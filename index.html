@@ -154,11 +154,17 @@
   .settings-row{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
   .settings-row label{font-size:12px;color:var(--text-faint);font-family:var(--mono);}
   .settings-row input[type=password],.settings-row input[type=text]{background:var(--bg-2);border:1px solid var(--border-soft);border-radius:7px;color:var(--text);padding:9px 10px;font-size:12.5px;width:100%;}
-  .settings-row .hint{font-size:11px;color:var(--text-faint);line-height:1.5;}
+  .hint{font-size:11px;color:var(--text-faint);line-height:1.5;}
   .settings-actions{display:flex;gap:8px;}
   .settings-actions button{background:var(--panel-2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 14px;cursor:pointer;font-size:12.5px;font-weight:600;}
   .settings-actions button.danger:hover{color:#E35B5B;border-color:#E35B5B;}
   .settings-status{font-family:var(--mono);font-size:11px;color:var(--sci);min-height:14px;}
+  .rotation-row{margin-bottom:12px;}
+  .rotation-label{font-size:12.5px;font-weight:600;margin-bottom:6px;}
+  .rotation-status{font-weight:400;color:var(--text-dim);font-size:11.5px;}
+  .rotation-actions{display:flex;gap:6px;flex-wrap:wrap;}
+  .rot-btn{background:var(--panel-2);border:1px solid var(--border);color:var(--text-dim);border-radius:7px;padding:6px 11px;cursor:pointer;font-size:11.5px;}
+  .rot-btn.active{background:var(--math);border-color:var(--math);color:#0B0E14;font-weight:700;}
 
   .tt-wrap{overflow-x:auto;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:10px;}
   .tt-table{border-collapse:collapse;width:100%;min-width:560px;}
@@ -231,8 +237,8 @@
 
   const TIMETABLE = {
     mon:[
-      {p:1,subject:"물리학",teacher:"박준홍",room:"611호"},
-      {p:2,subject:"물리학",teacher:"박준홍",room:"611호"},
+      {p:1,subject:"물리학",rot:'sci|phys',role:'double',room:"611호"},
+      {p:2,subject:"물리학",rot:'sci|phys',role:'double',room:"611호"},
       {p:3,subject:"영어",teacher:"이계화",room:"어학1실"},
       {p:4,subject:"수학",teacher:"조유경",room:"603호"},
       {p:5,subject:"화학",teacher:"이형준",room:"원격강의실"},
@@ -244,7 +250,7 @@
       {p:1,subject:"사회",teacher:"김현심",room:"703호"},
       {p:2,subject:"국어",teacher:"정진실",room:"705호"},
       {p:3,subject:"국어",teacher:"정진실",room:"705호"},
-      {p:4,subject:"지구과학",teacher:"배태윤",room:"지학3실"},
+      {p:4,subject:"지구과학",rot:'sci|earth',role:'single',room:"지학3실"},
       {p:5,subject:"수학",teacher:"손중록",room:"609호"},
       {p:6,subject:"수학",teacher:"손중록",room:"609호"},
       {p:7,label:"창의"},{p:8,label:"체험"},{p:9,label:"활동"}
@@ -253,7 +259,7 @@
       {p:1,subject:"사회",teacher:"김현심",room:"703호"},
       {p:2,subject:"수학",teacher:"이상규",room:"604호"},
       {p:3,subject:"수학",teacher:"이상규",room:"604호"},
-      {p:4,subject:"물리학",teacher:"김정석",room:"611호"},
+      {p:4,subject:"물리학",rot:'sci|phys',role:'single',room:"611호"},
       {p:5,subject:"영어",teacher:"김윤주",room:"어학1실"},
       {p:6,subject:"국어",teacher:"주혜령",room:"705호"},
       {p:7,label:"체육",room:"체육관"}
@@ -270,14 +276,60 @@
       {p:2,subject:"생명과학",teacher:"김성진",room:"생명1실"},
       {p:3,subject:"생명과학",teacher:"문우현",room:"생명1실"},
       {p:4,subject:"화학",teacher:"우희정",room:"원격강의실"},
-      {p:5,subject:"지구과학",teacher:"이윤아",room:"지학2실"},
-      {p:6,subject:"지구과학",teacher:"이윤아",room:"지학2실"},
+      {p:5,subject:"지구과학",rot:'sci|earth',role:'double',room:"지학2실"},
+      {p:6,subject:"지구과학",rot:'sci|earth',role:'double',room:"지학2실"},
       {p:7,subject:"화학",teacher:"이승재",room:"원격강의실"}
     ]
   };
   const DAYKEY = {1:'mon',2:'tue',3:'wed',4:'thu',5:'fri'};
   const DAYLABEL = {mon:'월',tue:'화',wed:'수',thu:'목',fri:'금'};
   const DAYNAME = ['일','월','화','수','목','금','토'];
+
+  /* ============ 선생님 주간 로테이션 ============ */
+  // 물리학·지구과학은 같은 과목을 두 선생님이 나눠 맡는데, 한 주는 A가 2타임/B가 1타임,
+  // 다음 주는 반대로 바뀐다. 기준 주(아래 REFERENCE_MONDAY)에는 double 쪽이 2타임을 맡은 걸로 본다.
+  const ROTATION_REFERENCE_MONDAY = new Date(2026,7,17); // 2026-08-17(월) 기준 시간표
+  const ROTATIONS = {
+    'sci|phys':  { double:'박준홍', single:'김정석', label:'물리학' },
+    'sci|earth': { double:'이윤아', single:'배태윤', label:'지구과학' }
+  };
+  const ROTATION_OVERRIDE_KEY = 'organizer-rotation-overrides';
+  function mondayOf(d){
+    const x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+    const day = x.getDay();
+    x.setDate(x.getDate() + (day===0 ? -6 : 1-day));
+    return x;
+  }
+  function weekIsSwapped(){
+    const weeks = Math.round((mondayOf(now).getTime() - mondayOf(ROTATION_REFERENCE_MONDAY).getTime()) / (7*86400000));
+    return ((weeks % 2) + 2) % 2 === 1;
+  }
+  function getRotationOverrides(){
+    try{ return JSON.parse(localStorage.getItem(ROTATION_OVERRIDE_KEY) || '{}'); }catch(e){ return {}; }
+  }
+  function getRotationOverride(rotKey){ return getRotationOverrides()[rotKey] || null; }
+  function setRotationOverride(rotKey, teacherOrNull){
+    const o = getRotationOverrides();
+    if(teacherOrNull) o[rotKey] = teacherOrNull; else delete o[rotKey];
+    try{ localStorage.setItem(ROTATION_OVERRIDE_KEY, JSON.stringify(o)); }catch(e){}
+  }
+  function currentDoubleTeacher(rotKey){
+    const cfg = ROTATIONS[rotKey]; if(!cfg) return null;
+    const override = getRotationOverride(rotKey);
+    if(override) return override;
+    return weekIsSwapped() ? cfg.single : cfg.double;
+  }
+  function resolveRotTeacher(rotKey, role){
+    const cfg = ROTATIONS[rotKey]; if(!cfg) return null;
+    const dbl = currentDoubleTeacher(rotKey);
+    if(role==='double') return dbl;
+    return dbl===cfg.double ? cfg.single : cfg.double;
+  }
+  function entryTeacher(entry){
+    if(entry.teacher) return entry.teacher;
+    if(entry.rot && entry.role) return resolveRotTeacher(entry.rot, entry.role);
+    return null;
+  }
 
   const CORNERS = [
     {key:'review', label:'수업 내용 복습', glyph:'▣', color:'var(--math)'},
@@ -313,7 +365,7 @@
   const todayPeriods = todayKey ? TIMETABLE[todayKey] : [];
   const todayDateStr = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 (${DAYNAME[now.getDay()]})`;
   const todayMid = new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
-  const TODAY_TEACHERS = new Set(todayPeriods.filter(p=>p.teacher).map(p=>p.teacher));
+  const TODAY_TEACHERS = new Set(todayPeriods.map(entryTeacher).filter(Boolean));
   function hasClassToday(t){ return TODAY_TEACHERS.has(t); }
 
   /* ============ 저장소 (localStorage — 완전 독립 로컬 저장) ============ */
@@ -403,7 +455,7 @@
       </div>
       <div class="topbar-right">
         <span class="chip">${todayDateStr}</span>
-        <button class="iconbtn" data-action="openSettings">⚙ API 키</button>
+        <button class="iconbtn" data-action="openSettings">⚙ 설정</button>
         <button class="iconbtn" data-action="exportData">⇩ 내보내기</button>
         <button class="iconbtn" data-action="importTrigger">⇧ 가져오기</button>
       </div>
@@ -426,10 +478,11 @@
       stripHtml = `<div class="reco-empty">주말이야. 등교일 시간표는 없어.</div>`;
     } else {
       stripHtml = `<div class="today-list">` + todayPeriods.map(p=>{
+        const pTeacher = entryTeacher(p);
         return `<div class="p-row ${p.subject?'linked':''}">
           <div class="pn">${p.p}교시</div>
           <div class="ps">${p.subject||p.label}</div>
-          <div class="pt">${p.teacher? p.teacher+(p.room?' · '+p.room:'') : (p.room||'')}</div>
+          <div class="pt">${pTeacher? pTeacher+(p.room?' · '+p.room:'') : (p.room||'')}</div>
         </div>`;
       }).join('') + `</div>`;
     }
@@ -525,7 +578,8 @@
         const todayCls = d===todayKey?'today':'';
         if(!e) return `<td class="tt-cell empty ${todayCls}">—</td>`;
         const label = e.subject||e.label;
-        const sub = e.teacher? `${e.teacher}${e.room?' · '+e.room:''}` : (e.room||'');
+        const eTeacher = entryTeacher(e);
+        const sub = eTeacher? `${eTeacher}${e.room?' · '+e.room:''}` : (e.room||'');
         return `<td class="tt-cell ${todayCls}"><div class="tt-subj">${label}</div><div class="tt-sub">${sub}</div></td>`;
       }).join('') + `</tr>`;
     }
@@ -730,20 +784,43 @@
   }
 
   function renderSettingsModal(){
+    const rotationRows = Object.keys(ROTATIONS).map(rotKey=>{
+      const cfg = ROTATIONS[rotKey];
+      const override = getRotationOverride(rotKey);
+      const dbl = currentDoubleTeacher(rotKey);
+      const sgl = dbl===cfg.double ? cfg.single : cfg.double;
+      return `<div class="rotation-row">
+        <div class="rotation-label">${cfg.label} <span class="rotation-status">— 이번 주 <b>${dbl}</b> 2타임 · ${sgl} 1타임 ${override?'(수동)':'(자동)'}</span></div>
+        <div class="rotation-actions">
+          <button class="rot-btn ${!override?'active':''}" data-action="setRotation" data-rot="${rotKey}" data-val="">자동</button>
+          <button class="rot-btn ${override===cfg.double?'active':''}" data-action="setRotation" data-rot="${rotKey}" data-val="${cfg.double}">${cfg.double} 2타임</button>
+          <button class="rot-btn ${override===cfg.single?'active':''}" data-action="setRotation" data-rot="${rotKey}" data-val="${cfg.single}">${cfg.single} 2타임</button>
+        </div>
+      </div>`;
+    }).join('');
+
     return `<div class="modal-overlay" data-action="closeModal">
       <div class="modal">
-        <div class="modal-head"><h3>Claude API 키 설정</h3><button class="iconbtn" data-action="closeModal">닫기</button></div>
+        <div class="modal-head"><h3>설정</h3><button class="iconbtn" data-action="closeModal">닫기</button></div>
         <div class="modal-body">
-          <div class="settings-row">
-            <label>ANTHROPIC API KEY</label>
-            <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
-            <div class="hint">OT 붙여넣기 자동 분류 기능에만 쓰여. console.anthropic.com에서 발급받은 키를 넣어줘. 이 브라우저의 로컬 저장소에만 저장되고, 내보내기 백업 파일에는 포함되지 않아 — 다른 기기에서는 다시 입력해야 해.</div>
+          <div class="modal-group">
+            <h5>Claude API 키</h5>
+            <div class="settings-row">
+              <label>ANTHROPIC API KEY</label>
+              <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
+              <div class="hint">OT 붙여넣기 자동 분류 기능에만 쓰여. console.anthropic.com에서 발급받은 키를 넣어줘. 이 브라우저의 로컬 저장소에만 저장되고, 내보내기 백업 파일에는 포함되지 않아 — 다른 기기에서는 다시 입력해야 해.</div>
+            </div>
+            <div class="settings-actions">
+              <button data-action="saveApiKey">저장</button>
+              <button class="danger" data-action="clearApiKey">삭제</button>
+            </div>
+            <div class="settings-status">${settingsStatus}</div>
           </div>
-          <div class="settings-actions">
-            <button data-action="saveApiKey">저장</button>
-            <button class="danger" data-action="clearApiKey">삭제</button>
+          <div class="modal-group">
+            <h5>선생님 로테이션</h5>
+            <div class="hint" style="margin-bottom:10px;">물리학·지구과학은 2타임 담당 선생님이 매주 바뀌어. 방학 등으로 자동 계산이 실제와 어긋나면 여기서 직접 맞춰줘.</div>
+            ${rotationRows}
           </div>
-          <div class="settings-status">${settingsStatus}</div>
         </div>
       </div>
     </div>`;
@@ -945,6 +1022,7 @@ ${text}`}]
       case 'otParse': otParse(); break;
       case 'saveApiKey': saveApiKey(); break;
       case 'clearApiKey': clearApiKey(); break;
+      case 'setRotation': setRotationOverride(el.dataset.rot, el.dataset.val || null); render(); break;
     }
   });
 
