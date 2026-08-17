@@ -196,6 +196,7 @@
   .asg-item.done .asg-title{text-decoration:line-through;}
   .asg-meta{font-family:var(--mono);font-size:10.5px;color:var(--text-dim);}
   .asg-tag{font-size:10.5px;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:5px;padding:2px 7px;color:var(--text-dim);}
+  .asg-hours-input{width:110px;background:var(--bg-2);border:1px solid var(--u-4);border-radius:6px;color:var(--text);padding:5px 7px;font-size:11.5px;}
 
   .fade-in{animation:fadeIn .18s ease;}
   @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
@@ -355,7 +356,7 @@
         CATS[c].subjects[s].teachers.forEach(t=>{ teachers[tKey(c,s,t)] = defaultTeacherData(); });
       });
     });
-    return { teachers, assignments:[], dailyCapacity:5 };
+    return { teachers, assignments:[], dailyCapacity:5, importedClassroomIds:[] };
   }
   function genId(){ return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
@@ -371,6 +372,9 @@
   /* ============ 저장소 (localStorage — 완전 독립 로컬 저장) ============ */
   const STORAGE_KEY = 'organizer-data-v2';
   const API_KEY_STORAGE_KEY = 'organizer-anthropic-key';
+  // Gmail의 Classroom 알림을 감시하는 예약 작업이 이 저장소의 이 파일에 새 과제를 커밋해두면,
+  // 앱이 열릴 때마다(온라인 상태일 때) 여기서 읽어와 로컬 과제 목록에 자동 병합한다.
+  const CLASSROOM_SYNC_URL = 'https://raw.githubusercontent.com/jundaleee/dshs-organizer/claude/jundal-study-organizer-migration-3z0jb8/data/assignments-sync.json';
   let storageOK = true;
   (function testStorage(){
     try{
@@ -430,6 +434,7 @@
   const app = document.getElementById('app');
   let otStatus = '';
   let settingsStatus = '';
+  let syncStatus = '';
 
   function render(){
     let html = renderTopbar();
@@ -520,6 +525,7 @@
     const pending = state.data.assignments.filter(a=>!a.done).sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
     let demand = 0;
     pending.forEach(a=>{
+      if(typeof a.estHours!=='number') return;
       const dueMid = new Date(a.dueDate+'T00:00:00').getTime();
       const dLeft = Math.round((dueMid-todayMid)/86400000);
       demand += a.estHours / Math.max(1,dLeft);
@@ -604,16 +610,21 @@
       const dLeft = Math.round((dueMid-todayMid)/86400000);
       const ddLabel = dLeft>0?`D-${dLeft}`:(dLeft===0?'D-DAY':`D+${Math.abs(dLeft)} 지남`);
       const ddColor = dLeft>0?'var(--sci)':(dLeft===0?'var(--u-4)':'var(--u-5)');
+      const hasHours = typeof a.estHours==='number';
       let perDayTxt='';
       if(!a.done){
-        const perDay = a.estHours/Math.max(1,dLeft);
-        demand += perDay;
-        perDayTxt = `<span class="asg-meta">하루 ${perDay.toFixed(1)}h 필요</span>`;
+        if(hasHours){
+          const perDay = a.estHours/Math.max(1,dLeft);
+          demand += perDay;
+          perDayTxt = `<span class="asg-meta">하루 ${perDay.toFixed(1)}h 필요</span>`;
+        } else {
+          perDayTxt = `<input type="number" class="asg-hours-input" step="0.5" min="0.5" placeholder="예상 h 입력" data-role="asgHours" data-id="${a.id}">`;
+        }
       }
       return `<div class="asg-item ${a.done?'done':''}">
         <div class="asg-title">${escapeHtml(a.title)}</div>
         ${a.tag?`<span class="asg-tag">${escapeHtml(a.tag)}</span>`:''}
-        <span class="asg-meta">${a.dueDate} · 총 ${a.estHours}h</span>
+        <span class="asg-meta">${a.dueDate} · 총 ${hasHours? a.estHours+'h' : '시간 미입력'}</span>
         ${perDayTxt}
         <span class="badge" style="background:${ddColor};color:#0B0E14">${ddLabel}</span>
         <div class="item-actions">
@@ -630,7 +641,9 @@
         <span>하루 가용 학습시간</span>
         <input type="number" min="0.5" step="0.5" value="${cap}" data-role="capacity">
         <span>시간</span>
+        <button class="iconbtn" style="margin-left:auto;" data-action="syncClassroom">🔄 Classroom 동기화</button>
       </div>
+      ${syncStatus?`<div class="hint" style="margin-bottom:10px;">${syncStatus}</div>`:''}
       ${state.data.assignments.length>0?`<div class="cap-banner ${over?'over':'ok'}">현재 대기 과제 기준 하루 평균 <b>${demand.toFixed(1)}시간</b> 필요 (가용 ${cap}시간) ${over?`— 초과 ${(demand-cap).toFixed(1)}시간, 일부 과제 미루거나 시간 늘려야 함`:`— 여유 ${(cap-demand).toFixed(1)}시간`}</div>`:''}
       <div class="asg-panel" style="padding:14px;">
         <div class="asg-form">
@@ -961,6 +974,43 @@ ${text}`}]
     }
   }
 
+  /* ============ 액션: Classroom 자동 동기화 ============ */
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  async function syncClassroom(manual){
+    if(manual){ syncStatus = '동기화 중...'; render(); }
+    try{
+      const res = await fetch(CLASSROOM_SYNC_URL + '?t=' + Date.now(), {cache:'no-store'});
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const payload = await res.json();
+      const incoming = Array.isArray(payload.assignments) ? payload.assignments : [];
+      const known = new Set(state.data.importedClassroomIds || []);
+      let added = 0, skippedNoDate = 0;
+      incoming.forEach(item=>{
+        if(!item || !item.id || known.has(item.id)) return;
+        if(!item.dueDate || !DATE_RE.test(item.dueDate)){ skippedNoDate++; return; }
+        state.data.assignments.push({
+          id: genId(),
+          title: (item.title || '제목 없음').trim(),
+          dueDate: item.dueDate,
+          estHours: (typeof item.estHours==='number' && item.estHours>0) ? item.estHours : null,
+          tag: (item.tag || 'Classroom').trim(),
+          done:false,
+          createdAt: Date.now(),
+          source:'classroom-sync'
+        });
+        state.data.importedClassroomIds.push(item.id);
+        known.add(item.id);
+        added++;
+      });
+      if(added>0) persist();
+      if(manual) syncStatus = added>0 ? `${added}개 새 과제를 불러왔어${skippedNoDate>0?` (기한 불명확 ${skippedNoDate}개 제외)`:''}.` : '새로 불러올 과제가 없어.';
+      if(added>0) render();
+    }catch(err){
+      if(manual) syncStatus = '동기화 실패 — 오프라인이거나 아직 동기화 파일이 없어.';
+    }
+    if(manual) render();
+  }
+
   /* ============ 내보내기/가져오기 ============ */
   function exportData(){
     const blob = new Blob([JSON.stringify(state.data,null,2)],{type:'application/json'});
@@ -979,11 +1029,12 @@ ${text}`}]
           state.data = {
             teachers: Object.assign(skeleton.teachers, parsed.teachers||{}),
             assignments: parsed.assignments || [],
-            dailyCapacity: parsed.dailyCapacity || 5
+            dailyCapacity: parsed.dailyCapacity || 5,
+            importedClassroomIds: parsed.importedClassroomIds || []
           };
         } else {
           // 구버전(평평한 teacher map) 백업 호환
-          state.data = { teachers: Object.assign(skeleton.teachers, parsed), assignments:[], dailyCapacity:5 };
+          state.data = { teachers: Object.assign(skeleton.teachers, parsed), assignments:[], dailyCapacity:5, importedClassroomIds:[] };
         }
         persist(); render();
       }catch(err){ alert('파일을 읽지 못했어. JSON 형식이 맞는지 확인해줘.'); }
@@ -1020,6 +1071,7 @@ ${text}`}]
       case 'toggleAssignment': toggleAssignment(el.dataset.id); break;
       case 'deleteAssignment': deleteAssignment(el.dataset.id); break;
       case 'otParse': otParse(); break;
+      case 'syncClassroom': syncClassroom(true); break;
       case 'saveApiKey': saveApiKey(); break;
       case 'clearApiKey': clearApiKey(); break;
       case 'setRotation': setRotationOverride(el.dataset.rot, el.dataset.val || null); render(); break;
@@ -1043,6 +1095,14 @@ ${text}`}]
       const val = parseFloat(e.target.value)||5;
       clearTimeout(debTimer);
       debTimer = setTimeout(()=>{ state.data.dailyCapacity = val; persist(); render(); }, 500);
+    } else if(e.target.dataset.role==='asgHours'){
+      const id = e.target.dataset.id;
+      const val = parseFloat(e.target.value);
+      clearTimeout(debTimer);
+      debTimer = setTimeout(()=>{
+        const a = state.data.assignments.find(x=>x.id===id);
+        if(a && val>0){ a.estHours = val; persist(); render(); }
+      }, 500);
     }
   });
 
@@ -1060,13 +1120,15 @@ ${text}`}]
         state.data = {
           teachers: Object.assign(skeleton.teachers, saved.teachers||{}),
           assignments: saved.assignments || [],
-          dailyCapacity: saved.dailyCapacity || 5
+          dailyCapacity: saved.dailyCapacity || 5,
+          importedClassroomIds: saved.importedClassroomIds || []
         };
       } else {
-        state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], dailyCapacity:5 };
+        state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], dailyCapacity:5, importedClassroomIds:[] };
       }
     }
     render();
+    syncClassroom(false);
   })();
 
 })();
