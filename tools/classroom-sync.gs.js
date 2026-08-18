@@ -27,6 +27,12 @@ const REPO_BRANCH = 'claude/jundal-study-organizer-migration-3z0jb8';
 const SYNC_PATH = 'data/assignments-sync.json';
 const PROCESSED_LABEL = 'Classroom-Synced';
 const CLAUDE_MODEL = 'claude-sonnet-5';
+// 이 자동화를 처음 도는 만큼, 최근 며칠치 알림만 보면 이미 몇 주 전에 올라온
+// (아직 안 끝난) 과제들을 놓친다. 그래서 검색 범위를 넉넉하게 잡고, 대신
+// 이미 마감이 지난 과제는 뒤에서 걸러낸다(과거 과제로 목록이 지저분해지는 것 방지).
+// 한 번 백로그를 다 따라잡고 나면(=Classroom-Synced 라벨이 최근 메일에 다 붙고 나면)
+// 매시간 실행은 라벨로 걸러지니까 굳이 이 숫자를 줄일 필요는 없다.
+const SEARCH_WINDOW_DAYS = 45;
 
 function syncClassroom() {
   const props = PropertiesService.getScriptProperties();
@@ -38,7 +44,9 @@ function syncClassroom() {
   }
 
   const label = getOrCreateLabel_(PROCESSED_LABEL);
-  const threads = GmailApp.search('from:classroom.google.com newer_than:7d -label:' + PROCESSED_LABEL, 0, 50);
+  const threads = GmailApp.search(
+    'from:classroom.google.com newer_than:' + SEARCH_WINDOW_DAYS + 'd -label:' + PROCESSED_LABEL, 0, 80
+  );
   if (threads.length === 0) { Logger.log('새 메일 없음.'); return; }
 
   const file = getSyncFile_(githubToken);
@@ -66,6 +74,12 @@ function syncClassroom() {
     if (!extracted) { return; } // 실패하면 라벨을 안 붙여서 다음 실행 때 재시도
 
     if (extracted.dueDate && /^\d{4}-\d{2}-\d{2}$/.test(extracted.dueDate)) {
+      const todayStr = Utilities.formatDate(new Date(), 'Asia/Seoul', 'yyyy-MM-dd');
+      if (extracted.dueDate < todayStr) {
+        // 이미 마감이 지난 옛날 과제 — 지금 와서 할 일 목록에 넣어봐야 의미 없으니 건너뜀
+        threadsToLabel.push(thread);
+        return;
+      }
       newAssignments.push({ id, title: extracted.title, dueDate: extracted.dueDate, tag: extracted.tag });
     } else {
       newNotices.push({
