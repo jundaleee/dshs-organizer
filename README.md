@@ -36,14 +36,22 @@
 
 ## Classroom 자동 동기화 (과제 + 공지 + 자료)
 
-Gmail로 오는 Google Classroom 알림(새 과제/새 공지/새 자료)을 감지해서 앱에 자동으로 반영하는 기능. 매시간 실행되는 예약 작업이 Gmail을 확인해서 이 저장소의 `data/assignments-sync.json`에 커밋해두면:
+Gmail로 오는 Google Classroom 알림(과제/공지/자료/성적공지 등 전부)을 감지해서 앱에 자동으로 반영하는 기능. 두 부분으로 나뉘어 있어:
 
-- **새 과제** (기한이 있는 것만) → **과제** 탭에 자동 추가
-- **새 공지 / 새 자료** → **홈** 화면 하단 "공지·자료" 섹션에 표시
+- **클라이언트 쪽 (앱, 완료)**: 앱은 열릴 때마다, 그리고 과제 탭의 "Classroom 동기화" 버튼을 누를 때마다 저장소의 `data/assignments-sync.json`을 읽어와 병합해.
+  - **기한이 있는 항목** → **과제** 탭에 자동 추가
+  - **기한이 없는 항목**(공지/자료/성적공지 등) → **홈** 화면 하단 "공지·자료" 섹션에 표시
+  - 이미 가져온 항목은 `id`로 추적해서 중복 추가되지 않고, 사용자가 지워도 다시 나타나지 않아.
 
-앱은 열릴 때마다, 그리고 과제 탭의 "Classroom 동기화" 버튼을 누를 때마다 이 파일을 읽어와 병합해. 이미 가져온 항목은 `id`로 추적해서 중복 추가되지 않고, 사용자가 지워도 다시 나타나지 않아.
+- **Gmail 쪽 (`tools/classroom-sync.gs.js`, Google Apps Script)**: 실제로 Gmail을 읽어서 위 JSON 파일에 새 항목을 커밋해주는 쪽. 원래 Claude Code Remote의 예약 작업(Routine)으로 만들었는데, **Gmail 커넥터가 대화창마다 다시 켜야 하는 문제 때문에 신뢰할 수 없어서 폐기했어.** 대신 Google Apps Script로 옮겼어 — Google 계정 안에서 직접 도는 방식이라 커넥터/세션 개념 자체가 없고, 한 번 설정하면 그냥 계속 돌아가.
 
-**저장소가 비공개**라서 (개인정보 보호 목적) 동기화 파일도 인증 없이는 못 읽어. 그래서 이 기능만을 위한 GitHub 읽기 전용 토큰이 필요해:
+  설정 방법은 `tools/classroom-sync.gs.js` 파일 맨 위 주석에 있어. 요약하면:
+  1. https://script.google.com 에서 새 프로젝트 만들고 그 파일 내용을 붙여넣기
+  2. 스크립트 속성에 `ANTHROPIC_API_KEY`(앱 설정에 넣은 키 재사용 가능)와 `GITHUB_TOKEN`(**앱의 읽기 전용 토큰과 별개로, Contents: Read and write 권한으로 새로 발급**) 등록
+  3. `syncClassroom` 함수 한 번 수동 실행 → 권한 승인
+  4. 트리거 추가: `syncClassroom`을 1시간마다 실행
+
+**저장소가 비공개**라서 (개인정보 보호 목적) 앱이 동기화 파일을 읽으려면 별도로 읽기 전용 GitHub 토큰이 필요해 (Apps Script가 쓰는 쓰기용 토큰과는 다른, 앱 전용 토큰):
 
 1. https://github.com/settings/personal-access-tokens/new 에서 fine-grained 토큰 발급
 2. Repository access → **Only select repositories** → `dshs-organizer` 선택
