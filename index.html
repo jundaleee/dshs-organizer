@@ -3,208 +3,266 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-<title>Jundal's Study Organizer</title>
+<title>Study Organizer</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" />
 <style>
   :root{
-    --bg:#0D1117; --bg-2:#10151D; --panel:#161C26; --panel-2:#1C2430;
-    --border:#2A3244; --border-soft:#212938;
-    --text:#E8ECF4; --text-dim:#8B96AA; --text-faint:#5B6578;
-    --sans:'Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'Malgun Gothic',sans-serif;
-    --mono:'IBM Plex Mono',ui-monospace,monospace;
-    --math:#5B7FDE; --sci:#33B18C; --cs:#A374F2; --hum:#E3A23B;
-    --u-new:#5B7FDE; --u-1:#33B18C; --u-2:#8FC93D; --u-3:#E3B23B; --u-4:#E38A3B; --u-5:#E35B5B;
-    --radius:10px; --shadow:0 8px 24px rgba(0,0,0,.35);
+    --bg:#FAFAF8; --bg-elevated:#FFFFFF; --bg-hover:rgba(0,0,0,.035); --bg-tint:rgba(58,92,224,.07);
+    --border:rgba(0,0,0,.08); --border-strong:rgba(0,0,0,.14);
+    --text:#17181A; --text-2:#6B6E76; --text-3:#9A9DA6;
+    --accent:#3A5CE0; --accent-ink:#FFFFFF;
+    --danger:#D64545; --good:#2E9B6B;
+    --sans:'Pretendard Variable','Pretendard',-apple-system,BlinkMacSystemFont,'SF Pro Text','Malgun Gothic',sans-serif;
+    --r-sm:8px; --r-md:12px; --r-lg:16px;
+    --dur:180ms; --ease:cubic-bezier(.4,0,.2,1);
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;}
-  body{
-    background:
-      radial-gradient(circle at 15% 0%, rgba(91,127,222,.08), transparent 40%),
-      radial-gradient(circle at 85% 10%, rgba(163,116,242,.07), transparent 40%),
-      var(--bg);
-    color:var(--text); font-family:var(--sans); min-height:100vh; -webkit-font-smoothing:antialiased;
-  }
-  #app{max-width:1100px;margin:0 auto;padding:18px 16px 90px;}
-  ::selection{background:rgba(91,127,222,.35);}
+  body{background:var(--bg);color:var(--text);font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1;}
+  ::selection{background:rgba(58,92,224,.18);}
   button,input,textarea{font-family:inherit;}
   a{color:inherit;}
-  :focus-visible{outline:2px solid #7C9CF2;outline-offset:2px;border-radius:6px;}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:6px;}
+  button{cursor:pointer;}
 
-  .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 4px 14px;border-bottom:1px solid var(--border-soft);margin-bottom:12px;flex-wrap:wrap;}
-  .brand{display:flex;align-items:center;gap:10px;cursor:pointer;}
-  .brand-mark{width:30px;height:30px;border-radius:7px;background:linear-gradient(135deg,var(--math),var(--cs));display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-weight:600;font-size:12px;color:#fff;flex-shrink:0;}
-  .brand-text{line-height:1.15;}
-  .brand-text b{font-size:15.5px;letter-spacing:.01em;}
-  .brand-text span{display:block;font-size:11px;color:var(--text-faint);font-family:var(--mono);}
-  .topbar-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  .chip{font-family:var(--mono);font-size:11.5px;color:var(--text-dim);background:var(--panel);border:1px solid var(--border);padding:5px 10px;border-radius:999px;white-space:nowrap;}
-  .iconbtn{background:var(--panel);border:1px solid var(--border);color:var(--text-dim);font-size:12px;padding:6px 11px;border-radius:8px;cursor:pointer;display:flex;align-items:center;gap:5px;transition:.15s;}
-  .iconbtn:hover{color:var(--text);border-color:#3A465C;background:var(--panel-2);}
+  /* ---- shell / nav ---- */
+  .app-shell{display:flex;min-height:100vh;align-items:stretch;}
+  .sidebar{width:224px;flex-shrink:0;padding:28px 14px;border-right:1px solid var(--border);position:sticky;top:0;height:100vh;overflow-y:auto;display:flex;flex-direction:column;}
+  .sidebar-brand{padding:2px 10px 26px;display:flex;align-items:center;gap:9px;cursor:pointer;}
+  .sidebar-brand .mark{width:22px;height:22px;border-radius:6px;background:var(--text);flex-shrink:0;}
+  .sidebar-brand b{font-size:14.5px;font-weight:600;letter-spacing:-.01em;}
+  .nav-list{display:flex;flex-direction:column;gap:1px;}
+  .nav-item{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:9px;font-size:14px;color:var(--text-2);background:none;border:none;text-align:left;width:100%;transition:background var(--dur) var(--ease),color var(--dur) var(--ease);position:relative;}
+  .nav-item svg{flex-shrink:0;opacity:.8;}
+  .nav-item:hover{background:var(--bg-hover);color:var(--text);}
+  .nav-item.active{background:var(--bg-hover);color:var(--text);font-weight:600;}
+  .nav-item.active svg{opacity:1;}
+  .nav-item .label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sidebar-foot{margin-top:auto;padding-top:14px;}
 
-  .navrow{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
-  .navbtn{background:var(--panel);border:1px solid var(--border);color:var(--text-dim);padding:7px 15px;border-radius:8px;font-size:12.5px;cursor:pointer;}
-  .navbtn.active{background:var(--panel-2);color:var(--text);border-color:#3A465C;font-weight:700;}
+  .bottom-nav{display:none;}
+  .main{flex:1;min-width:0;}
+  .main-inner{max-width:720px;margin:0 auto;padding:44px 32px 100px;}
 
-  .storage-warn{background:#2A2210;border:1px solid #55431A;color:#E3B23B;font-size:12.5px;padding:9px 13px;border-radius:8px;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+  .topbar-mini{display:flex;justify-content:flex-end;margin-bottom:-8px;}
+  .iconbtn{background:none;border:1px solid var(--border);color:var(--text-2);font-size:12.5px;padding:6px 12px;border-radius:8px;display:inline-flex;align-items:center;gap:6px;transition:all var(--dur) var(--ease);}
+  .iconbtn:hover{color:var(--text);border-color:var(--border-strong);background:var(--bg-hover);}
 
-  .today-panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;}
-  .today-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:6px;margin-bottom:10px;}
-  .today-head h2{font-size:15px;margin:0;letter-spacing:.01em;}
-  .today-head .linkbtn{font-family:var(--mono);font-size:11.5px;color:var(--text-dim);cursor:pointer;background:none;border:none;padding:0;}
-  .today-head .linkbtn:hover{color:var(--text);}
-  .today-list{display:flex;flex-direction:column;gap:6px;}
-  .p-row{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:8px;padding:8px 11px;}
-  .p-row.linked{border-color:#3A465C;}
-  .p-row .pn{font-family:var(--mono);font-size:11px;color:var(--text-faint);width:44px;flex-shrink:0;}
-  .p-row .ps{font-size:13px;font-weight:600;flex:1;}
-  .p-row .pt{font-size:11.5px;color:var(--text-dim);}
+  @media(max-width:979px){
+    .sidebar{width:76px;padding:24px 10px;}
+    .sidebar-brand{justify-content:center;padding:2px 0 22px;}
+    .sidebar-brand b{display:none;}
+    .nav-item{justify-content:center;padding:11px;}
+    .nav-item .label{display:none;}
+    .main-inner{padding:36px 24px 100px;}
+  }
+  @media(max-width:639px){
+    .app-shell{display:block;}
+    .sidebar{display:none;}
+    .bottom-nav{display:flex;position:fixed;left:0;right:0;bottom:0;background:var(--bg-elevated);border-top:1px solid var(--border);padding:7px 4px calc(6px + env(safe-area-inset-bottom));justify-content:space-around;z-index:60;}
+    .bottom-nav .nav-item{flex-direction:column;gap:3px;font-size:10px;padding:6px 4px;border-radius:10px;flex:1;min-width:0;}
+    .bottom-nav .nav-item .label{display:block;font-size:10px;}
+    .main-inner{padding:26px 18px 92px;max-width:100%;}
+  }
 
-  .reco-panel,.asg-panel{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;margin-bottom:16px;}
-  .reco-panel h2,.asg-panel h2{font-size:15px;margin:0 0 4px;}
-  .reco-sub{font-size:12px;color:var(--text-faint);margin-bottom:12px;}
-  .reco-empty,.item-empty,.modal-empty{color:var(--text-faint);font-size:12.5px;text-align:center;padding:20px 0;}
-  .reco-item{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--border-soft);cursor:pointer;}
-  .reco-item:last-child{border-bottom:none;}
-  .reco-item:hover{background:var(--panel-2);border-radius:8px;}
-  .reco-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
-  .reco-main{flex:1;min-width:0;}
-  .reco-path{font-family:var(--mono);font-size:10.5px;color:var(--text-faint);}
-  .reco-text{font-size:13px;margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .badge{font-family:var(--mono);font-size:10px;padding:3px 7px;border-radius:5px;white-space:nowrap;flex-shrink:0;font-weight:600;}
+  /* ---- page header ---- */
+  .page-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;margin-bottom:30px;flex-wrap:wrap;}
+  .page-head h1{font-size:26px;font-weight:600;letter-spacing:-.015em;margin:0;}
+  .page-head .sub{font-size:13px;color:var(--text-3);}
 
-  .cat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;}
-  @media(max-width:560px){.cat-grid{grid-template-columns:1fr;}}
-  .cat-tile{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px;cursor:pointer;position:relative;overflow:hidden;transition:.15s;text-align:left;}
-  .cat-tile:hover{transform:translateY(-2px);box-shadow:var(--shadow);border-color:var(--tint);}
-  .cat-tile::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--tint);}
-  .cat-tile h3{margin:0 0 4px;font-size:16px;}
-  .cat-tile p{margin:0;font-size:12px;color:var(--text-dim);font-family:var(--mono);}
-  .cat-tile .today-badge{position:absolute;right:14px;top:14px;font-family:var(--mono);font-size:10px;background:var(--tint);color:#0D1117;padding:3px 8px;border-radius:999px;font-weight:700;}
+  .home-date{font-size:13px;color:var(--text-3);margin-bottom:6px;}
+  .home-greeting{font-size:30px;font-weight:600;letter-spacing:-.015em;margin:0 0 40px;}
 
-  .crumb{display:flex;align-items:center;flex-wrap:wrap;gap:6px;font-size:12.5px;color:var(--text-faint);margin-bottom:14px;}
-  .crumb span.seg{cursor:pointer;padding:3px 2px;}
-  .crumb span.seg:hover{color:var(--text);}
-  .crumb span.seg.cur{color:var(--text);font-weight:600;cursor:default;}
-  .crumb .sep{color:var(--text-faint);opacity:.5;}
+  .section{margin-bottom:40px;}
+  .section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;gap:10px;}
+  .section-title{font-size:12.5px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.055em;}
+  .section-link{font-size:12.5px;color:var(--text-3);background:none;border:none;padding:0;}
+  .section-link:hover{color:var(--text);}
 
-  .tabrow{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px;}
-  .tab{background:var(--panel);border:1px solid var(--border);color:var(--text-dim);padding:7px 13px;border-radius:8px;font-size:13px;cursor:pointer;transition:.15s;display:flex;align-items:center;gap:6px;}
-  .tab:hover{color:var(--text);border-color:#3A465C;}
-  .tab.active{background:var(--tint);border-color:var(--tint);color:#0B0E14;font-weight:700;}
-  .tab .dot{width:6px;height:6px;border-radius:50%;background:var(--tint);flex-shrink:0;}
-  .tab.active .dot{background:#0B0E14;}
+  .empty{color:var(--text-3);font-size:13.5px;padding:18px 0;}
 
-  .info-box,.memo-box{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;margin-bottom:12px;}
-  .info-box label,.memo-box label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-faint);font-family:var(--mono);margin-bottom:7px;}
-  .info-box textarea,.memo-box textarea{width:100%;min-height:44px;resize:vertical;background:var(--bg-2);border:1px solid var(--border-soft);border-radius:7px;color:var(--text);padding:9px 10px;font-size:13px;line-height:1.5;}
-  .info-box textarea::placeholder,.memo-box textarea::placeholder{color:var(--text-faint);}
+  /* ---- task rows ---- */
+  .task-row{display:flex;align-items:flex-start;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);}
+  .task-row:last-child{border-bottom:none;}
+  .task-check{width:19px;height:19px;border-radius:50%;border:1.5px solid var(--border-strong);flex-shrink:0;margin-top:2px;background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;transition:background var(--dur) var(--ease),border-color var(--dur) var(--ease);padding:0;}
+  .task-check:hover{border-color:var(--accent);}
+  .task-check svg{opacity:0;transform:scale(.4);transition:all var(--dur) var(--ease);}
+  .task-row.done .task-check{background:var(--accent);border-color:var(--accent);}
+  .task-row.done .task-check svg{opacity:1;transform:scale(1);}
+  .task-body{flex:1;min-width:0;}
+  .task-tag{font-size:12px;color:var(--text-3);margin-bottom:2px;}
+  .task-text{font-size:14.5px;line-height:1.5;transition:color var(--dur) var(--ease);word-break:break-word;}
+  .task-row.done .task-text{color:var(--text-3);text-decoration:line-through;text-decoration-color:var(--border-strong);}
+  .task-badge{font-size:11px;color:var(--text-3);flex-shrink:0;margin-top:2px;font-variant-numeric:tabular-nums;}
+  .task-del{width:20px;height:20px;border-radius:6px;border:none;background:none;color:var(--text-3);flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity var(--dur) var(--ease);}
+  .task-row:hover .task-del{opacity:1;}
+  .task-del:hover{color:var(--danger);}
 
-  .corners{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
-  @media(max-width:820px){.corners{grid-template-columns:1fr;}}
-  .corner{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;min-height:220px;}
-  .corner-head{display:flex;align-items:center;gap:8px;margin-bottom:10px;}
-  .corner-glyph{width:22px;height:22px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0;color:#0B0E14;font-weight:700;}
-  .corner-head h4{margin:0;font-size:13.5px;flex:1;}
-  .corner-count{font-family:var(--mono);font-size:11px;color:var(--text-faint);}
-  .add-row{display:flex;gap:6px;margin-bottom:10px;}
-  .add-row input{flex:1;background:var(--bg-2);border:1px solid var(--border-soft);border-radius:7px;color:var(--text);padding:7px 9px;font-size:12.5px;min-width:0;}
-  .add-row input::placeholder{color:var(--text-faint);}
-  .add-row button{background:var(--panel-2);border:1px solid var(--border);color:var(--text-dim);border-radius:7px;padding:0 12px;cursor:pointer;font-size:13px;font-weight:600;}
-  .add-row button:hover{color:var(--text);}
-  .item-list{display:flex;flex-direction:column;gap:6px;overflow-y:auto;max-height:340px;padding-right:2px;}
-  .item{background:var(--bg-2);border:1px solid var(--border-soft);border-radius:8px;padding:8px 9px;}
-  .item-top{display:flex;align-items:flex-start;gap:7px;}
-  .item-text{flex:1;font-size:12.8px;line-height:1.45;word-break:break-word;}
-  .item-actions{display:flex;gap:4px;flex-shrink:0;}
-  .icb{width:22px;height:22px;border-radius:6px;border:1px solid var(--border-soft);background:var(--panel);color:var(--text-dim);cursor:pointer;font-size:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-  .icb:hover{color:var(--text);border-color:#3A465C;}
-  .icb.ok:hover{color:#33B18C;border-color:#33B18C;}
-  .icb.no:hover{color:#E35B5B;border-color:#E35B5B;}
-  .icb.on{color:#E35B5B;border-color:#E35B5B;background:rgba(227,91,91,.1);}
+  /* ---- assignment rows ---- */
+  .asg-row{display:flex;align-items:center;gap:14px;padding:13px 0;border-bottom:1px solid var(--border);}
+  .asg-row:last-child{border-bottom:none;}
+  .asg-row.done{opacity:.4;}
+  .asg-check{width:19px;height:19px;border-radius:6px;border:1.5px solid var(--border-strong);flex-shrink:0;background:var(--bg-elevated);display:flex;align-items:center;justify-content:center;padding:0;transition:all var(--dur) var(--ease);}
+  .asg-row.done .asg-check{background:var(--text);border-color:var(--text);}
+  .asg-check svg{opacity:0;transform:scale(.4);transition:all var(--dur) var(--ease);}
+  .asg-row.done .asg-check svg{opacity:1;transform:scale(1);}
+  .asg-main{flex:1;min-width:0;}
+  .asg-tag{font-size:12px;color:var(--text-3);}
+  .asg-title{font-size:14.5px;margin-top:1px;word-break:break-word;}
+  .asg-row.done .asg-title{text-decoration:line-through;text-decoration-color:var(--border-strong);}
+  .asg-sub{font-size:12px;color:var(--text-3);margin-top:3px;}
+  .asg-due{font-size:12.5px;color:var(--text-2);flex-shrink:0;font-variant-numeric:tabular-nums;white-space:nowrap;}
+  .asg-due.urgent{color:var(--accent);font-weight:600;}
+  .asg-due.overdue{color:var(--danger);font-weight:600;}
+  .asg-del{width:22px;height:22px;border-radius:6px;border:none;background:none;color:var(--text-3);flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity var(--dur);}
+  .asg-row:hover .asg-del{opacity:1;}
+  .asg-del:hover{color:var(--danger);}
+  .asg-hours-input{width:96px;background:var(--bg-elevated);border:1px solid var(--border-strong);border-radius:7px;color:var(--text);padding:6px 8px;font-size:12px;}
 
-  .meter{position:relative;height:5px;background:var(--border-soft);border-radius:3px;margin-top:7px;}
-  .meter .fill{position:absolute;left:0;top:0;height:100%;border-radius:3px;}
-  .meter .tick{position:absolute;top:-2px;width:1px;height:9px;background:var(--border);}
-  .item-meta{display:flex;align-items:center;justify-content:space-between;margin-top:6px;gap:6px;flex-wrap:wrap;}
-  .item-date{font-family:var(--mono);font-size:9.5px;color:var(--text-faint);}
-  .reps-row{display:flex;align-items:center;gap:6px;margin-top:5px;}
-  .reps-row .reps-btn{font-family:var(--mono);font-size:10px;background:var(--panel);border:1px solid var(--border-soft);color:var(--text-dim);border-radius:5px;padding:2px 7px;cursor:pointer;}
-  .reps-row .reps-count{font-family:var(--mono);font-size:10px;color:var(--text-faint);}
+  .cap-line{font-size:13px;color:var(--text-2);padding:10px 0 18px;border-bottom:1px solid var(--border);margin-bottom:6px;}
+  .cap-line b{color:var(--text);font-weight:600;}
+  .cap-line.over{color:var(--danger);}
+  .cap-line.over b{color:var(--danger);}
 
-  .ot-box{background:var(--panel);border:1px dashed var(--border);border-radius:var(--radius);padding:14px;margin-top:14px;}
-  .ot-head{font-size:13px;font-weight:600;}
-  .ot-textarea{width:100%;min-height:76px;background:var(--bg-2);border:1px solid var(--border-soft);border-radius:7px;color:var(--text);padding:9px;font-size:12.5px;margin:8px 0;}
-  .ot-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-  .ot-row button{background:var(--panel-2);border:1px solid var(--border);color:var(--text);padding:7px 14px;border-radius:7px;cursor:pointer;font-size:12.5px;font-weight:600;}
-  .ot-status{font-family:var(--mono);font-size:11px;color:var(--text-faint);}
-  .ot-note{font-size:10.5px;color:var(--text-faint);margin-top:7px;}
-
-  .fab{position:fixed;right:18px;bottom:18px;background:var(--panel-2);border:1px solid var(--border);color:var(--text-dim);border-radius:10px;padding:10px 14px;cursor:pointer;font-size:12.5px;box-shadow:var(--shadow);display:flex;align-items:center;gap:7px;z-index:40;}
-  .fab:hover{color:var(--text);border-color:#3A465C;}
-  .modal-overlay{position:fixed;inset:0;background:rgba(6,8,12,.65);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:60;padding:20px;}
-  .modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;max-width:560px;width:100%;max-height:80vh;display:flex;flex-direction:column;box-shadow:var(--shadow);}
-  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border-soft);}
-  .modal-head h3{margin:0;font-size:14.5px;}
-  .modal-body{padding:10px 16px 16px;overflow-y:auto;}
-  .modal-group{margin-bottom:14px;}
-  .modal-group h5{font-size:11px;color:var(--text-faint);font-family:var(--mono);margin:10px 0 6px;text-transform:uppercase;letter-spacing:.05em;}
-  .settings-row{display:flex;flex-direction:column;gap:8px;margin-bottom:14px;}
-  .settings-row label{font-size:12px;color:var(--text-faint);font-family:var(--mono);}
-  .settings-row input[type=password],.settings-row input[type=text]{background:var(--bg-2);border:1px solid var(--border-soft);border-radius:7px;color:var(--text);padding:9px 10px;font-size:12.5px;width:100%;}
-  .hint{font-size:11px;color:var(--text-faint);line-height:1.5;}
-  .settings-actions{display:flex;gap:8px;}
-  .settings-actions button{background:var(--panel-2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:7px 14px;cursor:pointer;font-size:12.5px;font-weight:600;}
-  .settings-actions button.danger:hover{color:#E35B5B;border-color:#E35B5B;}
-  .settings-status{font-family:var(--mono);font-size:11px;color:var(--sci);min-height:14px;}
-  .rotation-row{margin-bottom:12px;}
-  .rotation-label{font-size:12.5px;font-weight:600;margin-bottom:6px;}
-  .rotation-status{font-weight:400;color:var(--text-dim);font-size:11.5px;}
-  .rotation-actions{display:flex;gap:6px;flex-wrap:wrap;}
-  .rot-btn{background:var(--panel-2);border:1px solid var(--border);color:var(--text-dim);border-radius:7px;padding:6px 11px;cursor:pointer;font-size:11.5px;}
-  .rot-btn.active{background:var(--math);border-color:var(--math);color:#0B0E14;font-weight:700;}
-
-  .tt-wrap{overflow-x:auto;background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:10px;}
-  .tt-table{border-collapse:collapse;width:100%;min-width:560px;}
-  .tt-table th{font-family:var(--mono);font-size:12px;color:var(--text-dim);padding:8px 6px;border-bottom:1px solid var(--border-soft);text-align:left;}
-  .tt-table th.today{color:var(--math);}
-  .tt-p{font-family:var(--mono);font-size:11px;color:var(--text-faint);padding:8px 6px;white-space:nowrap;border-bottom:1px solid var(--border-soft);}
-  .tt-cell{border-bottom:1px solid var(--border-soft);padding:7px 8px;min-width:100px;vertical-align:top;}
-  .tt-cell.today{background:rgba(91,127,222,.08);}
-  .tt-cell.empty{color:var(--text-faint);}
-  .tt-subj{font-size:12.5px;font-weight:600;}
-  .tt-sub{font-size:10.5px;color:var(--text-dim);margin-top:2px;}
-
-  .cap-banner{padding:10px 14px;border-radius:8px;font-size:13px;margin-bottom:14px;font-family:var(--mono);}
-  .cap-banner.ok{background:rgba(51,177,140,.12);color:#33B18C;border:1px solid rgba(51,177,140,.3);}
-  .cap-banner.over{background:rgba(227,91,91,.12);color:#E35B5B;border:1px solid rgba(227,91,91,.3);}
-  .cap-input-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;font-size:12.5px;color:var(--text-dim);}
-  .cap-input-row input{width:64px;background:var(--bg-2);border:1px solid var(--border-soft);border-radius:6px;color:var(--text);padding:5px 7px;}
-  .asg-form{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;}
-  .asg-form input{background:var(--bg-2);border:1px solid var(--border-soft);border-radius:7px;color:var(--text);padding:8px 9px;font-size:12.5px;}
-  .asg-form input.title{flex:2;min-width:160px;}
+  .asg-form{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:26px;padding-bottom:26px;border-bottom:1px solid var(--border);}
+  .asg-form input{background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 10px;font-size:13px;}
+  .asg-form input.title{flex:2;min-width:180px;}
   .asg-form input.date{flex:1;min-width:130px;}
-  .asg-form input.hours{width:80px;}
+  .asg-form input.hours{width:82px;}
   .asg-form input.tag{flex:1;min-width:110px;}
-  .asg-form button{background:var(--panel-2);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:0 14px;cursor:pointer;font-weight:600;font-size:12.5px;}
-  .asg-list{display:flex;flex-direction:column;gap:8px;}
-  .asg-item{background:var(--bg-2);border:1px solid var(--border-soft);border-radius:8px;padding:10px 12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-  .asg-item.done{opacity:.45;}
-  .asg-title{font-size:13px;font-weight:600;flex:1;min-width:140px;}
-  .asg-item.done .asg-title{text-decoration:line-through;}
-  .asg-meta{font-family:var(--mono);font-size:10.5px;color:var(--text-dim);}
-  .asg-tag{font-size:10.5px;background:var(--panel-2);border:1px solid var(--border-soft);border-radius:5px;padding:2px 7px;color:var(--text-dim);}
-  .asg-hours-input{width:110px;background:var(--bg-2);border:1px solid var(--u-4);border-radius:6px;color:var(--text);padding:5px 7px;font-size:11.5px;}
+  .btn{background:var(--text);color:var(--bg-elevated);border:none;border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;transition:opacity var(--dur) var(--ease);}
+  .btn:hover{opacity:.82;}
+  .btn-outline{background:none;border:1px solid var(--border-strong);color:var(--text);border-radius:8px;padding:8px 16px;font-size:13px;font-weight:600;transition:all var(--dur) var(--ease);}
+  .btn-outline:hover{background:var(--bg-hover);}
 
-  .fade-in{animation:fadeIn .18s ease;}
-  @keyframes fadeIn{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:none;}}
-  .footer-note{text-align:center;color:var(--text-faint);font-size:11px;margin-top:26px;font-family:var(--mono);}
+  /* ---- schedule ---- */
+  .sched-row{display:flex;align-items:center;gap:16px;padding:10px 2px;border-bottom:1px solid var(--border);font-size:14px;border-radius:8px;}
+  .sched-row:last-child{border-bottom:none;}
+  .sched-row .p{width:46px;color:var(--text-3);font-size:12.5px;flex-shrink:0;}
+  .sched-row .s-main{flex:1;min-width:0;}
+  .sched-row .s-teacher{font-size:12.5px;color:var(--text-3);margin-top:1px;}
+  .sched-row.today{background:var(--bg-tint);padding-left:10px;padding-right:10px;margin:0 -10px;border-bottom:none;}
+  .sched-row.today .s-main{font-weight:600;}
+
+  .week-grid{display:grid;grid-template-columns:52px repeat(5,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:var(--r-md);overflow:hidden;}
+  .week-grid .wcell{background:var(--bg-elevated);padding:9px 8px;font-size:12px;min-height:52px;}
+  .week-grid .whead{background:var(--bg);font-size:12px;color:var(--text-3);font-weight:600;text-align:center;padding:9px 4px;}
+  .week-grid .whead.today{color:var(--accent);}
+  .week-grid .wcell.today{background:var(--bg-tint);}
+  .week-grid .wcell .subj{font-weight:600;font-size:12.5px;}
+  .week-grid .wcell .who{color:var(--text-3);font-size:11px;margin-top:2px;}
+  .week-grid .wcell.empty{color:var(--text-3);}
+  .week-stack{display:none;}
+  @media(max-width:639px){
+    .week-grid-wrap{display:none;}
+    .week-stack{display:flex;flex-direction:column;gap:20px;}
+    .week-day-block h3{font-size:13px;color:var(--text-2);margin:0 0 8px;font-weight:600;}
+  }
+
+  /* ---- teachers ---- */
+  .teacher-group{margin-bottom:28px;}
+  .teacher-group-label{font-size:12.5px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;}
+  .teacher-row{border-bottom:1px solid var(--border);}
+  .teacher-row:last-child{border-bottom:none;}
+  .teacher-head{display:flex;align-items:center;gap:12px;padding:13px 2px;background:none;border:none;width:100%;text-align:left;color:var(--text);}
+  .teacher-head:hover{background:var(--bg-hover);border-radius:8px;}
+  .teacher-name{font-size:15px;font-weight:500;flex:1;}
+  .teacher-subj{font-size:12.5px;color:var(--text-3);}
+  .teacher-dot{width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0;}
+  .teacher-chevron{color:var(--text-3);transition:transform var(--dur) var(--ease);flex-shrink:0;}
+  .teacher-row.open .teacher-chevron{transform:rotate(90deg);}
+  .teacher-detail{overflow:hidden;max-height:0;transition:max-height 260ms var(--ease);}
+  .teacher-row.open .teacher-detail{max-height:4000px;}
+  .teacher-detail-inner{padding:6px 2px 28px;}
+
+  .field-label{font-size:12px;color:var(--text-3);margin-bottom:7px;display:flex;align-items:center;gap:6px;}
+  .field-box{margin-bottom:18px;}
+  .field-box textarea{width:100%;min-height:44px;resize:vertical;background:var(--bg-elevated);border:1px solid var(--border);border-radius:9px;color:var(--text);padding:10px 12px;font-size:13.5px;line-height:1.55;}
+  .field-box textarea::placeholder{color:var(--text-3);}
+
+  .corner-tabs{display:flex;gap:4px;margin-bottom:14px;border-bottom:1px solid var(--border);}
+  .corner-tab{background:none;border:none;padding:9px 4px;margin-right:18px;font-size:13.5px;color:var(--text-3);border-bottom:2px solid transparent;margin-bottom:-1px;transition:color var(--dur) var(--ease),border-color var(--dur) var(--ease);}
+  .corner-tab.active{color:var(--text);border-color:var(--text);font-weight:600;}
+  .corner-tab .n{color:var(--text-3);font-weight:400;}
+
+  .add-row{display:flex;gap:8px;margin-bottom:12px;}
+  .add-row input{flex:1;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:8px 11px;font-size:13px;min-width:0;}
+  .add-row input::placeholder{color:var(--text-3);}
+
+  .rep-row{display:flex;align-items:center;gap:8px;margin-top:6px;}
+  .rep-btn{font-size:11px;background:none;border:1px solid var(--border);color:var(--text-2);border-radius:6px;padding:3px 9px;}
+  .rep-count{font-size:11px;color:var(--text-3);}
+  .retry-btn{width:20px;height:20px;border-radius:6px;border:1px solid var(--border);background:none;color:var(--text-3);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .retry-btn.on{color:var(--danger);border-color:var(--danger);background:rgba(214,69,69,.08);}
+  .meter{position:relative;height:3px;background:var(--border);border-radius:3px;margin-top:8px;max-width:220px;}
+  .meter .fill{position:absolute;left:0;top:0;height:100%;border-radius:3px;background:var(--accent);}
+
+  .ot-box{border:1px dashed var(--border-strong);border-radius:var(--r-md);padding:16px;margin-top:28px;}
+  .ot-head{font-size:13.5px;font-weight:600;margin-bottom:10px;}
+  .ot-textarea{width:100%;min-height:72px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px;font-size:13px;margin-bottom:10px;}
+  .ot-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+  .ot-status{font-size:11.5px;color:var(--text-3);}
+  .ot-note{font-size:11px;color:var(--text-3);margin-top:9px;line-height:1.5;}
+
+  .completed-link{font-size:12.5px;color:var(--text-3);background:none;border:none;padding:0;margin-top:6px;}
+  .completed-link:hover{color:var(--text);}
+
+  /* ---- notices ---- */
+  .notice-row{display:flex;gap:12px;padding:11px 0;border-bottom:1px solid var(--border);}
+  .notice-row:last-child{border-bottom:none;}
+  .notice-kind{font-size:11px;color:var(--text-3);width:34px;flex-shrink:0;padding-top:1px;}
+  .notice-main{flex:1;min-width:0;}
+  .notice-tag{font-size:12px;color:var(--text-3);}
+  .notice-title{font-size:13.5px;margin-top:1px;}
+  .notice-snippet{font-size:12.5px;color:var(--text-2);margin-top:3px;line-height:1.5;}
+
+  /* ---- planner ---- */
+  .date-nav{display:flex;align-items:center;gap:14px;margin-bottom:30px;}
+  .date-nav button{width:30px;height:30px;border-radius:8px;border:1px solid var(--border);background:none;color:var(--text-2);display:flex;align-items:center;justify-content:center;}
+  .date-nav button:hover{background:var(--bg-hover);color:var(--text);}
+  .date-nav .dn-label{font-size:18px;font-weight:600;flex:1;}
+  .date-nav .dn-today{font-size:12px;color:var(--text-3);background:none;border:1px solid var(--border);border-radius:7px;padding:5px 10px;width:auto;height:auto;}
+
+  /* ---- settings modal ---- */
+  .modal-overlay{position:fixed;inset:0;background:rgba(20,20,22,.32);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:80;padding:20px;}
+  .modal{background:var(--bg-elevated);border:1px solid var(--border);border-radius:16px;max-width:520px;width:100%;max-height:82vh;display:flex;flex-direction:column;box-shadow:0 20px 60px rgba(0,0,0,.14);}
+  .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 22px;border-bottom:1px solid var(--border);}
+  .modal-head h2{margin:0;font-size:16px;font-weight:600;}
+  .modal-close{width:26px;height:26px;border-radius:8px;border:none;background:none;color:var(--text-2);display:flex;align-items:center;justify-content:center;}
+  .modal-close:hover{background:var(--bg-hover);color:var(--text);}
+  .modal-body{padding:8px 22px 24px;overflow-y:auto;}
+  .settings-group{padding:20px 0;border-bottom:1px solid var(--border);}
+  .settings-group:last-child{border-bottom:none;}
+  .settings-group h3{font-size:13px;font-weight:600;margin:0 0 4px;}
+  .settings-group .desc{font-size:12px;color:var(--text-3);line-height:1.6;margin-bottom:12px;}
+  .settings-group input[type=password],.settings-group input[type=text]{width:100%;background:var(--bg);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:9px 11px;font-size:13px;margin-bottom:10px;}
+  .settings-actions{display:flex;gap:8px;align-items:center;}
+  .settings-status{font-size:11.5px;color:var(--good);margin-left:2px;}
+  .rotation-row{margin-bottom:14px;}
+  .rotation-row:last-child{margin-bottom:0;}
+  .rotation-label{font-size:13px;font-weight:500;margin-bottom:3px;}
+  .rotation-status{font-size:12px;color:var(--text-3);margin-bottom:8px;}
+  .rotation-actions{display:flex;gap:6px;flex-wrap:wrap;}
+  .rot-btn{background:var(--bg);border:1px solid var(--border);color:var(--text-2);border-radius:7px;padding:6px 11px;font-size:11.5px;}
+  .rot-btn.active{background:var(--text);border-color:var(--text);color:var(--bg-elevated);font-weight:600;}
+
+  .completed-modal .item{padding:11px 0;border-bottom:1px solid var(--border);}
+  .completed-modal .item:last-child{border-bottom:none;}
+  .completed-modal .item-top{display:flex;align-items:flex-start;gap:10px;}
+  .completed-modal .item-text{flex:1;font-size:13.5px;}
+  .completed-modal .item-date{font-size:11px;color:var(--text-3);margin-top:4px;}
+
+  .fade-in{animation:fadeIn 220ms var(--ease);}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
 </style>
 </head>
 <body>
-<div id="app"></div>
+<div class="app-shell" id="shell">
+  <div id="sidebarSlot"></div>
+  <main class="main"><div class="main-inner" id="app"></div></main>
+</div>
+<div id="bottomNavSlot"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
 <script>
@@ -213,26 +271,25 @@
 
   /* ============ 과목/교사 구조 ============ */
   const CATS = {
-    math:{ label:"수학과", tint:"var(--math)", subjects:{
+    math:{ label:"수학과", subjects:{
       math:{ label:"수학", teachers:["손중록","조유경","이상규"] }
     }},
-    sci:{ label:"과학과", tint:"var(--sci)", subjects:{
+    sci:{ label:"과학과", subjects:{
       bio:{ label:"생명과학", teachers:["옥창규","김성진","문우현"] },
       earth:{ label:"지구과학", teachers:["배태윤","이윤아"] },
       phys:{ label:"물리학", teachers:["박준홍","김정석"] },
       chem:{ label:"화학", teachers:["우희정","이형준","이승재"] }
     }},
-    cs:{ label:"정보과학과", tint:"var(--cs)", subjects:{
+    cs:{ label:"정보과학과", subjects:{
       cs:{ label:"정보과학", teachers:["윤수진"] }
     }},
-    hum:{ label:"문과", tint:"var(--hum)", subjects:{
+    hum:{ label:"문과", subjects:{
       kor:{ label:"국어", teachers:["정진실","주혜령"] },
       eng:{ label:"영어", teachers:["김윤주","이계화"] },
       soc:{ label:"사회", teachers:["김현심"] }
     }}
   };
 
-  // 반복 풀이 기반 모델을 적용할 과목 (수학/물리 자료 기준: "많이 풀어라" 강조)
   const REPETITION_SUBJECTS = new Set(['math|math','sci|phys']);
   function isRepetitionSubject(c,s){ return REPETITION_SUBJECTS.has(c+'|'+s); }
 
@@ -287,8 +344,6 @@
   const DAYNAME = ['일','월','화','수','목','금','토'];
 
   /* ============ 선생님 주간 로테이션 ============ */
-  // 물리학·지구과학은 같은 과목을 두 선생님이 나눠 맡는데, 한 주는 A가 2타임/B가 1타임,
-  // 다음 주는 반대로 바뀐다. 기준 주(아래 REFERENCE_MONDAY)에는 double 쪽이 2타임을 맡은 걸로 본다.
   const ROTATION_REFERENCE_MONDAY = new Date(2026,7,17); // 2026-08-17(월) 기준 시간표
   const ROTATIONS = {
     'sci|phys':  { double:'박준홍', single:'김정석', label:'물리학' },
@@ -301,8 +356,8 @@
     x.setDate(x.getDate() + (day===0 ? -6 : 1-day));
     return x;
   }
-  function weekIsSwapped(){
-    const weeks = Math.round((mondayOf(now).getTime() - mondayOf(ROTATION_REFERENCE_MONDAY).getTime()) / (7*86400000));
+  function weekIsSwappedFor(date){
+    const weeks = Math.round((mondayOf(date).getTime() - mondayOf(ROTATION_REFERENCE_MONDAY).getTime()) / (7*86400000));
     return ((weeks % 2) + 2) % 2 === 1;
   }
   function getRotationOverrides(){
@@ -314,49 +369,48 @@
     if(teacherOrNull) o[rotKey] = teacherOrNull; else delete o[rotKey];
     try{ localStorage.setItem(ROTATION_OVERRIDE_KEY, JSON.stringify(o)); }catch(e){}
   }
-  function currentDoubleTeacher(rotKey){
+  function currentDoubleTeacherFor(rotKey, date){
     const cfg = ROTATIONS[rotKey]; if(!cfg) return null;
     const override = getRotationOverride(rotKey);
     if(override) return override;
-    return weekIsSwapped() ? cfg.single : cfg.double;
+    return weekIsSwappedFor(date) ? cfg.single : cfg.double;
   }
-  function resolveRotTeacher(rotKey, role){
+  function currentDoubleTeacher(rotKey){ return currentDoubleTeacherFor(rotKey, now); }
+  function resolveRotTeacherFor(rotKey, role, date){
     const cfg = ROTATIONS[rotKey]; if(!cfg) return null;
-    const dbl = currentDoubleTeacher(rotKey);
+    const dbl = currentDoubleTeacherFor(rotKey, date);
     if(role==='double') return dbl;
     return dbl===cfg.double ? cfg.single : cfg.double;
   }
-  function entryTeacher(entry){
+  function entryTeacherFor(entry, date){
     if(entry.teacher) return entry.teacher;
-    if(entry.rot && entry.role) return resolveRotTeacher(entry.rot, entry.role);
+    if(entry.rot && entry.role) return resolveRotTeacherFor(entry.rot, entry.role, date);
     return null;
   }
+  function entryTeacher(entry){ return entryTeacherFor(entry, now); }
 
   const CORNERS = [
-    {key:'review', label:'수업 내용 복습', glyph:'▣', color:'var(--math)'},
-    {key:'self',   label:'자율 학습 필요', glyph:'◇', color:'var(--sci)'},
-    {key:'tips',   label:'꿀팁 · 조언',   glyph:'✺', color:'var(--hum)'}
+    {key:'review', label:'수업 복습'},
+    {key:'self',   label:'자율 학습'},
+    {key:'tips',   label:'꿀팁'}
   ];
 
-  const TEACHER_INDEX = {};
+  const TEACHER_LIST = [];
   Object.keys(CATS).forEach(c=>{
     Object.keys(CATS[c].subjects).forEach(s=>{
       CATS[c].subjects[s].teachers.forEach(t=>{
-        (TEACHER_INDEX[t] = TEACHER_INDEX[t]||[]).push({cat:c,subj:s});
+        TEACHER_LIST.push({cat:c, subj:s, teacher:t, key:c+'|'+s+'|'+t, catLabel:CATS[c].label, subjLabel:CATS[c].subjects[s].label});
       });
     });
   });
 
   function tKey(c,s,t){ return c+'|'+s+'|'+t; }
+  function splitTKey(key){ const [cat,subj,teacher]=key.split('|'); return {cat,subj,teacher}; }
   function defaultTeacherData(){ return {review:[],self:[],tips:[],completed:[],memo:'',info:''}; }
   function buildSkeleton(){
     const teachers = {};
-    Object.keys(CATS).forEach(c=>{
-      Object.keys(CATS[c].subjects).forEach(s=>{
-        CATS[c].subjects[s].teachers.forEach(t=>{ teachers[tKey(c,s,t)] = defaultTeacherData(); });
-      });
-    });
-    return { teachers, assignments:[], dailyCapacity:5, importedClassroomIds:[] };
+    TEACHER_LIST.forEach(x=>{ teachers[x.key] = defaultTeacherData(); });
+    return { teachers, assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[] };
   }
   function genId(){ return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
@@ -364,18 +418,26 @@
   const now = new Date();
   const todayKey = DAYKEY[now.getDay()] || null;
   const todayPeriods = todayKey ? TIMETABLE[todayKey] : [];
-  const todayDateStr = `${now.getFullYear()}년 ${now.getMonth()+1}월 ${now.getDate()}일 (${DAYNAME[now.getDay()]})`;
+  const DAYNAME_FULL = ['일요일','월요일','화요일','수요일','목요일','금요일','토요일'];
+  const MONTHNAME = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+  const todayDateStr = `${MONTHNAME[now.getMonth()]} ${now.getDate()}일 ${DAYNAME_FULL[now.getDay()]}`;
   const todayMid = new Date(now.getFullYear(),now.getMonth(),now.getDate()).getTime();
+  function toISODate(d){ return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; }
+  const todayISO = toISODate(now);
   const TODAY_TEACHERS = new Set(todayPeriods.map(entryTeacher).filter(Boolean));
   function hasClassToday(t){ return TODAY_TEACHERS.has(t); }
+  function greetingWord(){
+    const h = now.getHours();
+    if(h<11) return '좋은 아침이야';
+    if(h<17) return '좋은 오후야';
+    return '좋은 저녁이야';
+  }
 
-  /* ============ 저장소 (localStorage — 완전 독립 로컬 저장) ============ */
+  /* ============ 저장소 ============ */
   const STORAGE_KEY = 'organizer-data-v2';
   const API_KEY_STORAGE_KEY = 'organizer-anthropic-key';
   const GITHUB_TOKEN_STORAGE_KEY = 'organizer-github-token';
-  // Gmail의 Classroom 알림을 감시하는 예약 작업이 이 저장소의 이 파일에 새 과제를 커밋해두면,
-  // 앱이 열릴 때마다(온라인 상태일 때) 여기서 읽어와 로컬 과제 목록에 자동 병합한다.
-  // 저장소가 비공개라서 raw.githubusercontent.com은 쓸 수 없고, 인증된 Contents API를 써야 한다.
+  const STUDENT_NAME_KEY = 'organizer-student-name';
   const CLASSROOM_SYNC_API_URL = 'https://api.github.com/repos/jundaleee/dshs-organizer/contents/data/assignments-sync.json?ref=claude/jundal-study-organizer-migration-3z0jb8';
   let storageOK = true;
   (function testStorage(){
@@ -397,35 +459,30 @@
     try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(state.data)); }
     catch(e){ storageOK = false; render(); }
   }
-  function getApiKey(){
-    try{ return localStorage.getItem(API_KEY_STORAGE_KEY) || ''; }catch(e){ return ''; }
-  }
+  function getApiKey(){ try{ return localStorage.getItem(API_KEY_STORAGE_KEY) || ''; }catch(e){ return ''; } }
   function setApiKey(key){
-    try{
-      if(key) localStorage.setItem(API_KEY_STORAGE_KEY, key);
-      else localStorage.removeItem(API_KEY_STORAGE_KEY);
-    }catch(e){}
+    try{ if(key) localStorage.setItem(API_KEY_STORAGE_KEY, key); else localStorage.removeItem(API_KEY_STORAGE_KEY); }catch(e){}
   }
-  function getGithubToken(){
-    try{ return localStorage.getItem(GITHUB_TOKEN_STORAGE_KEY) || ''; }catch(e){ return ''; }
-  }
+  function getGithubToken(){ try{ return localStorage.getItem(GITHUB_TOKEN_STORAGE_KEY) || ''; }catch(e){ return ''; } }
   function setGithubToken(token){
-    try{
-      if(token) localStorage.setItem(GITHUB_TOKEN_STORAGE_KEY, token);
-      else localStorage.removeItem(GITHUB_TOKEN_STORAGE_KEY);
-    }catch(e){}
+    try{ if(token) localStorage.setItem(GITHUB_TOKEN_STORAGE_KEY, token); else localStorage.removeItem(GITHUB_TOKEN_STORAGE_KEY); }catch(e){}
+  }
+  function getStudentName(){ try{ return localStorage.getItem(STUDENT_NAME_KEY) || ''; }catch(e){ return ''; } }
+  function setStudentName(name){
+    try{ if(name) localStorage.setItem(STUDENT_NAME_KEY, name); else localStorage.removeItem(STUDENT_NAME_KEY); }catch(e){}
   }
 
   /* ============ 상태 ============ */
   const state = {
-    view:'home', cat:null, subj:null, teacher:null,
-    data:buildSkeleton(), modal:null
+    view:'home', expandedTeacher:null, cornerTab:'review',
+    modal:null, completedTeacherKey:null,
+    plannerDate: todayISO,
+    data:buildSkeleton()
   };
-  function getTD(){ return state.data.teachers[tKey(state.cat,state.subj,state.teacher)]; }
+  function getTD(key){ return state.data.teachers[key]; }
 
   /* ============ 복습 우선순위 모델 ============ */
   const CURVE = [1,3,7,14,30];
-  const STAGE_COLORS = ['var(--u-new)','var(--u-1)','var(--u-2)','var(--u-3)','var(--u-4)','var(--u-5)'];
   const STAGE_LABELS = ['신규','1차 복습','2차 복습','3차 복습','4차 복습','망각위험'];
   function urgency(item, repetitionMode){
     const days = Math.max(0, Math.floor((Date.now()-item.createdAt)/86400000));
@@ -438,180 +495,255 @@
     }
     if(item.retry){ stage = 5; suffix = ' · 재교정 필요'; }
     const pct = Math.min(100, (days/30)*100);
-    return {days, stage, color:STAGE_COLORS[stage], label:`D+${days} · ${STAGE_LABELS[stage]}${suffix}`, pct};
+    return {days, stage, label:`D+${days} · ${STAGE_LABELS[stage]}${suffix}`, pct};
   }
 
-  /* ============ 렌더 ============ */
-  const app = document.getElementById('app');
-  let otStatus = '';
-  let settingsStatus = '';
-  let githubTokenStatus = '';
-  let syncStatus = '';
+  /* ============ 아이콘 ============ */
+  function icon(name){
+    const p = {
+      home:'<path d="M3 10.5 10 4l7 6.5"/><path d="M5 9v7h10V9"/>',
+      tasks:'<path d="M4 6h1.5M4 10h1.5M4 14h1.5"/><path d="M8 6h8M8 10h8M8 14h5"/>',
+      assignments:'<path d="M5 3h7l3 3v11H5z"/><path d="M12 3v3h3"/><path d="M7.5 10h5M7.5 13h5"/>',
+      schedule:'<rect x="3.5" y="4" width="13" height="12" rx="2"/><path d="M3.5 8h13M7 2.5v3M13 2.5v3"/>',
+      teachers:'<circle cx="10" cy="7" r="3"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6"/>',
+      planner:'<rect x="3.5" y="4" width="13" height="12" rx="2"/><path d="M3.5 8h13M6.5 11h1M9.5 11h1M12.5 11h1M6.5 13.5h1M9.5 13.5h1"/>',
+      settings:'<circle cx="10" cy="10" r="2.6"/><path d="M10 3v2M10 15v2M3 10h2M15 10h2M5 5l1.4 1.4M13.6 13.6 15 15M15 5l-1.4 1.4M6.4 13.6 5 15"/>',
+      check:'<path d="M4 8.5 7 11.5 12 5"/>',
+      close:'<path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/>',
+      trash:'<path d="M4 5.5h8M7 5.5V4h2v1.5M5 5.5l.5 6.5h5l.5-6.5"/>',
+      chevron:'<path d="M6 4l4 4-4 4"/>',
+      arrowLeft:'<path d="M9 4L5 8l4 4"/>',
+      arrowRight:'<path d="M7 4l4 4-4 4"/>',
+      retry:'<path d="M3.5 8a4.5 4.5 0 1 1 1.4 3.3M3.5 8V5M3.5 8h3"/>'
+    }[name] || '';
+    return `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
+  }
 
+  const NAV_ITEMS = [
+    {view:'home', label:'홈', icon:'home'},
+    {view:'tasks', label:'할 일', icon:'tasks'},
+    {view:'assignments', label:'과제', icon:'assignments'},
+    {view:'schedule', label:'시간표', icon:'schedule'},
+    {view:'teachers', label:'선생님', icon:'teachers'},
+    {view:'planner', label:'플래너', icon:'planner'}
+  ];
+
+  /* ============ 렌더 ============ */
   function render(){
-    let html = renderTopbar();
-    if(!storageOK) html += renderStorageWarn();
-    html += renderNav();
+    const sidebarSlot = document.getElementById('sidebarSlot');
+    const bottomNavSlot = document.getElementById('bottomNavSlot');
+    sidebarSlot.innerHTML = renderSidebar();
+    bottomNavSlot.innerHTML = renderBottomNav();
+
+    const app = document.getElementById('app');
+    let html = renderTopbarMini();
+    if(!storageOK) html += `<div class="empty" style="color:var(--danger);">이 브라우저에서는 로컬 저장이 안 돼(시크릿 모드이거나 저장 공간이 꽉 찼을 수 있어). 작업 후 꼭 설정에서 내보내기로 백업해줘.</div>`;
     if(state.view==='home') html += renderHome();
+    else if(state.view==='tasks') html += renderTasksPage();
     else if(state.view==='assignments') html += renderAssignmentsPage();
-    else if(state.view==='timetable') html += renderTimetablePage();
-    else html += renderTeacherPage();
-    if(state.modal==='completed') html += renderCompletedModal();
-    if(state.modal==='settings') html += renderSettingsModal();
+    else if(state.view==='schedule') html += renderSchedulePage();
+    else if(state.view==='teachers') html += renderTeachersPage();
+    else if(state.view==='planner') html += renderPlannerPage();
     app.innerHTML = html;
+
+    document.querySelectorAll('.modal-overlay').forEach(el=>el.remove());
+    if(state.modal==='settings') document.body.insertAdjacentHTML('beforeend', renderSettingsModal());
+    else if(state.modal==='completed') document.body.insertAdjacentHTML('beforeend', renderCompletedModal());
+
     const apiKeyInput = document.getElementById('apiKeyInput');
     if(apiKeyInput) apiKeyInput.value = getApiKey();
     const githubTokenInput = document.getElementById('githubTokenInput');
     if(githubTokenInput) githubTokenInput.value = getGithubToken();
+    const nameInput = document.getElementById('studentNameInput');
+    if(nameInput) nameInput.value = getStudentName();
   }
 
-  function renderTopbar(){
-    return `
-    <div class="topbar">
-      <div class="brand" data-action="goHome">
-        <div class="brand-mark">JS</div>
-        <div class="brand-text"><b>Jundal's Study Organizer</b><span>자기주도학습 워크벤치</span></div>
-      </div>
-      <div class="topbar-right">
-        <span class="chip">${todayDateStr}</span>
-        <button class="iconbtn" data-action="openSettings">⚙ 설정</button>
-        <button class="iconbtn" data-action="exportData">⇩ 내보내기</button>
-        <button class="iconbtn" data-action="importTrigger">⇧ 가져오기</button>
+  function renderSidebar(){
+    const items = NAV_ITEMS.map(n=>`
+      <button class="nav-item ${state.view===n.view?'active':''}" data-action="goView" data-view="${n.view}">
+        ${icon(n.icon)}<span class="label">${n.label}</span>
+      </button>`).join('');
+    return `<div class="sidebar">
+      <div class="sidebar-brand" data-action="goView" data-view="home"><div class="mark"></div><b>Study Organizer</b></div>
+      <div class="nav-list">${items}</div>
+      <div class="sidebar-foot">
+        <button class="nav-item" data-action="openSettings">${icon('settings')}<span class="label">설정</span></button>
       </div>
     </div>`;
   }
-  function renderNav(){
-    return `<div class="navrow">
-      <button class="navbtn ${state.view==='home'?'active':''}" data-action="goHome">홈</button>
-      <button class="navbtn ${state.view==='assignments'?'active':''}" data-action="goAssignments">과제</button>
-      <button class="navbtn ${state.view==='timetable'?'active':''}" data-action="goTimetable">전체 시간표</button>
-    </div>`;
+  function renderBottomNav(){
+    const items = NAV_ITEMS.map(n=>`
+      <button class="nav-item ${state.view===n.view?'active':''}" data-action="goView" data-view="${n.view}">
+        ${icon(n.icon)}<span class="label">${n.label}</span>
+      </button>`).join('');
+    return `<div class="bottom-nav">${items}</div>`;
   }
-  function renderStorageWarn(){
-    return `<div class="storage-warn">⚠ 이 브라우저에서는 로컬 저장이 안 돼(시크릿 모드이거나 저장 공간이 꽉 찼을 수 있어). 작업 후 꼭 <b>내보내기</b>로 백업해줘.</div>`;
+  function renderTopbarMini(){
+    return `<div class="topbar-mini"><button class="iconbtn" data-action="openSettings">${icon('settings')} 설정</button></div>`;
   }
 
+  /* ---- Home ---- */
   function renderHome(){
-    let stripHtml = '';
-    if(todayPeriods.length===0){
-      stripHtml = `<div class="reco-empty">주말이야. 등교일 시간표는 없어.</div>`;
-    } else {
-      stripHtml = `<div class="today-list">` + todayPeriods.map(p=>{
-        const pTeacher = entryTeacher(p);
-        return `<div class="p-row ${p.subject?'linked':''}">
-          <div class="pn">${p.p}교시</div>
-          <div class="ps">${p.subject||p.label}</div>
-          <div class="pt">${pTeacher? pTeacher+(p.room?' · '+p.room:'') : (p.room||'')}</div>
-        </div>`;
-      }).join('') + `</div>`;
-    }
-
-    let queue = [];
-    Object.keys(CATS).forEach(c=>{
-      Object.keys(CATS[c].subjects).forEach(s=>{
-        CATS[c].subjects[s].teachers.forEach(t=>{
-          const td = state.data.teachers[tKey(c,s,t)];
-          const rep = isRepetitionSubject(c,s);
-          td.review.forEach(item=>{
-            const u = urgency(item, rep);
-            const today = hasClassToday(t);
-            queue.push({c,s,t,item,u,today, score:u.days+(today?6:0)+(item.retry?50:0)});
-          });
-        });
+    const name = getStudentName();
+    let reviewQueue = [];
+    TEACHER_LIST.forEach(x=>{
+      const td = state.data.teachers[x.key];
+      const rep = isRepetitionSubject(x.cat,x.subj);
+      td.review.forEach(item=>{
+        const u = urgency(item, rep);
+        const today = hasClassToday(x.teacher);
+        reviewQueue.push({x, item, u, today, score:u.days+(today?6:0)+(item.retry?50:0)});
       });
     });
-    queue.sort((a,b)=>b.score-a.score);
-    queue = queue.slice(0,8);
+    reviewQueue.sort((a,b)=>b.score-a.score);
+    const taskPreview = reviewQueue.slice(0,5);
 
-    let recoHtml = queue.length===0
-      ? `<div class="reco-empty">아직 '수업 내용 복습'에 등록된 항목이 없어.</div>`
-      : queue.map(q=>`<div class="reco-item" data-action="selectTeacher" data-cat="${q.c}" data-subj="${q.s}" data-teacher="${q.t}">
-          <div class="reco-dot" style="background:${CATS[q.c].tint}"></div>
-          <div class="reco-main">
-            <div class="reco-path">${CATS[q.c].label} · ${CATS[q.c].subjects[q.s].label} · ${q.t}${q.today?' · 오늘 수업':''}</div>
-            <div class="reco-text">${escapeHtml(q.item.text)}</div>
+    const tasksHtml = taskPreview.length===0
+      ? `<div class="empty">오늘 예정된 복습이 없어.</div>`
+      : taskPreview.map(q=>`<div class="task-row" data-key="${q.x.key}">
+          <button class="task-check" data-action="completeItem" data-corner="review" data-key="${q.x.key}" data-id="${q.item.id}">${icon('check')}</button>
+          <div class="task-body">
+            <div class="task-tag">${q.x.subjLabel} · ${q.x.teacher}</div>
+            <div class="task-text">${escapeHtml(q.item.text)}</div>
           </div>
-          <div class="badge" style="background:${q.u.color};color:#0B0E14">${q.u.label}</div>
+          <div class="task-badge">${q.u.label.split(' · ')[0]}</div>
         </div>`).join('');
 
-    // 과제 미니 패널
-    const cap = state.data.dailyCapacity||5;
     const pending = state.data.assignments.filter(a=>!a.done).sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
-    let demand = 0;
+    const cap = state.data.dailyCapacity||5;
+    let demand=0;
     pending.forEach(a=>{
       if(typeof a.estHours!=='number') return;
-      const dueMid = new Date(a.dueDate+'T00:00:00').getTime();
-      const dLeft = Math.round((dueMid-todayMid)/86400000);
-      demand += a.estHours / Math.max(1,dLeft);
+      const dLeft = Math.round((new Date(a.dueDate+'T00:00:00').getTime()-todayMid)/86400000);
+      demand += a.estHours/Math.max(1,dLeft);
     });
     const over = demand>cap;
-    const asgMini = pending.slice(0,4).map(a=>{
-      const dueMid = new Date(a.dueDate+'T00:00:00').getTime();
-      const dLeft = Math.round((dueMid-todayMid)/86400000);
-      const ddLabel = dLeft>0?`D-${dLeft}`:(dLeft===0?'D-DAY':`D+${Math.abs(dLeft)} 지남`);
-      const ddColor = dLeft>0?'var(--sci)':(dLeft===0?'var(--u-4)':'var(--u-5)');
-      return `<div class="reco-item" data-action="goAssignments">
-        <div class="reco-dot" style="background:${ddColor}"></div>
-        <div class="reco-main"><div class="reco-text">${escapeHtml(a.title)}</div></div>
-        <div class="badge" style="background:${ddColor};color:#0B0E14">${ddLabel}</div>
-      </div>`;
-    }).join('');
+    const asgHtml = pending.length===0
+      ? `<div class="empty">등록된 과제가 없어.</div>`
+      : pending.map(a=>assignmentRowHtml(a,false)).join('');
 
-    const catTiles = Object.keys(CATS).map(c=>{
-      const cat = CATS[c];
-      const subjCount = Object.keys(cat.subjects).length;
-      const teacherCount = Object.values(cat.subjects).reduce((a,s)=>a+s.teachers.length,0);
-      const todayCount = Object.values(cat.subjects).reduce((a,s)=>a+s.teachers.filter(hasClassToday).length,0);
-      return `<button class="cat-tile" style="--tint:${cat.tint}" data-action="selectCat" data-cat="${c}">
-        ${todayCount>0?`<div class="today-badge">오늘 수업 ${todayCount}</div>`:''}
-        <h3>${cat.label}</h3><p>과목 ${subjCount} · 선생님 ${teacherCount}</p>
-      </button>`;
-    }).join('');
-
-    return `
-    <div class="fade-in">
-      <div class="today-panel">
-        <div class="today-head"><h2>오늘 시간표</h2><button class="linkbtn" data-action="goTimetable">전체 시간표 →</button></div>
-        ${stripHtml}
-      </div>
-      <div class="reco-panel">
-        <h2>오늘의 추천 복습</h2>
-        <div class="reco-sub">망각곡선(1·3·7·14·30일) + 오늘 수업 여부 + 재교정 플래그로 우선순위를 매겼어</div>
-        ${recoHtml}
-      </div>
-      <div class="asg-panel">
-        <div class="today-head"><h2>다가오는 과제</h2><button class="linkbtn" data-action="goAssignments">과제 관리 →</button></div>
-        ${pending.length>0?`<div class="cap-banner ${over?'over':'ok'}">하루 평균 ${demand.toFixed(1)}시간 필요 / 가용 ${cap}시간 ${over?'— 초과, 일정 조정 필요':'— 여유 있음'}</div>`:''}
-        ${pending.length===0?`<div class="reco-empty">등록된 과제가 없어</div>`:asgMini}
-      </div>
-      <div class="cat-grid">${catTiles}</div>
-    </div>`;
-  }
-
-  function renderTimetablePage(){
-    const days=['mon','tue','wed','thu','fri'];
-    let maxP=0; days.forEach(d=>TIMETABLE[d].forEach(p=>{ if(p.p>maxP) maxP=p.p; }));
-    let rows='';
-    for(let p=1;p<=maxP;p++){
-      rows += `<tr><td class="tt-p">${p}교시</td>` + days.map(d=>{
-        const e = TIMETABLE[d].find(x=>x.p===p);
-        const todayCls = d===todayKey?'today':'';
-        if(!e) return `<td class="tt-cell empty ${todayCls}">—</td>`;
-        const label = e.subject||e.label;
-        const eTeacher = entryTeacher(e);
-        const sub = eTeacher? `${eTeacher}${e.room?' · '+e.room:''}` : (e.room||'');
-        return `<td class="tt-cell ${todayCls}"><div class="tt-subj">${label}</div><div class="tt-sub">${sub}</div></td>`;
-      }).join('') + `</tr>`;
+    let scheduleHtml;
+    if(todayPeriods.length===0){
+      scheduleHtml = `<div class="empty">오늘은 등교일이 아니야.</div>`;
+    } else {
+      scheduleHtml = todayPeriods.map(p=>{
+        const t = entryTeacher(p);
+        return `<div class="sched-row">
+          <div class="p">${p.p}교시</div>
+          <div class="s-main">${p.subject||p.label}${t?`<div class="s-teacher">${t}${p.room?' · '+p.room:''}</div>`:(p.room?`<div class="s-teacher">${p.room}</div>`:'')}</div>
+        </div>`;
+      }).join('');
     }
+
+    const notices = (state.data.notices||[]).slice().sort((a,b)=>(b.postedAt||'').localeCompare(a.postedAt||'')).slice(0,5);
+    const noticesHtml = notices.length===0 ? '' : `
+      <div class="section">
+        <div class="section-head"><div class="section-title">공지 · 자료</div></div>
+        ${notices.map(n=>`<div class="notice-row">
+          <div class="notice-kind">${n.type==='material'?'자료':'공지'}</div>
+          <div class="notice-main">
+            <div class="notice-tag">${escapeHtml(n.tag||'')}</div>
+            <div class="notice-title">${escapeHtml(n.title||'')}</div>
+          </div>
+        </div>`).join('')}
+      </div>`;
+
     return `<div class="fade-in">
-      <div class="crumb"><span class="seg" data-action="goHome">홈</span><span class="sep">›</span><span class="seg cur">전체 시간표</span></div>
-      <div class="tt-wrap"><table class="tt-table">
-        <thead><tr><th></th>${days.map(d=>`<th class="${d===todayKey?'today':''}">${DAYLABEL[d]}</th>`).join('')}</tr></thead>
-        <tbody>${rows}</tbody>
-      </table></div>
+      <div class="home-date">${todayDateStr}</div>
+      <h1 class="home-greeting">${greetingWord()}${name?', '+escapeHtml(name):''}</h1>
+
+      <div class="section">
+        <div class="section-head"><div class="section-title">오늘 할 일</div><button class="section-link" data-action="goView" data-view="tasks">전체 보기</button></div>
+        ${tasksHtml}
+      </div>
+
+      <div class="section">
+        <div class="section-head"><div class="section-title">임박한 과제</div><button class="section-link" data-action="goView" data-view="assignments">전체 보기</button></div>
+        ${pending.length>0?`<div class="cap-line ${over?'over':''}">하루 평균 <b>${demand.toFixed(1)}시간</b> 필요 · 가용 ${cap}시간 ${over?'— 초과':''}</div>`:''}
+        ${asgHtml}
+      </div>
+
+      <div class="section">
+        <div class="section-head"><div class="section-title">오늘 시간표</div><button class="section-link" data-action="goView" data-view="schedule">전체 보기</button></div>
+        ${scheduleHtml}
+      </div>
+
+      ${noticesHtml}
     </div>`;
   }
 
+  function assignmentRowHtml(a, showCheckbox){
+    const dueMid = new Date(a.dueDate+'T00:00:00').getTime();
+    const dLeft = Math.round((dueMid-todayMid)/86400000);
+    const ddLabel = dLeft>0?`D-${dLeft}`:(dLeft===0?'D-DAY':`D+${Math.abs(dLeft)} 지남`);
+    const ddClass = dLeft<0?'overdue':(dLeft<=2?'urgent':'');
+    const hasHours = typeof a.estHours==='number';
+    let sub = '';
+    if(!a.done){
+      if(hasHours){
+        const perDay = a.estHours/Math.max(1,dLeft);
+        sub = `<div class="asg-sub">총 ${a.estHours}h · 하루 ${perDay.toFixed(1)}h 필요</div>`;
+      } else {
+        sub = `<input type="number" class="asg-hours-input" step="0.5" min="0.5" placeholder="예상 h 입력" data-role="asgHours" data-id="${a.id}">`;
+      }
+    }
+    return `<div class="asg-row ${a.done?'done':''}">
+      <button class="asg-check" data-action="toggleAssignment" data-id="${a.id}">${icon('check')}</button>
+      <div class="asg-main">
+        ${a.tag?`<div class="asg-tag">${escapeHtml(a.tag)}</div>`:''}
+        <div class="asg-title">${escapeHtml(a.title)}</div>
+        ${sub}
+      </div>
+      <div class="asg-due ${ddClass}">${ddLabel}</div>
+      <button class="asg-del" title="삭제" data-action="deleteAssignment" data-id="${a.id}">${icon('trash')}</button>
+    </div>`;
+  }
+
+  /* ---- Tasks ---- */
+  function renderTasksPage(){
+    let review = [], self = [];
+    TEACHER_LIST.forEach(x=>{
+      const td = state.data.teachers[x.key];
+      const rep = isRepetitionSubject(x.cat,x.subj);
+      td.review.forEach(item=> review.push({x,item,u:urgency(item,rep)}));
+      td.self.forEach(item=> self.push({x,item}));
+    });
+    review.sort((a,b)=>b.u.days-a.u.days);
+    self.sort((a,b)=>b.item.createdAt-a.item.createdAt);
+
+    const reviewHtml = review.length===0 ? `<div class="empty">복습할 항목이 없어.</div>` : review.map(q=>`
+      <div class="task-row">
+        <button class="task-check" data-action="completeItem" data-corner="review" data-key="${q.x.key}" data-id="${q.item.id}">${icon('check')}</button>
+        <div class="task-body">
+          <div class="task-tag">${q.x.subjLabel} · ${q.x.teacher}</div>
+          <div class="task-text">${escapeHtml(q.item.text)}</div>
+        </div>
+        <div class="task-badge">${q.u.label.split(' · ')[0]}</div>
+      </div>`).join('');
+
+    const selfHtml = self.length===0 ? `<div class="empty">자율 학습 항목이 없어.</div>` : self.map(q=>`
+      <div class="task-row">
+        <button class="task-check" data-action="completeItem" data-corner="self" data-key="${q.x.key}" data-id="${q.item.id}">${icon('check')}</button>
+        <div class="task-body">
+          <div class="task-tag">${q.x.subjLabel} · ${q.x.teacher}</div>
+          <div class="task-text">${escapeHtml(q.item.text)}</div>
+        </div>
+      </div>`).join('');
+
+    return `<div class="fade-in">
+      <div class="page-head"><h1>할 일</h1></div>
+      <div class="section">
+        <div class="section-head"><div class="section-title">수업 복습</div></div>
+        ${reviewHtml}
+      </div>
+      <div class="section">
+        <div class="section-head"><div class="section-title">자율 학습</div></div>
+        ${selfHtml}
+      </div>
+    </div>`;
+  }
+
+  /* ---- Assignments ---- */
   function renderAssignmentsPage(){
     const cap = state.data.dailyCapacity||5;
     const sorted = state.data.assignments.slice().sort((a,b)=>{
@@ -619,197 +751,237 @@
       return a.dueDate.localeCompare(b.dueDate);
     });
     let demand=0;
-    const rows = sorted.map(a=>{
-      const dueMid = new Date(a.dueDate+'T00:00:00').getTime();
-      const dLeft = Math.round((dueMid-todayMid)/86400000);
-      const ddLabel = dLeft>0?`D-${dLeft}`:(dLeft===0?'D-DAY':`D+${Math.abs(dLeft)} 지남`);
-      const ddColor = dLeft>0?'var(--sci)':(dLeft===0?'var(--u-4)':'var(--u-5)');
-      const hasHours = typeof a.estHours==='number';
-      let perDayTxt='';
-      if(!a.done){
-        if(hasHours){
-          const perDay = a.estHours/Math.max(1,dLeft);
-          demand += perDay;
-          perDayTxt = `<span class="asg-meta">하루 ${perDay.toFixed(1)}h 필요</span>`;
-        } else {
-          perDayTxt = `<input type="number" class="asg-hours-input" step="0.5" min="0.5" placeholder="예상 h 입력" data-role="asgHours" data-id="${a.id}">`;
-        }
-      }
-      return `<div class="asg-item ${a.done?'done':''}">
-        <div class="asg-title">${escapeHtml(a.title)}</div>
-        ${a.tag?`<span class="asg-tag">${escapeHtml(a.tag)}</span>`:''}
-        <span class="asg-meta">${a.dueDate} · 총 ${hasHours? a.estHours+'h' : '시간 미입력'}</span>
-        ${perDayTxt}
-        <span class="badge" style="background:${ddColor};color:#0B0E14">${ddLabel}</span>
-        <div class="item-actions">
-          <button class="icb ok" title="완료 토글" data-action="toggleAssignment" data-id="${a.id}">✓</button>
-          <button class="icb no" title="삭제" data-action="deleteAssignment" data-id="${a.id}">×</button>
-        </div>
-      </div>`;
-    }).join('');
+    sorted.forEach(a=>{
+      if(a.done || typeof a.estHours!=='number') return;
+      const dLeft = Math.round((new Date(a.dueDate+'T00:00:00').getTime()-todayMid)/86400000);
+      demand += a.estHours/Math.max(1,dLeft);
+    });
     const over = demand>cap;
+    const rows = sorted.map(a=>assignmentRowHtml(a,true)).join('');
 
     return `<div class="fade-in">
-      <div class="crumb"><span class="seg" data-action="goHome">홈</span><span class="sep">›</span><span class="seg cur">과제</span></div>
-      <div class="cap-input-row">
+      <div class="page-head"><h1>과제</h1><button class="iconbtn" data-action="syncClassroom">${icon('arrowRight')} Classroom 동기화</button></div>
+      ${syncStatus?`<div class="empty" style="padding:0 0 14px;">${syncStatus}</div>`:''}
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2);margin-bottom:18px;">
         <span>하루 가용 학습시간</span>
-        <input type="number" min="0.5" step="0.5" value="${cap}" data-role="capacity">
+        <input type="number" min="0.5" step="0.5" value="${cap}" data-role="capacity" style="width:60px;background:var(--bg-elevated);border:1px solid var(--border);border-radius:7px;color:var(--text);padding:5px 7px;">
         <span>시간</span>
-        <button class="iconbtn" style="margin-left:auto;" data-action="syncClassroom">🔄 Classroom 동기화</button>
       </div>
-      ${syncStatus?`<div class="hint" style="margin-bottom:10px;">${syncStatus}</div>`:''}
-      ${state.data.assignments.length>0?`<div class="cap-banner ${over?'over':'ok'}">현재 대기 과제 기준 하루 평균 <b>${demand.toFixed(1)}시간</b> 필요 (가용 ${cap}시간) ${over?`— 초과 ${(demand-cap).toFixed(1)}시간, 일부 과제 미루거나 시간 늘려야 함`:`— 여유 ${(cap-demand).toFixed(1)}시간`}</div>`:''}
-      <div class="asg-panel" style="padding:14px;">
-        <div class="asg-form">
-          <input type="text" class="title" id="asgTitle" placeholder="과제명 (예: 물리 수행평가 보고서)">
-          <input type="date" class="date" id="asgDate">
-          <input type="number" class="hours" id="asgHours" step="0.5" min="0.5" placeholder="예상 h">
-          <input type="text" class="tag" id="asgTag" placeholder="관련 과목(선택)">
-          <button data-action="addAssignment">추가</button>
-        </div>
-        <div class="asg-list">${sorted.length===0?`<div class="item-empty">등록된 과제가 없어</div>`:rows}</div>
+      ${state.data.assignments.length>0?`<div class="cap-line ${over?'over':''}">대기 과제 기준 하루 평균 <b>${demand.toFixed(1)}시간</b> 필요 (가용 ${cap}시간) ${over?`— 초과 ${(demand-cap).toFixed(1)}시간`:`— 여유 ${(cap-demand).toFixed(1)}시간`}</div>`:''}
+      <div class="asg-form">
+        <input type="text" class="title" id="asgTitle" placeholder="과제명">
+        <input type="date" class="date" id="asgDate">
+        <input type="number" class="hours" id="asgHours" step="0.5" min="0.5" placeholder="예상 h">
+        <input type="text" class="tag" id="asgTag" placeholder="관련 과목">
+        <button class="btn" data-action="addAssignment">추가</button>
       </div>
+      ${sorted.length===0?`<div class="empty">등록된 과제가 없어.</div>`:rows}
     </div>`;
   }
 
-  function renderTeacherPage(){
-    const cat = CATS[state.cat];
-    const subjTabs = Object.keys(cat.subjects).map(s=>{
-      const active = s===state.subj?'active':'';
-      const anyToday = cat.subjects[s].teachers.some(hasClassToday);
-      return `<button class="tab ${active}" style="--tint:${cat.tint}" data-action="selectSubj" data-cat="${state.cat}" data-subj="${s}">${anyToday?'<span class="dot"></span>':''}${cat.subjects[s].label}</button>`;
-    }).join('');
+  /* ---- Schedule ---- */
+  function renderSchedulePage(){
+    const days=['mon','tue','wed','thu','fri'];
+    let maxP=0; days.forEach(d=>TIMETABLE[d].forEach(p=>{ if(p.p>maxP) maxP=p.p; }));
 
-    let teacherTabs='', content='';
-    if(state.subj){
-      const subj = cat.subjects[state.subj];
-      teacherTabs = subj.teachers.map(t=>{
-        const active = t===state.teacher?'active':'';
-        return `<button class="tab ${active}" style="--tint:${cat.tint}" data-action="selectTeacher" data-cat="${state.cat}" data-subj="${state.subj}" data-teacher="${t}">${hasClassToday(t)?'<span class="dot"></span>':''}${t} 선생님</button>`;
-      }).join('');
-      if(state.teacher) content = renderCorners();
+    const gridCells = [];
+    for(let p=1;p<=maxP;p++){
+      gridCells.push(`<div class="wcell" style="display:flex;align-items:center;color:var(--text-3);font-size:12px;">${p}교시</div>`);
+      days.forEach(d=>{
+        const e = TIMETABLE[d].find(x=>x.p===p);
+        const todayCls = d===todayKey?'today':'';
+        if(!e){ gridCells.push(`<div class="wcell empty ${todayCls}">—</div>`); return; }
+        const label = e.subject||e.label;
+        const t = entryTeacher(e);
+        gridCells.push(`<div class="wcell ${todayCls}"><div class="subj">${label}</div>${t?`<div class="who">${t}</div>`:''}</div>`);
+      });
     }
-
-    const crumb = `<div class="crumb">
-      <span class="seg" data-action="goHome">홈</span><span class="sep">›</span>
-      <span class="seg ${!state.subj?'cur':''}" data-action="selectCat" data-cat="${state.cat}">${cat.label}</span>
-      ${state.subj?`<span class="sep">›</span><span class="seg ${!state.teacher?'cur':''}" data-action="selectSubj" data-cat="${state.cat}" data-subj="${state.subj}">${cat.subjects[state.subj].label}</span>`:''}
-      ${state.teacher?`<span class="sep">›</span><span class="seg cur">${state.teacher} 선생님</span>`:''}
+    const grid = `<div class="week-grid" style="grid-template-columns:52px repeat(5,1fr);">
+      <div class="wcell whead"></div>
+      ${days.map(d=>`<div class="wcell whead ${d===todayKey?'today':''}">${DAYLABEL[d]}</div>`).join('')}
+      ${gridCells.join('')}
     </div>`;
+
+    const stack = `<div class="week-stack">${days.map(d=>{
+      const rows = TIMETABLE[d].map(e=>{
+        const label = e.subject||e.label;
+        const t = entryTeacher(e);
+        return `<div class="sched-row ${d===todayKey?'today':''}"><div class="p">${e.p}교시</div><div class="s-main">${label}${t?`<div class="s-teacher">${t}${e.room?' · '+e.room:''}</div>`:(e.room?`<div class="s-teacher">${e.room}</div>`:'')}</div></div>`;
+      }).join('');
+      return `<div class="week-day-block"><h3>${DAYLABEL[d]}요일</h3>${rows}</div>`;
+    }).join('')}</div>`;
 
     return `<div class="fade-in">
-      ${crumb}
-      <div class="tabrow">${subjTabs}</div>
-      ${state.subj?`<div class="tabrow">${teacherTabs}</div>`:''}
-      ${content}
-      <div class="footer-note">Jundal's Study Organizer · 데이터는 이 브라우저의 로컬 저장소에 저장돼</div>
-    </div>
-    ${state.teacher?`<button class="fab" data-action="openCompleted">☑ 완료 목록</button>`:''}`;
+      <div class="page-head"><h1>시간표</h1></div>
+      <div class="week-grid-wrap" style="overflow-x:auto;">${grid}</div>
+      ${stack}
+    </div>`;
   }
 
-  function renderCorners(){
-    const td = getTD();
-    const rep = isRepetitionSubject(state.cat, state.subj);
-
-    const infoBox = `<div class="info-box">
-      <label>ⓘ 수업 정보 — 담당 세부 내용 / 커리큘럼</label>
-      <textarea data-role="info" data-cat="${state.cat}" data-subj="${state.subj}" data-teacher="${state.teacher}"
-        placeholder="이 선생님이 어떤 세부 과목·단원을 가르치는지 적어둬">${escapeHtml(td.info)}</textarea>
-    </div>`;
-    const memoBox = `<div class="memo-box">
-      <label>✎ 메모 — 부족한 점 / 기억할 것</label>
-      <textarea data-role="memo" data-cat="${state.cat}" data-subj="${state.subj}" data-teacher="${state.teacher}"
-        placeholder="부족했던 부분이나 다음에 기억해야 할 것을 적어둬">${escapeHtml(td.memo)}</textarea>
-    </div>`;
-
-    const corners = CORNERS.map(cfg=>{
-      const list = td[cfg.key];
-      const itemsHtml = list.length===0
-        ? `<div class="item-empty">아직 항목이 없어</div>`
-        : list.slice().sort((a,b)=>b.createdAt-a.createdAt).map(it=>renderItem(it,cfg.key,rep)).join('');
-      return `<div class="corner">
-        <div class="corner-head">
-          <div class="corner-glyph" style="background:${cfg.color}">${cfg.glyph}</div>
-          <h4>${cfg.label}</h4><div class="corner-count">${list.length}</div>
-        </div>
-        <div class="add-row">
-          <input type="text" class="add-input" data-corner="${cfg.key}" placeholder="추가할 내용 입력 후 Enter">
-          <button data-action="addItem" data-corner="${cfg.key}">추가</button>
-        </div>
-        <div class="item-list">${itemsHtml}</div>
+  /* ---- Teachers ---- */
+  function renderTeachersPage(){
+    const groups = Object.keys(CATS).map(c=>{
+      const rows = TEACHER_LIST.filter(x=>x.cat===c).map(x=>{
+        const open = state.expandedTeacher===x.key;
+        return `<div class="teacher-row ${open?'open':''}">
+          <button class="teacher-head" data-action="toggleTeacher" data-key="${x.key}">
+            ${hasClassToday(x.teacher)?'<span class="teacher-dot"></span>':'<span style="width:6px;"></span>'}
+            <span class="teacher-name">${x.teacher}</span>
+            <span class="teacher-subj">${x.subjLabel}</span>
+            <span class="teacher-chevron">${icon('chevron')}</span>
+          </button>
+          <div class="teacher-detail">${open?renderTeacherDetail(x):''}</div>
+        </div>`;
+      }).join('');
+      return `<div class="teacher-group">
+        <div class="teacher-group-label">${CATS[c].label}</div>
+        ${rows}
       </div>`;
     }).join('');
 
-    const otBox = `<div class="ot-box">
-      <div class="ot-head">✦ OT 붙여넣기 → AI 자동 정리</div>
-      <textarea class="ot-textarea" id="otInput" placeholder="선생님이 OT에서 말씀하신 내용을 그대로 붙여넣어봐. 복습·자율학습·팁으로 자동 분류해서 추가해줘."></textarea>
-      <div class="ot-row">
-        <button data-action="otParse">AI로 정리해서 추가</button>
-        <span class="ot-status" id="otStatus">${otStatus}</span>
-      </div>
-      <div class="ot-note">※ Claude API 키가 필요해 — 우측 상단 <b>⚙ API 키</b>에서 등록해줘. 키는 이 브라우저에만 저장되고 내보내기 백업에는 포함되지 않아.</div>
+    return `<div class="fade-in">
+      <div class="page-head"><h1>선생님</h1></div>
+      ${groups}
     </div>`;
-
-    return infoBox + memoBox + `<div class="corners">${corners}</div>` + otBox;
   }
 
-  function renderItem(it, corner, rep){
-    let metaHtml='';
+  function renderTeacherDetail(x){
+    const td = getTD(x.key);
+    const rep = isRepetitionSubject(x.cat, x.subj);
+    const tab = state.cornerTab;
+
+    const tabsHtml = CORNERS.map(cfg=>`
+      <button class="corner-tab ${tab===cfg.key?'active':''}" data-action="setCornerTab" data-corner="${cfg.key}">${cfg.label} <span class="n">${td[cfg.key].length}</span></button>
+    `).join('');
+
+    const list = td[tab];
+    const itemsHtml = list.length===0
+      ? `<div class="empty">아직 항목이 없어.</div>`
+      : list.slice().sort((a,b)=>b.createdAt-a.createdAt).map(it=>teacherItemHtml(it, tab, rep, x.key)).join('');
+
+    return `<div class="teacher-detail-inner">
+      <div class="field-box">
+        <div class="field-label">수업 정보</div>
+        <textarea data-role="info" data-key="${x.key}" placeholder="이 선생님이 어떤 세부 과목·단원을 가르치는지 적어둬">${escapeHtml(td.info)}</textarea>
+      </div>
+      <div class="field-box">
+        <div class="field-label">메모</div>
+        <textarea data-role="memo" data-key="${x.key}" placeholder="부족했던 부분이나 기억할 것">${escapeHtml(td.memo)}</textarea>
+      </div>
+
+      <div class="corner-tabs">${tabsHtml}</div>
+      <div class="add-row">
+        <input type="text" class="add-input" data-key="${x.key}" data-corner="${tab}" placeholder="추가할 내용 입력 후 Enter">
+        <button class="btn-outline" data-action="addItem" data-key="${x.key}" data-corner="${tab}">추가</button>
+      </div>
+      <div>${itemsHtml}</div>
+      <button class="completed-link" data-action="openCompleted" data-key="${x.key}">완료 목록 (${td.completed.length}) →</button>
+
+      <div class="ot-box">
+        <div class="ot-head">OT 붙여넣기 → AI 자동 정리</div>
+        <textarea class="ot-textarea" id="otInput" placeholder="OT에서 들은 내용을 그대로 붙여넣으면 복습·자율학습·팁으로 자동 분류해서 추가해줘."></textarea>
+        <div class="ot-row">
+          <button class="btn-outline" data-action="otParse" data-key="${x.key}">AI로 정리해서 추가</button>
+          <span class="ot-status" id="otStatus">${otStatus}</span>
+        </div>
+        <div class="ot-note">Claude API 키가 필요해 — 설정에서 등록해줘.</div>
+      </div>
+    </div>`;
+  }
+
+  function teacherItemHtml(it, corner, rep, key){
+    let metaHtml = '';
     if(corner==='review'){
       const u = urgency(it, rep);
-      const ticks = CURVE.map(d=>`<div class="tick" style="left:${Math.min(100,(d/30)*100)}%"></div>`).join('');
-      const repsRow = rep ? `<div class="reps-row">
-        <button class="reps-btn" data-action="incReps" data-id="${it.id}">+ 풀이</button>
-        <span class="reps-count">풀이 ${it.reps||0}회</span>
-      </div>` : '';
-      metaHtml = `
-      <div class="meter">${ticks}<div class="fill" style="width:${u.pct}%;background:${u.color}"></div></div>
-      <div class="item-meta">
-        <span class="item-date">${fmtDate(it.createdAt)}</span>
-        <span class="badge" style="background:${u.color};color:#0B0E14">${u.label}</span>
-      </div>
-      ${repsRow}
-      <div class="item-meta"><span></span><button class="icb ${it.retry?'on':''}" title="재교정 필요 표시" data-action="toggleRetry" data-id="${it.id}">🔁</button></div>`;
-    } else {
-      metaHtml = `<div class="item-meta"><span class="item-date">${fmtDate(it.createdAt)}</span></div>`;
-    }
-    return `<div class="item">
-      <div class="item-top">
-        <div class="item-text">${escapeHtml(it.text)}</div>
-        <div class="item-actions">
-          <button class="icb ok" title="완료" data-action="completeItem" data-corner="${corner}" data-id="${it.id}">✓</button>
-          <button class="icb no" title="삭제" data-action="deleteItem" data-corner="${corner}" data-id="${it.id}">×</button>
+      const repsRow = rep ? `<div class="rep-row">
+        <button class="rep-btn" data-action="incReps" data-key="${key}" data-id="${it.id}">+ 풀이</button>
+        <span class="rep-count">풀이 ${it.reps||0}회</span>
+        <button class="retry-btn ${it.retry?'on':''}" title="재교정 필요" data-action="toggleRetry" data-key="${key}" data-id="${it.id}">${icon('retry')}</button>
+      </div>` : `<div class="rep-row"><button class="retry-btn ${it.retry?'on':''}" title="재교정 필요" data-action="toggleRetry" data-key="${key}" data-id="${it.id}">${icon('retry')}</button></div>`;
+      metaHtml = `<div class="meter"><div class="fill" style="width:${u.pct}%"></div></div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
+          <span class="task-badge">${u.label}</span>
         </div>
+        ${repsRow}`;
+    }
+    return `<div class="task-row">
+      <button class="task-check" data-action="completeItem" data-corner="${corner}" data-key="${key}" data-id="${it.id}">${icon('check')}</button>
+      <div class="task-body">
+        <div class="task-text">${escapeHtml(it.text)}</div>
+        ${metaHtml}
       </div>
-      ${metaHtml}
+      <button class="task-del" title="삭제" data-action="deleteItem" data-corner="${corner}" data-key="${key}" data-id="${it.id}">${icon('trash')}</button>
     </div>`;
   }
 
   function renderCompletedModal(){
-    const td = getTD();
+    const key = state.completedTeacherKey;
+    const td = getTD(key);
+    const x = TEACHER_LIST.find(t=>t.key===key);
     const groups = CORNERS.map(cfg=>{
       const items = td.completed.filter(c=>c.corner===cfg.key).sort((a,b)=>b.completedAt-a.completedAt);
       if(items.length===0) return '';
       const rows = items.map(it=>`<div class="item">
         <div class="item-top">
           <div class="item-text">${escapeHtml(it.text)}</div>
-          <div class="item-actions">
-            <button class="icb" title="복원" data-action="restoreItem" data-id="${it.id}">↺</button>
-            <button class="icb no" title="영구삭제" data-action="deletePermanent" data-id="${it.id}">×</button>
+          <div class="item-actions" style="display:flex;gap:4px;">
+            <button class="task-del" style="opacity:1;" title="복원" data-action="restoreItem" data-key="${key}" data-id="${it.id}">${icon('retry')}</button>
+            <button class="task-del" style="opacity:1;" title="영구삭제" data-action="deletePermanent" data-key="${key}" data-id="${it.id}">${icon('trash')}</button>
           </div>
         </div>
-        <div class="item-meta"><span class="item-date">완료: ${fmtDate(it.completedAt)}</span></div>
+        <div class="item-date">완료: ${fmtDate(it.completedAt)}</div>
       </div>`).join('');
-      return `<div class="modal-group"><h5>${cfg.label}</h5>${rows}</div>`;
+      return `<div style="margin-bottom:16px;"><div class="section-title" style="margin-bottom:8px;">${cfg.label}</div>${rows}</div>`;
     }).join('');
     return `<div class="modal-overlay" data-action="closeModal">
-      <div class="modal">
-        <div class="modal-head"><h3>완료된 항목 — ${state.teacher} 선생님</h3><button class="iconbtn" data-action="closeModal">닫기</button></div>
-        <div class="modal-body">${td.completed.length===0?`<div class="modal-empty">아직 완료한 항목이 없어</div>`:groups}</div>
+      <div class="modal completed-modal">
+        <div class="modal-head"><h2>완료 목록 — ${x?x.teacher:''} 선생님</h2><button class="modal-close" data-action="closeModal">${icon('close')}</button></div>
+        <div class="modal-body">${td.completed.length===0?`<div class="empty">아직 완료한 항목이 없어.</div>`:groups}</div>
       </div>
     </div>`;
   }
 
+  /* ---- Planner ---- */
+  function renderPlannerPage(){
+    const d = new Date(state.plannerDate+'T00:00:00');
+    const dow = d.getDay();
+    const dayKey = DAYKEY[dow] || null;
+    const periods = dayKey ? TIMETABLE[dayKey] : [];
+    const label = `${MONTHNAME[d.getMonth()]} ${d.getDate()}일 ${DAYNAME_FULL[dow]}`;
+
+    const dueToday = state.data.assignments.filter(a=>a.dueDate===state.plannerDate);
+    const asgHtml = dueToday.length===0 ? `<div class="empty">이 날 마감인 과제가 없어.</div>` : dueToday.map(a=>assignmentRowHtml(a,true)).join('');
+
+    let scheduleHtml;
+    if(periods.length===0){
+      scheduleHtml = `<div class="empty">등교일이 아니야.</div>`;
+    } else {
+      scheduleHtml = periods.map(p=>{
+        const t = entryTeacherFor(p, d);
+        return `<div class="sched-row"><div class="p">${p.p}교시</div><div class="s-main">${p.subject||p.label}${t?`<div class="s-teacher">${t}${p.room?' · '+p.room:''}</div>`:(p.room?`<div class="s-teacher">${p.room}</div>`:'')}</div></div>`;
+      }).join('');
+    }
+
+    return `<div class="fade-in">
+      <div class="page-head"><h1>플래너</h1></div>
+      <div class="date-nav">
+        <button data-action="plannerShift" data-delta="-1">${icon('arrowLeft')}</button>
+        <div class="dn-label">${label}</div>
+        <button data-action="plannerShift" data-delta="1">${icon('arrowRight')}</button>
+        <button class="dn-today" data-action="plannerToday">오늘</button>
+      </div>
+      <div class="section">
+        <div class="section-head"><div class="section-title">마감 과제</div></div>
+        ${asgHtml}
+      </div>
+      <div class="section">
+        <div class="section-head"><div class="section-title">시간표</div></div>
+        ${scheduleHtml}
+      </div>
+    </div>`;
+  }
+
+  /* ---- Settings ---- */
   function renderSettingsModal(){
     const rotationRows = Object.keys(ROTATIONS).map(rotKey=>{
       const cfg = ROTATIONS[rotKey];
@@ -817,7 +989,8 @@
       const dbl = currentDoubleTeacher(rotKey);
       const sgl = dbl===cfg.double ? cfg.single : cfg.double;
       return `<div class="rotation-row">
-        <div class="rotation-label">${cfg.label} <span class="rotation-status">— 이번 주 <b>${dbl}</b> 2타임 · ${sgl} 1타임 ${override?'(수동)':'(자동)'}</span></div>
+        <div class="rotation-label">${cfg.label}</div>
+        <div class="rotation-status">이번 주 — ${dbl} 2타임 · ${sgl} 1타임 ${override?'(수동)':'(자동)'}</div>
         <div class="rotation-actions">
           <button class="rot-btn ${!override?'active':''}" data-action="setRotation" data-rot="${rotKey}" data-val="">자동</button>
           <button class="rot-btn ${override===cfg.double?'active':''}" data-action="setRotation" data-rot="${rotKey}" data-val="${cfg.double}">${cfg.double} 2타임</button>
@@ -828,38 +1001,52 @@
 
     return `<div class="modal-overlay" data-action="closeModal">
       <div class="modal">
-        <div class="modal-head"><h3>설정</h3><button class="iconbtn" data-action="closeModal">닫기</button></div>
+        <div class="modal-head"><h2>설정</h2><button class="modal-close" data-action="closeModal">${icon('close')}</button></div>
         <div class="modal-body">
-          <div class="modal-group">
-            <h5>Claude API 키</h5>
-            <div class="settings-row">
-              <label>ANTHROPIC API KEY</label>
-              <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
-              <div class="hint">OT 붙여넣기 자동 분류 기능에만 쓰여. console.anthropic.com에서 발급받은 키를 넣어줘. 이 브라우저의 로컬 저장소에만 저장되고, 내보내기 백업 파일에는 포함되지 않아 — 다른 기기에서는 다시 입력해야 해.</div>
-            </div>
+          <div class="settings-group">
+            <h3>이름</h3>
+            <div class="desc">홈 화면 인사말에 쓰여. (예: "좋은 아침이야, 준혁")</div>
+            <input type="text" id="studentNameInput" placeholder="이름">
             <div class="settings-actions">
-              <button data-action="saveApiKey">저장</button>
-              <button class="danger" data-action="clearApiKey">삭제</button>
+              <button class="btn-outline" data-action="saveStudentName">저장</button>
             </div>
-            <div class="settings-status">${settingsStatus}</div>
           </div>
-          <div class="modal-group">
-            <h5>GitHub 동기화 토큰</h5>
-            <div class="settings-row">
-              <label>GITHUB TOKEN (read-only)</label>
-              <input type="password" id="githubTokenInput" placeholder="github_pat_..." autocomplete="off" spellcheck="false">
-              <div class="hint">Classroom 과제 자동 동기화용이야. 저장소가 비공개라서 필요해. github.com/settings/personal-access-tokens/new 에서 이 저장소(dshs-organizer) 하나만, Contents 권한을 Read-only로 선택해서 발급받아줘. 이 브라우저에만 저장되고 내보내기 백업에는 포함되지 않아.</div>
-            </div>
+
+          <div class="settings-group">
+            <h3>Claude API 키</h3>
+            <div class="desc">오직 <b>선생님 상세 화면의 "OT 붙여넣기 → AI 자동 정리"</b> 기능에서만 쓰여. 이 브라우저에서 api.anthropic.com으로 직접 요청을 보낼 때만 사용되고, 그 외 어디에도 전송되지 않아. console.anthropic.com에서 발급받아줘. 이 브라우저에만 저장되고 내보내기 백업에는 포함되지 않아.</div>
+            <input type="password" id="apiKeyInput" placeholder="sk-ant-..." autocomplete="off" spellcheck="false">
             <div class="settings-actions">
-              <button data-action="saveGithubToken">저장</button>
-              <button class="danger" data-action="clearGithubToken">삭제</button>
+              <button class="btn-outline" data-action="saveApiKey">저장</button>
+              <button class="btn-outline" data-action="clearApiKey">삭제</button>
+              <span class="settings-status">${settingsStatus}</span>
             </div>
-            <div class="settings-status">${githubTokenStatus}</div>
           </div>
-          <div class="modal-group">
-            <h5>선생님 로테이션</h5>
-            <div class="hint" style="margin-bottom:10px;">물리학·지구과학은 2타임 담당 선생님이 매주 바뀌어. 방학 등으로 자동 계산이 실제와 어긋나면 여기서 직접 맞춰줘.</div>
+
+          <div class="settings-group">
+            <h3>GitHub 동기화 토큰</h3>
+            <div class="desc">오직 <b>과제 탭의 "Classroom 동기화"</b> 기능에서만 쓰여. 비공개 저장소의 동기화 파일(data/assignments-sync.json)을 읽어올 때만 사용돼. github.com/settings/personal-access-tokens/new 에서 dshs-organizer 저장소 하나만, Contents: Read-only 권한으로 발급받아줘.</div>
+            <input type="password" id="githubTokenInput" placeholder="github_pat_..." autocomplete="off" spellcheck="false">
+            <div class="settings-actions">
+              <button class="btn-outline" data-action="saveGithubToken">저장</button>
+              <button class="btn-outline" data-action="clearGithubToken">삭제</button>
+              <span class="settings-status">${githubTokenStatus}</span>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h3>선생님 로테이션</h3>
+            <div class="desc">물리학·지구과학은 2타임 담당이 매주 바뀌어. 방학 등으로 어긋나면 여기서 직접 맞춰줘.</div>
             ${rotationRows}
+          </div>
+
+          <div class="settings-group">
+            <h3>데이터</h3>
+            <div class="desc">정기적으로 내보내기 백업을 해두는 걸 추천해.</div>
+            <div class="settings-actions">
+              <button class="btn-outline" data-action="exportData">내보내기</button>
+              <button class="btn-outline" data-action="importTrigger">가져오기</button>
+            </div>
           </div>
         </div>
       </div>
@@ -868,48 +1055,48 @@
 
   /* ============ 유틸 ============ */
   function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
-  function fmtDate(ts){ const d=new Date(ts); return `${d.getMonth()+1}/${d.getDate()} 등록`; }
+  function fmtDate(ts){ const d=new Date(ts); return `${d.getMonth()+1}/${d.getDate()}`; }
 
   /* ============ 액션: 코너 항목 ============ */
-  function addItem(corner, text){
+  function addItem(key, corner, text){
     text = text.trim(); if(!text) return;
-    const td = getTD();
+    const td = getTD(key);
     const item = {id:genId(), text, createdAt:Date.now()};
     if(corner==='review'){ item.reps=0; item.retry=false; }
     td[corner].push(item);
     persist(); render();
   }
-  function completeItem(corner, id){
-    const td = getTD();
+  function completeItem(key, corner, id){
+    const td = getTD(key);
     const idx = td[corner].findIndex(i=>i.id===id); if(idx<0) return;
     const [it] = td[corner].splice(idx,1);
     td.completed.push({...it, corner, completedAt:Date.now()});
     persist(); render();
   }
-  function deleteItem(corner, id){
-    const td = getTD();
+  function deleteItem(key, corner, id){
+    const td = getTD(key);
     td[corner] = td[corner].filter(i=>i.id!==id);
     persist(); render();
   }
-  function restoreItem(id){
-    const td = getTD();
+  function restoreItem(key, id){
+    const td = getTD(key);
     const idx = td.completed.findIndex(i=>i.id===id); if(idx<0) return;
     const [it] = td.completed.splice(idx,1);
     delete it.completedAt; const corner = it.corner; delete it.corner;
     td[corner].push(it); persist(); render();
   }
-  function deletePermanent(id){
-    const td = getTD();
+  function deletePermanent(key, id){
+    const td = getTD(key);
     td.completed = td.completed.filter(i=>i.id!==id);
     persist(); render();
   }
-  function incReps(id){
-    const td = getTD();
+  function incReps(key, id){
+    const td = getTD(key);
     const it = td.review.find(i=>i.id===id); if(!it) return;
     it.reps = (it.reps||0)+1; persist(); render();
   }
-  function toggleRetry(id){
-    const td = getTD();
+  function toggleRetry(key, id){
+    const td = getTD(key);
     const it = td.review.find(i=>i.id===id); if(!it) return;
     it.retry = !it.retry; persist(); render();
   }
@@ -933,46 +1120,39 @@
     persist(); render();
   }
 
-  /* ============ 액션: 설정(API 키) ============ */
+  /* ============ 액션: 설정 ============ */
+  let settingsStatus = '', githubTokenStatus = '', otStatus = '', syncStatus = '';
   function saveApiKey(){
     const input = document.getElementById('apiKeyInput');
     const val = input ? input.value.trim() : '';
     if(!val){ settingsStatus = '키를 입력해줘.'; render(); return; }
-    setApiKey(val);
-    settingsStatus = '저장했어.';
-    render();
+    setApiKey(val); settingsStatus = '저장했어.'; render();
   }
-  function clearApiKey(){
-    setApiKey('');
-    settingsStatus = '삭제했어.';
-    render();
-  }
+  function clearApiKey(){ setApiKey(''); settingsStatus = '삭제했어.'; render(); }
   function saveGithubToken(){
     const input = document.getElementById('githubTokenInput');
     const val = input ? input.value.trim() : '';
     if(!val){ githubTokenStatus = '토큰을 입력해줘.'; render(); return; }
     setGithubToken(val);
-    githubTokenStatus = '저장했어. 과제 탭에서 "Classroom 동기화"를 눌러 확인해봐.';
+    githubTokenStatus = '저장했어. 과제 탭에서 동기화를 확인해봐.';
     render();
     syncClassroom(false);
   }
-  function clearGithubToken(){
-    setGithubToken('');
-    githubTokenStatus = '삭제했어.';
+  function clearGithubToken(){ setGithubToken(''); githubTokenStatus = '삭제했어.'; render(); }
+  function saveStudentName(){
+    const input = document.getElementById('studentNameInput');
+    setStudentName(input ? input.value.trim() : '');
     render();
   }
 
   /* ============ 액션: OT AI 정리 ============ */
-  async function otParse(){
+  async function otParse(key){
     const ta = document.getElementById('otInput');
     const statusEl = document.getElementById('otStatus');
     const text = ta.value.trim();
     if(!text) return;
     const apiKey = getApiKey();
-    if(!apiKey){
-      statusEl.textContent = 'API 키가 필요해 — 우측 상단 ⚙ API 키에서 먼저 등록해줘.';
-      return;
-    }
+    if(!apiKey){ statusEl.textContent = 'API 키가 필요해 — 설정에서 먼저 등록해줘.'; return; }
     statusEl.textContent = '정리 중...';
     try{
       const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -1003,7 +1183,7 @@ ${text}`}]
       const raw = (data.content||[]).map(b=>b.text||'').join('').trim();
       const clean = raw.replace(/^```json/i,'').replace(/```$/,'').trim();
       const parsed = JSON.parse(clean);
-      const td = getTD();
+      const td = getTD(key);
       const t = Date.now();
       (parsed.review||[]).forEach(x=> td.review.push({id:genId(), text:x, createdAt:t, reps:0, retry:false}));
       (parsed.self||[]).forEach(x=> td.self.push({id:genId(), text:x, createdAt:t}));
@@ -1020,44 +1200,49 @@ ${text}`}]
   async function syncClassroom(manual){
     const token = getGithubToken();
     if(!token){
-      if(manual){ syncStatus = 'GitHub 토큰이 필요해 — 저장소가 비공개라서 그래. ⚙ 설정에서 등록해줘.'; render(); }
+      if(manual){ syncStatus = 'GitHub 토큰이 필요해 — 저장소가 비공개라서 그래. 설정에서 등록해줘.'; render(); }
       return;
     }
     if(manual){ syncStatus = '동기화 중...'; render(); }
     try{
       const res = await fetch(CLASSROOM_SYNC_API_URL + '&t=' + Date.now(), {
         cache:'no-store',
-        headers:{
-          'Authorization': 'Bearer ' + token,
-          'Accept': 'application/vnd.github.raw+json'
-        }
+        headers:{ 'Authorization': 'Bearer ' + token, 'Accept': 'application/vnd.github.raw+json' }
       });
       if(res.status===401 || res.status===403) throw new Error('토큰이 유효하지 않거나 권한이 없어');
       if(!res.ok) throw new Error('HTTP '+res.status);
       const payload = await res.json();
-      const incoming = Array.isArray(payload.assignments) ? payload.assignments : [];
-      const known = new Set(state.data.importedClassroomIds || []);
-      let added = 0, skippedNoDate = 0;
-      incoming.forEach(item=>{
-        if(!item || !item.id || known.has(item.id)) return;
+      const incomingAsg = Array.isArray(payload.assignments) ? payload.assignments : [];
+      const incomingNotices = Array.isArray(payload.notices) ? payload.notices : [];
+      const knownAsg = new Set(state.data.importedClassroomIds || []);
+      const knownNotices = new Set(state.data.importedNoticeIds || []);
+      let addedAsg = 0, skippedNoDate = 0, addedNotices = 0;
+      incomingAsg.forEach(item=>{
+        if(!item || !item.id || knownAsg.has(item.id)) return;
         if(!item.dueDate || !DATE_RE.test(item.dueDate)){ skippedNoDate++; return; }
         state.data.assignments.push({
-          id: genId(),
-          title: (item.title || '제목 없음').trim(),
-          dueDate: item.dueDate,
+          id: genId(), title: (item.title || '제목 없음').trim(), dueDate: item.dueDate,
           estHours: (typeof item.estHours==='number' && item.estHours>0) ? item.estHours : null,
-          tag: (item.tag || 'Classroom').trim(),
-          done:false,
-          createdAt: Date.now(),
-          source:'classroom-sync'
+          tag: (item.tag || 'Classroom').trim(), done:false, createdAt: Date.now(), source:'classroom-sync'
         });
         state.data.importedClassroomIds.push(item.id);
-        known.add(item.id);
-        added++;
+        knownAsg.add(item.id); addedAsg++;
       });
-      if(added>0) persist();
-      if(manual) syncStatus = added>0 ? `${added}개 새 과제를 불러왔어${skippedNoDate>0?` (기한 불명확 ${skippedNoDate}개 제외)`:''}.` : '새로 불러올 과제가 없어.';
-      if(added>0) render();
+      incomingNotices.forEach(item=>{
+        if(!item || !item.id || knownNotices.has(item.id)) return;
+        state.data.notices.push({
+          id: genId(), type: item.type==='material'?'material':'notice',
+          title:(item.title||'').trim(), tag:(item.tag||'').trim(),
+          postedAt: item.postedAt || new Date().toISOString(), snippet:(item.snippet||'').trim()
+        });
+        state.data.importedNoticeIds.push(item.id);
+        knownNotices.add(item.id); addedNotices++;
+      });
+      if(addedAsg>0 || addedNotices>0) persist();
+      if(manual) syncStatus = (addedAsg>0||addedNotices>0)
+        ? `과제 ${addedAsg}개, 공지·자료 ${addedNotices}개를 불러왔어${skippedNoDate>0?` (기한 불명확 ${skippedNoDate}개 제외)`:''}.`
+        : '새로 불러올 항목이 없어.';
+      if(addedAsg>0 || addedNotices>0) render();
     }catch(err){
       if(manual) syncStatus = `동기화 실패 — ${err.message || '오프라인이거나 알 수 없는 오류'}.`;
     }
@@ -1082,12 +1267,13 @@ ${text}`}]
           state.data = {
             teachers: Object.assign(skeleton.teachers, parsed.teachers||{}),
             assignments: parsed.assignments || [],
+            notices: parsed.notices || [],
             dailyCapacity: parsed.dailyCapacity || 5,
-            importedClassroomIds: parsed.importedClassroomIds || []
+            importedClassroomIds: parsed.importedClassroomIds || [],
+            importedNoticeIds: parsed.importedNoticeIds || []
           };
         } else {
-          // 구버전(평평한 teacher map) 백업 호환
-          state.data = { teachers: Object.assign(skeleton.teachers, parsed), assignments:[], dailyCapacity:5, importedClassroomIds:[] };
+          state.data = { teachers: Object.assign(skeleton.teachers, parsed), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[] };
         }
         persist(); render();
       }catch(err){ alert('파일을 읽지 못했어. JSON 형식이 맞는지 확인해줘.'); }
@@ -1096,63 +1282,71 @@ ${text}`}]
   }
 
   /* ============ 이벤트 위임 ============ */
-  app.addEventListener('click', function(e){
+  document.body.addEventListener('click', function(e){
     const el = e.target.closest('[data-action]'); if(!el) return;
-    // 모달 배경(overlay) 클릭으로만 닫히게 하고, 모달 내부 클릭이 버블링돼서
-    // 배경의 data-action에 잡히는 건 막는다 (내부 버튼은 자기 자신의 data-action으로 이미 처리됨)
     if(el.dataset.action==='closeModal' && el.classList.contains('modal-overlay') && e.target!==el) return;
     switch(el.dataset.action){
-      case 'goHome': state.view='home'; state.cat=null; state.subj=null; state.teacher=null; state.modal=null; render(); break;
-      case 'goAssignments': state.view='assignments'; state.modal=null; render(); break;
-      case 'goTimetable': state.view='timetable'; state.modal=null; render(); break;
-      case 'selectCat': state.view='teacher'; state.cat=el.dataset.cat; state.subj=null; state.teacher=null; state.modal=null; render(); break;
-      case 'selectSubj': state.view='teacher'; state.cat=el.dataset.cat; state.subj=el.dataset.subj; state.teacher=null; state.modal=null; render(); break;
-      case 'selectTeacher': state.view='teacher'; state.cat=el.dataset.cat; state.subj=el.dataset.subj; state.teacher=el.dataset.teacher; state.modal=null; render(); break;
-      case 'addItem': { const input = el.parentElement.querySelector('.add-input'); addItem(el.dataset.corner, input.value); break; }
-      case 'completeItem': completeItem(el.dataset.corner, el.dataset.id); break;
-      case 'deleteItem': deleteItem(el.dataset.corner, el.dataset.id); break;
-      case 'restoreItem': restoreItem(el.dataset.id); break;
-      case 'deletePermanent': deletePermanent(el.dataset.id); break;
-      case 'incReps': incReps(el.dataset.id); break;
-      case 'toggleRetry': toggleRetry(el.dataset.id); break;
-      case 'openCompleted': state.modal='completed'; render(); break;
-      case 'openSettings': settingsStatus=''; state.modal='settings'; render(); break;
+      case 'goView': state.view=el.dataset.view; render(); break;
+      case 'toggleTeacher': {
+        const k = el.dataset.key;
+        state.expandedTeacher = state.expandedTeacher===k ? null : k;
+        state.cornerTab = 'review';
+        render();
+        break;
+      }
+      case 'setCornerTab': state.cornerTab = el.dataset.corner; render(); break;
+      case 'addItem': { const input = el.parentElement.querySelector('.add-input'); addItem(el.dataset.key, el.dataset.corner, input.value); break; }
+      case 'completeItem': completeItem(el.dataset.key, el.dataset.corner, el.dataset.id); break;
+      case 'deleteItem': deleteItem(el.dataset.key, el.dataset.corner, el.dataset.id); break;
+      case 'restoreItem': restoreItem(el.dataset.key, el.dataset.id); break;
+      case 'deletePermanent': deletePermanent(el.dataset.key, el.dataset.id); break;
+      case 'incReps': incReps(el.dataset.key, el.dataset.id); break;
+      case 'toggleRetry': toggleRetry(el.dataset.key, el.dataset.id); break;
+      case 'openCompleted': state.completedTeacherKey = el.dataset.key; state.modal='completed'; render(); break;
+      case 'openSettings': settingsStatus=''; githubTokenStatus=''; state.modal='settings'; render(); break;
       case 'closeModal': state.modal=null; render(); break;
       case 'exportData': exportData(); break;
       case 'importTrigger': document.getElementById('importFile').click(); break;
       case 'addAssignment': addAssignment(); break;
       case 'toggleAssignment': toggleAssignment(el.dataset.id); break;
       case 'deleteAssignment': deleteAssignment(el.dataset.id); break;
-      case 'otParse': otParse(); break;
-      case 'syncClassroom': syncClassroom(true); break;
+      case 'otParse': otParse(el.dataset.key); break;
       case 'saveApiKey': saveApiKey(); break;
       case 'clearApiKey': clearApiKey(); break;
       case 'saveGithubToken': saveGithubToken(); break;
       case 'clearGithubToken': clearGithubToken(); break;
+      case 'saveStudentName': saveStudentName(); break;
       case 'setRotation': setRotationOverride(el.dataset.rot, el.dataset.val || null); render(); break;
+      case 'syncClassroom': syncClassroom(true); break;
+      case 'plannerShift': {
+        const d = new Date(state.plannerDate+'T00:00:00');
+        d.setDate(d.getDate() + parseInt(el.dataset.delta,10));
+        state.plannerDate = toISODate(d);
+        render();
+        break;
+      }
+      case 'plannerToday': state.plannerDate = todayISO; render(); break;
     }
   });
 
-  app.addEventListener('keydown', function(e){
+  document.body.addEventListener('keydown', function(e){
     if(e.key==='Enter' && e.target.classList.contains('add-input')){
-      addItem(e.target.dataset.corner, e.target.value);
+      addItem(e.target.dataset.key, e.target.dataset.corner, e.target.value);
     }
   });
 
   let debTimer = null;
-  app.addEventListener('input', function(e){
+  document.body.addEventListener('input', function(e){
     if(e.target.dataset.role==='memo' || e.target.dataset.role==='info'){
-      const role = e.target.dataset.role;
-      const c=e.target.dataset.cat, s=e.target.dataset.subj, t=e.target.dataset.teacher, val=e.target.value;
+      const role = e.target.dataset.role, key=e.target.dataset.key, val=e.target.value;
       clearTimeout(debTimer);
-      debTimer = setTimeout(()=>{ state.data.teachers[tKey(c,s,t)][role] = val; persist(); }, 400);
+      debTimer = setTimeout(()=>{ state.data.teachers[key][role] = val; persist(); }, 400);
     } else if(e.target.dataset.role==='capacity'){
       const val = parseFloat(e.target.value)||5;
       clearTimeout(debTimer);
       debTimer = setTimeout(()=>{ state.data.dailyCapacity = val; persist(); render(); }, 500);
     } else if(e.target.dataset.role==='asgHours'){
-      const id = e.target.dataset.id;
-      const val = parseFloat(e.target.value);
+      const id = e.target.dataset.id, val = parseFloat(e.target.value);
       clearTimeout(debTimer);
       debTimer = setTimeout(()=>{
         const a = state.data.assignments.find(x=>x.id===id);
@@ -1175,11 +1369,13 @@ ${text}`}]
         state.data = {
           teachers: Object.assign(skeleton.teachers, saved.teachers||{}),
           assignments: saved.assignments || [],
+          notices: saved.notices || [],
           dailyCapacity: saved.dailyCapacity || 5,
-          importedClassroomIds: saved.importedClassroomIds || []
+          importedClassroomIds: saved.importedClassroomIds || [],
+          importedNoticeIds: saved.importedNoticeIds || []
         };
       } else {
-        state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], dailyCapacity:5, importedClassroomIds:[] };
+        state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[] };
       }
     }
     render();
