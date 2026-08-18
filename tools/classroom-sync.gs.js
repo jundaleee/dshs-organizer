@@ -49,15 +49,16 @@ function syncClassroom() {
 
   const newAssignments = [];
   const newNotices = [];
+  const threadsToLabel = []; // 커밋이 성공한 게 확인된 뒤에만 라벨을 붙인다
 
   threads.forEach(thread => {
     const id = 'gclass-' + thread.getId();
-    if (knownIds.has(id)) { thread.addLabel(label); return; }
+    if (knownIds.has(id)) { threadsToLabel.push(thread); return; }
 
     const msg = thread.getMessages()[0];
     const subject = msg.getSubject();
 
-    if (/^내일 기한:/.test(subject)) { thread.addLabel(label); return; }
+    if (/^내일 기한:/.test(subject)) { threadsToLabel.push(thread); return; }
 
     const body = msg.getPlainBody();
     const date = msg.getDate();
@@ -76,20 +77,28 @@ function syncClassroom() {
         snippet: extracted.snippet || ''
       });
     }
-    thread.addLabel(label);
+    threadsToLabel.push(thread);
   });
 
-  if (newAssignments.length === 0 && newNotices.length === 0) {
-    Logger.log('처리할 새 항목 없음 (전부 마감 리마인더거나 이미 처리됨).');
-    return;
+  if (newAssignments.length > 0 || newNotices.length > 0) {
+    file.data.assignments = (file.data.assignments || []).concat(newAssignments);
+    file.data.notices = (file.data.notices || []).concat(newNotices);
+    file.data.lastCheckedAt = new Date().toISOString();
+    // commitSyncFile_이 실패하면 여기서 예외를 던지고 함수가 끝난다 — 그러면
+    // 아래 라벨 붙이는 줄까지 절대 도달하지 않으므로, 커밋이 실패한 메일은
+    // "처리됨" 표시가 안 되고 다음 실행 때 다시 시도된다.
+    commitSyncFile_(githubToken, file.data, file.sha, newAssignments.length, newNotices.length);
   }
 
-  file.data.assignments = (file.data.assignments || []).concat(newAssignments);
-  file.data.notices = (file.data.notices || []).concat(newNotices);
-  file.data.lastCheckedAt = new Date().toISOString();
+  // 커밋이 성공했거나(위에서 통과) 애초에 새로 커밋할 게 없었던 경우에만 여기 도달 —
+  // 두 경우 다 라벨을 붙여도 안전하다.
+  threadsToLabel.forEach(t => t.addLabel(label));
 
-  commitSyncFile_(githubToken, file.data, file.sha, newAssignments.length, newNotices.length);
-  Logger.log(`Classroom sync: 과제 ${newAssignments.length}개, 공지·자료 ${newNotices.length}개 추가함.`);
+  if (newAssignments.length > 0 || newNotices.length > 0) {
+    Logger.log(`Classroom sync: 과제 ${newAssignments.length}개, 공지·자료 ${newNotices.length}개 추가함.`);
+  } else {
+    Logger.log('처리할 새 항목 없음 (전부 마감 리마인더거나 이미 처리됨).');
+  }
 }
 
 function getOrCreateLabel_(name) {
@@ -125,8 +134,12 @@ function commitSyncFile_(githubToken, data, sha, addedAsg, addedNotices) {
     payload: JSON.stringify(body),
     muteHttpExceptions: true
   });
-  if (res.getResponseCode() >= 300) {
-    throw new Error('커밋 실패: ' + res.getResponseCode() + ' ' + res.getContentText());
+  const code = res.getResponseCode();
+  if (code === 403 || code === 401) {
+    throw new Error(`커밋 실패: ${code} — GITHUB_TOKEN에 쓰기 권한이 없어. 스크립트 속성의 GITHUB_TOKEN이 Contents: Read and write 권한으로 발급된 토큰이 맞는지 확인해줘 (앱 설정에 등록한 읽기 전용 토큰과는 다른 토큰이어야 함). 원본 응답: ${res.getContentText()}`);
+  }
+  if (code >= 300) {
+    throw new Error('커밋 실패: ' + code + ' ' + res.getContentText());
   }
 }
 
