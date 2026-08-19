@@ -95,6 +95,27 @@
   .home-date{font-size:13px;color:var(--text-3);margin-bottom:6px;}
   .home-greeting{font-size:32px;font-weight:700;letter-spacing:-.02em;margin:0 0 40px;}
 
+  /* ---- home: 4분면 카테고리 그리드 ---- */
+  .quad-grid{
+    display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
+    gap:2px;background:var(--border);border:1px solid var(--border);border-radius:var(--r-lg);
+    overflow:hidden;aspect-ratio:16/7;margin-bottom:40px;
+  }
+  .quad-cell{
+    background:rgba(255,255,255,.035);border:none;display:flex;flex-direction:column;
+    align-items:flex-start;justify-content:center;padding:30px 38px;text-align:left;
+    position:relative;transition:background var(--dur) var(--ease);color:var(--text);
+  }
+  .quad-cell:hover{background:rgba(255,255,255,.075);}
+  .quad-cell::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--qc);}
+  .quad-label{font-size:26px;font-weight:700;letter-spacing:-.015em;margin-bottom:7px;}
+  .quad-meta{font-size:12.5px;color:var(--text-3);}
+  .quad-today{position:absolute;top:20px;right:22px;font-size:11px;font-weight:700;color:#fff;background:var(--qc);padding:4px 11px;border-radius:999px;}
+  @media(max-width:900px){
+    .quad-grid{aspect-ratio:auto;grid-template-columns:1fr;grid-template-rows:none;}
+    .quad-cell{padding:22px 24px;}
+  }
+
   .section{margin-bottom:36px;}
   .section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;gap:10px;}
   .section-title{font-size:12.5px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.055em;}
@@ -648,104 +669,40 @@
   }
 
   /* ---- Home ---- */
+  const CAT_COLOR = { math:'var(--blue)', sci:'var(--green)', cs:'var(--purple)', hum:'var(--orange)' };
+  // 수학의 사분면 배치: 1(우상)=math, 2(좌상)=sci, 3(좌하)=cs, 4(우하)=hum
+  const QUADRANT_ORDER = ['sci','math','cs','hum'];
+
   function renderHome(){
     const name = getStudentName();
-    let reviewQueue = [];
-    TEACHER_LIST.forEach(x=>{
-      const td = state.data.teachers[x.key];
-      const rep = isRepetitionSubject(x.cat,x.subj);
-      td.review.forEach(item=>{
-        const u = urgency(item, rep);
-        const today = hasClassToday(x.teacher);
-        reviewQueue.push({x, item, u, today, score:u.days+(today?6:0)+(item.retry?50:0)});
-      });
-    });
-    reviewQueue.sort((a,b)=>b.score-a.score);
-    const taskPreview = reviewQueue.slice(0,5);
 
-    const tasksHtml = taskPreview.length===0
-      ? `<div class="empty">오늘 예정된 복습이 없어.</div>`
-      : taskPreview.map(q=>`<div class="task-row" data-key="${q.x.key}">
-          <button class="task-check" data-action="completeItem" data-corner="review" data-key="${q.x.key}" data-id="${q.item.id}">${icon('check')}</button>
-          <div class="task-body">
-            <div class="task-tag">${q.x.subjLabel} · ${q.x.teacher}</div>
-            <div class="task-text">${escapeHtml(q.item.text)}</div>
-          </div>
-          <div class="task-badge">${q.u.label.split(' · ')[0]}</div>
-        </div>`).join('');
+    const quadHtml = QUADRANT_ORDER.map((c,i)=>{
+      const cat = CATS[c];
+      const subjCount = Object.keys(cat.subjects).length;
+      const teacherCount = TEACHER_LIST.filter(x=>x.cat===c).length;
+      const todayCount = TEACHER_LIST.filter(x=>x.cat===c && hasClassToday(x.teacher)).length;
+      return `<button class="quad-cell" style="--qc:${CAT_COLOR[c]}" data-action="goCategory" data-cat="${c}">
+        <div class="quad-label">${cat.label}</div>
+        <div class="quad-meta">과목 ${subjCount} · 선생님 ${teacherCount}</div>
+        ${todayCount>0?`<div class="quad-today">오늘 수업 ${todayCount}</div>`:''}
+      </button>`;
+    }).join('');
 
-    const pending = state.data.assignments.filter(a=>!a.done).sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
-    const cap = state.data.dailyCapacity||5;
-    let demand=0;
-    pending.forEach(a=>{
-      if(typeof a.estHours!=='number') return;
-      const dLeft = Math.round((new Date(a.dueDate+'T00:00:00').getTime()-todayMid)/86400000);
-      demand += a.estHours/Math.max(1,dLeft);
-    });
-    const over = demand>cap;
+    const pending = state.data.assignments.filter(a=>!a.done).sort((a,b)=>a.dueDate.localeCompare(b.dueDate)).slice(0,3);
     const asgHtml = pending.length===0
       ? `<div class="empty">등록된 과제가 없어.</div>`
       : pending.map(a=>assignmentRowHtml(a,false)).join('');
-
-    let scheduleHtml;
-    if(todayPeriods.length===0){
-      scheduleHtml = `<div class="empty">오늘은 등교일이 아니야.</div>`;
-    } else {
-      scheduleHtml = todayPeriods.map(p=>{
-        const t = entryTeacher(p);
-        const tk = t ? teacherKeyByName(t) : null;
-        return `<div class="sched-row ${tk?'clickable':''}" ${tk?`data-action="quickAdd" data-key="${tk}"`:''}>
-          <div class="p">${p.p}교시</div>
-          <div class="s-main">${p.subject||p.label}${t?`<div class="s-teacher">${t}${p.room?' · '+p.room:''}</div>`:(p.room?`<div class="s-teacher">${p.room}</div>`:'')}</div>
-          ${tk?`<div class="sched-add">${icon('sparkle')}</div>`:''}
-        </div>`;
-      }).join('');
-    }
-
-    const notices = (state.data.notices||[]).slice().sort((a,b)=>(b.postedAt||'').localeCompare(a.postedAt||'')).slice(0,8);
-    const noticesHtml = notices.length===0 ? '' : `
-      <div class="section">
-        <div class="section-head"><div class="section-title">공지 · 자료</div></div>
-        <div class="personal-note">파란 링크가 있는 항목은 눌러서 바로 Classroom으로 이동해 (학교 계정 로그인 필요, 거기서 첨부파일 다운로드).</div>
-        ${notices.map(n=>noticeRowHtml(n)).join('')}
-      </div>`;
-
-    const personalPreview = (state.data.personal?.tasks||[]).slice().sort((a,b)=>b.createdAt-a.createdAt).slice(0,5);
-    const personalPreviewHtml = personalPreview.length===0
-      ? `<div class="empty">개인 학습 항목이 없어.</div>`
-      : personalPreview.map(it=>`<div class="task-row">
-          <button class="task-check" data-action="completePersonal" data-id="${it.id}">${icon('check')}</button>
-          <div class="task-body"><div class="task-text">${escapeHtml(it.text)}</div></div>
-        </div>`).join('');
 
     return `<div class="fade-in">
       <div class="home-date">${todayDateStr}</div>
       <h1 class="home-greeting">${greetingWord()}${name?', '+escapeHtml(name):''}</h1>
 
-      <div class="section">
-        <div class="section-head"><div class="section-title">오늘 할 일</div><button class="section-link" data-action="goView" data-view="tasks">전체 보기</button></div>
-        <div class="task-subgroup">
-          <div class="task-subgroup-label">학교 복습</div>
-          ${tasksHtml}
-        </div>
-        <div class="task-subgroup">
-          <div class="task-subgroup-label">개인 학습</div>
-          ${personalPreviewHtml}
-        </div>
-      </div>
+      <div class="quad-grid">${quadHtml}</div>
 
       <div class="section">
         <div class="section-head"><div class="section-title">임박한 과제</div><button class="section-link" data-action="goView" data-view="assignments">전체 보기</button></div>
-        ${pending.length>0?`<div class="cap-line ${over?'over':''}">하루 평균 <b>${demand.toFixed(1)}시간</b> 필요 · 가용 ${cap}시간 ${over?'— 초과':''}</div>`:''}
         ${asgHtml}
       </div>
-
-      <div class="section">
-        <div class="section-head"><div class="section-title">오늘 시간표</div><button class="section-link" data-action="goView" data-view="schedule">전체 보기</button></div>
-        ${scheduleHtml}
-      </div>
-
-      ${noticesHtml}
     </div>`;
   }
 
@@ -875,6 +832,14 @@
     const over = demand>cap;
     const rows = sorted.map(a=>assignmentRowHtml(a,true)).join('');
 
+    const notices = (state.data.notices||[]).slice().sort((a,b)=>(b.postedAt||'').localeCompare(a.postedAt||'')).slice(0,8);
+    const noticesHtml = notices.length===0 ? '' : `
+      <div class="section" style="margin-top:32px;">
+        <div class="section-head"><div class="section-title">공지 · 자료</div></div>
+        <div class="personal-note">파란 링크가 있는 항목은 눌러서 바로 Classroom으로 이동해 (학교 계정 로그인 필요, 거기서 첨부파일 다운로드).</div>
+        ${notices.map(n=>noticeRowHtml(n)).join('')}
+      </div>`;
+
     return `<div class="fade-in">
       <div class="page-head"><h1>과제</h1><button class="iconbtn" data-action="syncClassroom">${icon('arrowRight')} Classroom 동기화</button></div>
       ${syncStatus?`<div class="empty" style="padding:0 0 14px;">${syncStatus}</div>`:''}
@@ -892,6 +857,7 @@
         <button class="btn" data-action="addAssignment">추가</button>
       </div>
       ${sorted.length===0?`<div class="empty">등록된 과제가 없어.</div>`:rows}
+      ${noticesHtml}
     </div>`;
   }
 
@@ -951,7 +917,7 @@
           <div class="teacher-detail">${open?renderTeacherDetail(x):''}</div>
         </div>`;
       }).join('');
-      return `<div class="teacher-group">
+      return `<div class="teacher-group" id="catgroup-${c}">
         <div class="teacher-group-label">${CATS[c].label}</div>
         ${rows}
       </div>`;
@@ -1525,6 +1491,14 @@ ${text}`}]
     if(el.dataset.action==='closeModal' && el.classList.contains('modal-overlay') && e.target!==el) return;
     switch(el.dataset.action){
       case 'goView': state.view=el.dataset.view; render(); break;
+      case 'goCategory': {
+        const cat = el.dataset.cat;
+        state.view = 'teachers';
+        render();
+        const groupEl = document.getElementById('catgroup-' + cat);
+        if(groupEl) groupEl.scrollIntoView({behavior:'smooth', block:'start'});
+        break;
+      }
       case 'toggleTeacher': {
         const k = el.dataset.key;
         state.expandedTeacher = state.expandedTeacher===k ? null : k;
