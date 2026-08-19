@@ -80,7 +80,7 @@ function syncClassroom() {
         threadsToLabel.push(thread);
         return;
       }
-      newAssignments.push({ id, title: extracted.title, dueDate: extracted.dueDate, tag: extracted.tag });
+      newAssignments.push({ id, title: extracted.title, dueDate: extracted.dueDate, tag: extracted.tag, link: extracted.link || null });
     } else {
       newNotices.push({
         id,
@@ -88,7 +88,8 @@ function syncClassroom() {
         title: extracted.title,
         tag: extracted.tag,
         postedAt: date.toISOString(),
-        snippet: extracted.snippet || ''
+        snippet: extracted.snippet || '',
+        link: extracted.link || null
       });
     }
     threadsToLabel.push(thread);
@@ -160,15 +161,16 @@ function commitSyncFile_(githubToken, data, sha, addedAsg, addedNotices) {
 function extractWithClaude_(apiKey, subject, body, date) {
   const receivedDate = Utilities.formatDate(date, 'Asia/Seoul', 'yyyy-MM-dd');
   const prompt = `다음은 Google Classroom에서 온 이메일이야. 아래 JSON 형식으로만 답해 (다른 설명, 코드블록 금지):
-{"type":"assignment 또는 notice 또는 material","title":"...","dueDate":"YYYY-MM-DD 또는 null","tag":"...","snippet":"..."}
+{"type":"assignment 또는 notice 또는 material","title":"...","dueDate":"YYYY-MM-DD 또는 null","tag":"...","snippet":"...","link":"https://... 또는 null"}
 
-- title: 이메일 제목에 따옴표(' ')로 감싸진 부분이 있으면 그 안 텍스트, 없으면 제목 전체.
+- title: 이메일 제목에 따옴표(' ')로 감싸진 부분이 있으면 그 안 텍스트 전체(여는 대괄호 '[' 등 포함해서 원문 그대로), 없으면 제목 전체.
 - dueDate: 본문에 "기한: N월 N일" 같은 마감일 표현이 있으면 YYYY-MM-DD로 변환, 없으면 null.
   연도가 본문에 안 적혀 있으면 이메일 수신일(${receivedDate})의 연도를 기본으로 쓰되,
   그렇게 계산한 날짜가 수신일보다 30일 이상 과거가 되면 연도를 +1 해서 다음 해로 처리해.
 - tag: 이 메일이 속한 수업/클래스 이름 (본문 상단, "알림 설정" 다음 줄에 보통 있음).
 - type: 제목에 "자료"가 들어가면 material, dueDate가 있으면 assignment, 그 외엔 notice.
 - snippet: 본문 내용을 2~3문장으로 간결하게 요약 (dueDate가 있으면 빈 문자열이어도 됨).
+- link: 본문에서 "세부정보 보기" 또는 "과제 보기" 바로 다음 줄에 나오는 <https://...> 형태의 URL을 그대로. 그런 링크가 없으면 null.
 
 제목: ${subject}
 
