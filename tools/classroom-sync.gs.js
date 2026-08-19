@@ -80,7 +80,7 @@ function syncClassroom() {
         threadsToLabel.push(thread);
         return;
       }
-      newAssignments.push({ id, title: extracted.title, dueDate: extracted.dueDate, tag: extracted.tag, link: extracted.link || null });
+      newAssignments.push({ id, title: extracted.title, dueDate: extracted.dueDate, tag: extracted.tag, link: resolveClassroomLink_(extracted.link) });
     } else {
       newNotices.push({
         id,
@@ -89,7 +89,7 @@ function syncClassroom() {
         tag: extracted.tag,
         postedAt: date.toISOString(),
         snippet: extracted.snippet || '',
-        link: extracted.link || null
+        link: resolveClassroomLink_(extracted.link)
       });
     }
     threadsToLabel.push(thread);
@@ -118,6 +118,19 @@ function syncClassroom() {
 
 function getOrCreateLabel_(name) {
   return GmailApp.getUserLabelByName(name) || GmailApp.createLabel(name);
+}
+
+// Classroom 알림 메일의 "세부정보 보기" 링크는 구글이 몇 년 전에 접었다는
+// accounts.google.com/AccountChooser?continue=... 형태로 와서, 그대로 쓰면 계정과
+// 무관하게 클릭해도 안 열린다. continue= 뒤에 인코딩된 실제 classroom.google.com
+// 주소만 꺼내서 그걸 링크로 쓴다. 그 형태가 아니면(이미 직접 링크면) 그대로 둔다.
+function resolveClassroomLink_(rawLink) {
+  if (!rawLink) return null;
+  const m = rawLink.match(/[?&]continue=([^&]+)/);
+  if (m) {
+    try { return decodeURIComponent(m[1]); } catch (e) { return rawLink; }
+  }
+  return rawLink;
 }
 
 function getSyncFile_(githubToken) {
