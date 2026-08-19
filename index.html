@@ -95,34 +95,38 @@
   .home-date{font-size:13px;color:var(--text-3);margin-bottom:6px;}
   .home-greeting{font-size:32px;font-weight:700;letter-spacing:-.02em;margin:0 0 40px;}
 
-  /* ---- home: 4분면 카테고리 그리드 ---- */
-  .quad-grid{
-    display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:40px;align-items:start;
+  /* ---- home: 과목별 박스 그리드 ---- */
+  .box-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:14px;margin-bottom:40px;align-items:start;
   }
-  .quad-cell{
+  .box-cell{
     background:var(--glass);
     -webkit-backdrop-filter:blur(var(--blur)) saturate(1.7);
     backdrop-filter:blur(var(--blur)) saturate(1.7);
     border:1px solid var(--border);border-top-color:var(--border-hi);
-    border-radius:var(--r-lg);padding:22px 24px 8px;text-align:left;
-    position:relative;overflow:hidden;color:var(--text);
+    border-radius:var(--r-lg);padding:22px 22px 8px;text-align:left;
+    position:relative;overflow:hidden;color:var(--text);isolation:isolate;
   }
-  .quad-cell::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--qc);}
-  .quad-head{display:block;width:100%;background:none;border:none;padding:0;margin:0 0 14px;text-align:left;color:var(--text);border-radius:8px;transition:opacity var(--dur) var(--ease);}
-  .quad-head:hover{opacity:.72;}
-  .quad-label{font-size:19px;font-weight:700;letter-spacing:-.015em;margin-bottom:4px;}
-  .quad-meta{font-size:11.5px;color:var(--text-3);}
-  .quad-tasks{display:flex;flex-direction:column;}
-  .quad-task-row{display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:1px solid var(--border);}
-  .quad-task-row:last-child{border-bottom:none;}
-  .quad-task-check{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border-strong);flex-shrink:0;margin-top:1px;background:var(--glass);display:flex;align-items:center;justify-content:center;padding:0;}
-  .quad-task-check svg{width:11px;height:11px;opacity:0;transform:scale(.4);}
-  .quad-task-check:hover{border-color:var(--qc,var(--blue));}
-  .quad-task-text{font-size:12.5px;line-height:1.45;word-break:break-word;}
-  .quad-task-tag{font-size:10.5px;color:var(--text-3);margin-top:1px;}
-  .quad-empty{font-size:11.5px;color:var(--text-3);padding:6px 0;}
+  .box-cell::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--qg);z-index:1;}
+  .box-cell::after{content:'';position:absolute;top:-55%;right:-35%;width:80%;height:150%;background:var(--qg);opacity:.22;filter:blur(44px);border-radius:50%;pointer-events:none;z-index:0;}
+  .box-head{position:relative;z-index:1;display:block;width:100%;background:none;border:none;padding:0;margin:0 0 14px;text-align:left;color:var(--text);border-radius:8px;transition:opacity var(--dur) var(--ease);}
+  .box-head:hover{opacity:.72;}
+  .box-label{font-size:19px;font-weight:700;letter-spacing:-.015em;margin-bottom:4px;}
+  .box-meta{font-size:11.5px;color:var(--text-3);}
+  .box-tasks{position:relative;z-index:1;display:flex;flex-direction:column;}
+  .box-task-row{display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:1px solid var(--border);}
+  .box-task-row:last-child{border-bottom:none;}
+  .box-task-check{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border-strong);flex-shrink:0;margin-top:1px;background:var(--glass);display:flex;align-items:center;justify-content:center;padding:0;}
+  .box-task-check svg{width:11px;height:11px;opacity:0;transform:scale(.4);}
+  .box-task-check:hover{border-color:var(--qc,var(--blue));}
+  .box-task-text{font-size:12.5px;line-height:1.45;word-break:break-word;}
+  .box-task-tag{font-size:10.5px;color:var(--text-3);margin-top:1px;}
+  .box-empty{font-size:11.5px;color:var(--text-3);padding:6px 0;}
   @media(max-width:900px){
-    .quad-grid{grid-template-columns:1fr;}
+    .box-grid{grid-template-columns:1fr 1fr;}
+  }
+  @media(max-width:639px){
+    .box-grid{grid-template-columns:1fr;}
   }
 
   .section{margin-bottom:36px;}
@@ -250,7 +254,7 @@
   .corner-tab .n{color:inherit;opacity:.6;font-weight:400;}
 
   .add-row{display:flex;gap:8px;margin-bottom:14px;}
-  .add-row input{flex:1;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:9px 15px;font-size:13px;min-width:0;}
+  .add-row input,.add-row select{flex:1;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:9px 15px;font-size:13px;min-width:0;}
   .add-row input::placeholder{color:var(--text-3);}
 
   .rep-row{display:flex;align-items:center;gap:8px;margin-top:8px;}
@@ -677,30 +681,54 @@
     return `<div class="topbar-mini"><button class="iconbtn" data-action="openSettings">${icon('settings')} 설정</button></div>`;
   }
 
-  /* ---- Home ---- */
-  const CAT_COLOR = { math:'var(--blue)', sci:'var(--green)', cs:'var(--purple)', hum:'var(--orange)' };
-  // 수학의 사분면 배치: 1(우상)=math, 2(좌상)=sci, 3(좌하)=cs, 4(우하)=hum
-  const QUADRANT_ORDER = ['sci','math','cs','hum'];
-  const QUAD_TASK_LIMIT = 4;
+  /* ---- Home: 과목별 박스 ---- */
+  // 수학과/정보과학과/문과는 카테고리 단위 그대로 유지, 과학과만 지구과학/생명과학/화학/물리학 네 박스로 분할
+  const BOXES = [
+    { key:'math',      label:'수학과',    cat:'math', subj:null,   qc:'var(--blue)',   qg:'linear-gradient(135deg,var(--blue),var(--indigo))' },
+    { key:'sci-earth', label:'지구과학',  cat:'sci',  subj:'earth', qc:'var(--teal)',   qg:'linear-gradient(135deg,var(--teal),var(--blue))' },
+    { key:'sci-bio',   label:'생명과학',  cat:'sci',  subj:'bio',   qc:'var(--green)',  qg:'linear-gradient(135deg,var(--green),var(--teal))' },
+    { key:'sci-chem',  label:'화학',      cat:'sci',  subj:'chem',  qc:'var(--pink)',   qg:'linear-gradient(135deg,var(--pink),var(--red))' },
+    { key:'sci-phys',  label:'물리학',    cat:'sci',  subj:'phys',  qc:'var(--indigo)', qg:'linear-gradient(135deg,var(--indigo),var(--purple))' },
+    { key:'cs',        label:'정보과학과', cat:'cs',   subj:null,   qc:'var(--purple)', qg:'linear-gradient(135deg,var(--purple),var(--pink))' },
+    { key:'hum',       label:'문과',      cat:'hum',  subj:null,   qc:'var(--orange)', qg:'linear-gradient(135deg,var(--orange),var(--pink))' }
+  ];
+  const BOX_KEYS = new Set(BOXES.map(b=>b.key));
+  const BOX_TASK_LIMIT = 4;
 
-  function categoryTaskItems(c){
+  function boxTeachers(box){
+    return TEACHER_LIST.filter(x=>x.cat===box.cat && (!box.subj || x.subj===box.subj));
+  }
+
+  function boxTaskItems(box){
     let items = [];
-    TEACHER_LIST.filter(x=>x.cat===c).forEach(x=>{
+    boxTeachers(box).forEach(x=>{
       const td = state.data.teachers[x.key];
       const rep = isRepetitionSubject(x.cat, x.subj);
-      td.review.forEach(item=> items.push({x, item, corner:'review', days:urgency(item,rep).days}));
-      td.self.forEach(item=> items.push({x, item, corner:'self', days:Math.floor((Date.now()-item.createdAt)/86400000)}));
+      td.review.forEach(item=> items.push({x, item, corner:'review', kind:'teacher', days:urgency(item,rep).days}));
+      td.self.forEach(item=> items.push({x, item, corner:'self', kind:'teacher', days:Math.floor((Date.now()-item.createdAt)/86400000)}));
+    });
+    (state.data.personal?.tasks||[]).filter(p=>p.boxKey===box.key).forEach(item=>{
+      items.push({item, kind:'personal', days:Math.floor((Date.now()-item.createdAt)/86400000)});
     });
     items.sort((a,b)=>b.days-a.days);
     return items;
   }
 
-  function quadTaskRowHtml(q){
-    return `<div class="quad-task-row">
-      <button class="quad-task-check" data-action="completeItem" data-corner="${q.corner}" data-key="${q.x.key}" data-id="${q.item.id}">${icon('check')}</button>
+  function boxTaskRowHtml(q){
+    if(q.kind==='personal'){
+      return `<div class="box-task-row">
+        <button class="box-task-check" data-action="completePersonal" data-id="${q.item.id}">${icon('check')}</button>
+        <div>
+          <div class="box-task-text">${escapeHtml(q.item.text)}</div>
+          <div class="box-task-tag">개인 학습</div>
+        </div>
+      </div>`;
+    }
+    return `<div class="box-task-row">
+      <button class="box-task-check" data-action="completeItem" data-corner="${q.corner}" data-key="${q.x.key}" data-id="${q.item.id}">${icon('check')}</button>
       <div>
-        <div class="quad-task-text">${escapeHtml(q.item.text)}</div>
-        <div class="quad-task-tag">${q.x.teacher} · ${q.corner==='review'?'복습':'자율'}</div>
+        <div class="box-task-text">${escapeHtml(q.item.text)}</div>
+        <div class="box-task-tag">${q.x.teacher} · ${q.corner==='review'?'복습':'자율'}</div>
       </div>
     </div>`;
   }
@@ -708,22 +736,21 @@
   function renderHome(){
     const name = getStudentName();
 
-    const quadHtml = QUADRANT_ORDER.map((c,i)=>{
-      const cat = CATS[c];
-      const teacherCount = TEACHER_LIST.filter(x=>x.cat===c).length;
-      const todayCount = TEACHER_LIST.filter(x=>x.cat===c && hasClassToday(x.teacher)).length;
-      const all = categoryTaskItems(c);
-      const shown = all.slice(0, QUAD_TASK_LIMIT);
+    const boxHtml = BOXES.map(box=>{
+      const teachers = boxTeachers(box);
+      const todayCount = teachers.filter(x=>hasClassToday(x.teacher)).length;
+      const all = boxTaskItems(box);
+      const shown = all.slice(0, BOX_TASK_LIMIT);
       const moreCount = all.length - shown.length;
       const tasksHtml = shown.length===0
-        ? `<div class="quad-empty">할 일 없음</div>`
-        : shown.map(quadTaskRowHtml).join('') + (moreCount>0?`<div class="quad-empty">+${moreCount}개 더</div>`:'');
-      return `<div class="quad-cell" style="--qc:${CAT_COLOR[c]}">
-        <button class="quad-head" data-action="goCategory" data-cat="${c}">
-          <div class="quad-label">${cat.label}</div>
-          <div class="quad-meta">선생님 ${teacherCount}${todayCount>0?` · 오늘 수업 ${todayCount}`:''}</div>
+        ? `<div class="box-empty">할 일 없음</div>`
+        : shown.map(boxTaskRowHtml).join('') + (moreCount>0?`<div class="box-empty">+${moreCount}개 더</div>`:'');
+      return `<div class="box-cell" style="--qc:${box.qc};--qg:${box.qg}">
+        <button class="box-head" data-action="goCategory" data-cat="${box.cat}" ${box.subj?`data-subj="${box.subj}"`:''}>
+          <div class="box-label">${box.label}</div>
+          <div class="box-meta">선생님 ${teachers.length}${todayCount>0?` · 오늘 수업 ${todayCount}`:''}</div>
         </button>
-        <div class="quad-tasks">${tasksHtml}</div>
+        <div class="box-tasks">${tasksHtml}</div>
       </div>`;
     }).join('');
 
@@ -736,7 +763,7 @@
       <div class="home-date">${todayDateStr}</div>
       <h1 class="home-greeting">${greetingWord()}${name?', '+escapeHtml(name):''}</h1>
 
-      <div class="quad-grid">${quadHtml}</div>
+      <div class="box-grid">${boxHtml}</div>
 
       <div class="section">
         <div class="section-head"><div class="section-title">임박한 과제</div><button class="section-link" data-action="goView" data-view="assignments">전체 보기</button></div>
@@ -815,19 +842,29 @@
       </div>`).join('');
 
     const personal = (state.data.personal?.tasks||[]).slice().sort((a,b)=>b.createdAt-a.createdAt);
-    const personalHtml = personal.length===0 ? `<div class="empty">개인 학습 항목이 없어.</div>` : personal.map(it=>`
-      <div class="task-row">
+    function personalRowHtml(it){
+      return `<div class="task-row">
         <button class="task-check" data-action="completePersonal" data-id="${it.id}">${icon('check')}</button>
         <div class="task-body"><div class="task-text">${escapeHtml(it.text)}</div></div>
         <button class="task-del" title="삭제" data-action="deletePersonal" data-id="${it.id}">${icon('trash')}</button>
-      </div>`).join('');
+      </div>`;
+    }
+    const personalGroupsHtml = BOXES.map(box=>{
+      const items = personal.filter(it=>it.boxKey===box.key);
+      if(items.length===0) return '';
+      return `<div class="task-subgroup"><div class="task-subgroup-label">${box.label}</div>${items.map(personalRowHtml).join('')}</div>`;
+    }).join('');
+    const unassigned = personal.filter(it=>!BOX_KEYS.has(it.boxKey));
+    const unassignedHtml = unassigned.length===0 ? '' : `<div class="task-subgroup"><div class="task-subgroup-label">미분류</div>${unassigned.map(personalRowHtml).join('')}</div>`;
+    const personalHtml = personal.length===0 ? `<div class="empty">개인 학습 항목이 없어.</div>` : personalGroupsHtml + unassignedHtml;
+    const boxOptionsHtml = BOXES.map(b=>`<option value="${b.key}">${b.label}</option>`).join('');
 
     return `<div class="fade-in">
       <div class="page-head"><h1>할 일</h1></div>
 
       <div class="ai-box">
         <div class="ai-head">${icon('sparkle')} 무엇이든 붙여넣기 → 자동 분류</div>
-        <div class="ai-desc">수업 내용, 할 일, 공부 계획을 자유롭게 적으면 학교 복습 · 자율 학습 · 개인 학습으로 알아서 나눠서 추가해줘. 특정 선생님 수업이면 자동으로 그 선생님한테 연결되고, 어느 과목인지 애매하면 개인 학습으로 들어가.</div>
+        <div class="ai-desc">수업 내용, 할 일, 공부 계획을 자유롭게 적으면 학교 복습 · 자율 학습 · 개인 학습으로 알아서 나눠서 추가해줘. 특정 선생님 수업이면 그 선생님한테 연결되고, 개인 학습이어도 가능하면 관련 과목 박스에 연결돼. 정말 어느 과목인지도 알 수 없으면 미분류로 들어가.</div>
         <textarea class="ai-textarea" id="taskClassifyInput" placeholder="예: 내일까지 물리 3단원 다시 풀어보기 / 수학 기출 5개 풀기 / 영어단어 100개 외우기"></textarea>
         <div class="ai-row">
           <button class="btn-ai" data-action="classifyTasks">${icon('sparkle')} AI로 분류해서 추가</button>
@@ -845,8 +882,12 @@
       </div>
       <div class="section">
         <div class="section-head"><div class="section-title">개인 학습</div></div>
-        <div class="personal-note">특정 수업과 무관한 혼자 공부하는 것들. 여기 직접 추가하거나, 위 상자에 자연어로 적어서 자동 분류돼도 여기로 들어와.</div>
+        <div class="personal-note">특정 선생님 수업과 무관하게 혼자 공부하는 것들. 과목을 골라두면 홈 화면 해당 과목 박스에도 함께 보여.</div>
         <div class="add-row">
+          <select class="add-input" id="personalAddBox" style="flex:0 0 128px;">
+            <option value="">과목 미지정</option>
+            ${boxOptionsHtml}
+          </select>
           <input type="text" class="add-input" id="personalAddInput" placeholder="추가할 내용 입력 후 Enter">
           <button class="btn-outline" data-action="addPersonal">추가</button>
         </div>
@@ -946,7 +987,7 @@
     const groups = Object.keys(CATS).map(c=>{
       const rows = TEACHER_LIST.filter(x=>x.cat===c).map(x=>{
         const open = state.expandedTeacher===x.key;
-        return `<div class="teacher-row ${open?'open':''}">
+        return `<div class="teacher-row ${open?'open':''}" data-subj="${x.subj}">
           <button class="teacher-head" data-action="toggleTeacher" data-key="${x.key}">
             ${hasClassToday(x.teacher)?'<span class="teacher-dot"></span>':'<span style="width:6px;"></span>'}
             <span class="teacher-name">${x.teacher}</span>
@@ -1350,9 +1391,9 @@ ${text}`}]
   }
 
   /* ============ 액션: 개인 학습 ============ */
-  function addPersonalTask(text){
+  function addPersonalTask(text, boxKey){
     text = (text||'').trim(); if(!text) return;
-    state.data.personal.tasks.push({id:genId(), text, createdAt:Date.now()});
+    state.data.personal.tasks.push({id:genId(), text, createdAt:Date.now(), boxKey: BOX_KEYS.has(boxKey) ? boxKey : null});
     persist(); render();
   }
   function completePersonalTask(id){
@@ -1376,6 +1417,7 @@ ${text}`}]
     if(!apiKey){ statusEl.textContent = 'API 키가 필요해 — 설정에서 먼저 등록해줘.'; return; }
     statusEl.textContent = '분류 중...';
     const roster = TEACHER_LIST.map(x=>`${x.key} :: ${x.catLabel} ${x.subjLabel} ${x.teacher}`).join('\n');
+    const boxList = BOXES.map(b=>`${b.key} :: ${b.label}`).join('\n');
     try{
       const res = await fetch('https://api.anthropic.com/v1/messages', {
         method:'POST',
@@ -1390,16 +1432,19 @@ ${text}`}]
           max_tokens:1200,
           messages:[{role:'user', content:
 `다음은 학생이 자유롭게 적은 할 일 · 공부 계획 텍스트야. 한 줄 또는 한 항목씩 나눠서, 아래 JSON 배열 형식으로만 출력해(다른 설명, 코드블록 금지):
-[{"kind":"review 또는 self 또는 personal","teacherKey":"학교 수업과 관련되면 아래 목록의 키를 정확히 그대로, personal이면 null","text":"한국어 한 문장으로 정리"}]
+[{"kind":"review 또는 self 또는 personal","teacherKey":"학교 수업과 관련되면 아래 선생님 목록의 키를 정확히 그대로, personal이면 null","boxKey":"personal일 때 아래 박스 목록의 키 중 관련된 과목 하나, 정말 어느 과목인지도 알 수 없으면 null","text":"한국어 한 문장으로 정리"}]
 
 분류 기준:
 - review: 특정 선생님 수업 내용을 복습해야 하는 항목
 - self: 특정 과목과 관련 있지만 스스로 더 공부해야 하는 항목 (자율 학습)
-- review/self로 분류할 때 teacherKey는 반드시 아래 목록의 키 중 하나와 완전히 똑같아야 해. 어느 선생님·과목인지 확실하지 않으면 절대 추측하지 말고 personal로 분류해.
-- personal: 특정 학교 수업과 무관한 개인 공부/할 일 (예: 단어 암기, 인강 듣기, 개인 프로젝트 등)
+- review/self로 분류할 때 teacherKey는 반드시 아래 선생님 목록의 키 중 하나와 완전히 똑같아야 해. 어느 선생님·과목인지 확실하지 않으면 절대 추측하지 말고 personal로 분류해.
+- personal: 특정 선생님 수업과 무관한 개인 공부/할 일 (예: 단어 암기, 인강 듣기, 개인 프로젝트 등). 이 경우에도 가능하면 아래 박스 목록 중 관련 과목의 boxKey를 골라줘 (예: "영어단어 암기"는 문과 관련이 없어도 영어 과목이니 hum). 과목과 전혀 무관하면(예: 운동, 생활 계획) boxKey는 null.
 
 선생님 목록 (형식: 키 :: 학과 과목 이름):
 ${roster}
+
+박스 목록 (형식: 키 :: 이름):
+${boxList}
 
 원문:
 ${text}`}]
@@ -1423,7 +1468,7 @@ ${text}`}]
           state.data.teachers[it.teacherKey][it.kind].push(item);
           if(it.kind==='review') addedReview++; else addedSelf++;
         } else {
-          state.data.personal.tasks.push({id:genId(), text:it.text, createdAt:t});
+          state.data.personal.tasks.push({id:genId(), text:it.text, createdAt:t, boxKey: BOX_KEYS.has(it.boxKey) ? it.boxKey : null});
           addedPersonal++;
         }
       });
@@ -1532,10 +1577,11 @@ ${text}`}]
       case 'goView': state.view=el.dataset.view; render(); break;
       case 'goCategory': {
         const cat = el.dataset.cat;
+        const subj = el.dataset.subj;
         state.view = 'teachers';
         render();
-        const groupEl = document.getElementById('catgroup-' + cat);
-        if(groupEl) groupEl.scrollIntoView({behavior:'smooth', block:'start'});
+        const target = (subj && document.querySelector(`.teacher-row[data-subj="${subj}"]`)) || document.getElementById('catgroup-' + cat);
+        if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
         break;
       }
       case 'toggleTeacher': {
@@ -1565,7 +1611,12 @@ ${text}`}]
       case 'deleteAssignment': deleteAssignment(el.dataset.id); break;
       case 'otParse': otParse(el.dataset.key); break;
       case 'classifyTasks': classifyTasks(); break;
-      case 'addPersonal': { const input = document.getElementById('personalAddInput'); addPersonalTask(input.value); break; }
+      case 'addPersonal': {
+        const input = document.getElementById('personalAddInput');
+        const boxSel = document.getElementById('personalAddBox');
+        addPersonalTask(input.value, boxSel ? boxSel.value : null);
+        break;
+      }
       case 'completePersonal': completePersonalTask(el.dataset.id); break;
       case 'deletePersonal': deletePersonalTask(el.dataset.id); break;
       case 'saveApiKey': saveApiKey(); break;
@@ -1589,7 +1640,8 @@ ${text}`}]
   document.body.addEventListener('keydown', function(e){
     if(e.key!=='Enter') return;
     if(e.target.id==='personalAddInput'){
-      addPersonalTask(e.target.value);
+      const boxSel = document.getElementById('personalAddBox');
+      addPersonalTask(e.target.value, boxSel ? boxSel.value : null);
     } else if(e.target.classList.contains('add-input')){
       addItem(e.target.dataset.key, e.target.dataset.corner, e.target.value);
     }
