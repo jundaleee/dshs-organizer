@@ -141,7 +141,8 @@
   .box-label{font-size:12.5px;font-weight:700;letter-spacing:-.01em;line-height:1.2;}
   .box-meta{font-size:9px;color:var(--text-3);margin-top:1px;}
   .box-tasks{position:relative;z-index:1;display:flex;flex-direction:column;gap:4px;flex:1;min-width:0;}
-  .box-task-row{display:flex;align-items:center;gap:5px;min-width:0;}
+  .box-task-row{display:flex;align-items:center;gap:5px;min-width:0;cursor:grab;border-radius:5px;transition:opacity var(--dur) var(--ease);}
+  .box-task-row.dragging-task{opacity:.35;}
   .box-task-check{width:13px;height:13px;border-radius:50%;border:1.3px solid var(--border-strong);flex-shrink:0;background:var(--glass);display:flex;align-items:center;justify-content:center;padding:0;transition:border-color var(--dur) var(--ease);}
   .box-task-check svg{width:8px;height:8px;opacity:0;transform:scale(.4);}
   .box-task-check:hover{border-color:var(--qc,var(--blue));}
@@ -157,7 +158,9 @@
     background:var(--glass);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.7);backdrop-filter:blur(var(--blur)) saturate(1.7);
     border:1px solid var(--border);border-top-color:var(--border-hi);border-radius:var(--r-lg);
     padding:16px 20px;margin-bottom:28px;flex-wrap:wrap;
+    transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease);
   }
+  .pomo-card.drag-over{border-color:var(--blue);box-shadow:0 0 0 2px var(--blue) inset;}
   .pomo-ring{
     width:76px;height:76px;border-radius:50%;flex-shrink:0;
     background:conic-gradient(var(--pomo-c, var(--blue)) var(--deg,0deg), rgba(255,255,255,.12) 0);
@@ -816,12 +819,12 @@
 
   function boxTaskRowHtml(q){
     if(q.kind==='personal'){
-      return `<div class="box-task-row">
+      return `<div class="box-task-row" draggable="true" data-drag-type="personal" data-drag-id="${q.item.id}">
         <button class="box-task-check" data-action="completePersonal" data-id="${q.item.id}">${icon('check')}</button>
         <div class="box-task-text" title="${escapeHtml(q.item.text)}">${escapeHtml(q.item.text)}</div>
       </div>`;
     }
-    return `<div class="box-task-row">
+    return `<div class="box-task-row" draggable="true" data-drag-type="teacher" data-drag-key="${q.x.key}" data-drag-corner="${q.corner}" data-drag-id="${q.item.id}">
       <button class="box-task-check" data-action="completeItem" data-corner="${q.corner}" data-key="${q.x.key}" data-id="${q.item.id}">${icon('check')}</button>
       <div class="box-task-text" title="${escapeHtml(q.item.text)}">${escapeHtml(q.item.text)}</div>
     </div>`;
@@ -1983,7 +1986,7 @@ ${text}`}]
   document.body.addEventListener('pointerdown', function(e){
     if(e.button!=null && e.button!==0) return;
     const wrap = e.target.closest('.box-drag');
-    if(!wrap || e.target.closest('button')) return;
+    if(!wrap || e.target.closest('button') || e.target.closest('.box-task-row')) return;
     const key = wrap.dataset.boxkey;
     const off = boxDragOffsets[key] || {x:0, y:0};
     boxDrag = { key, el:wrap, startX:e.clientX, startY:e.clientY, origX:off.x, origY:off.y, moved:false, pointerId:e.pointerId };
@@ -2021,6 +2024,40 @@ ${text}`}]
   }
   document.body.addEventListener('pointerup', endBoxDrag);
   document.body.addEventListener('pointercancel', endBoxDrag);
+
+  /* ============ 할 일 항목을 뽀모도로 카드로 드래그해서 연결하기 ============ */
+  document.body.addEventListener('dragstart', function(e){
+    const row = e.target.closest('.box-task-row');
+    if(!row) return;
+    const payload = row.dataset.dragType==='personal'
+      ? {type:'personal', id:row.dataset.dragId}
+      : {type:'teacher', key:row.dataset.dragKey, corner:row.dataset.dragCorner, id:row.dataset.dragId};
+    e.dataTransfer.setData('application/json', JSON.stringify(payload));
+    e.dataTransfer.effectAllowed = 'copy';
+    row.classList.add('dragging-task');
+  });
+  document.body.addEventListener('dragend', function(e){
+    const row = e.target.closest('.box-task-row');
+    if(row) row.classList.remove('dragging-task');
+    document.querySelectorAll('.pomo-card.drag-over').forEach(c=>c.classList.remove('drag-over'));
+  });
+  document.body.addEventListener('dragover', function(e){
+    const card = e.target.closest('.pomo-card');
+    if(!card) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    card.classList.add('drag-over');
+  });
+  document.body.addEventListener('drop', function(e){
+    const card = e.target.closest('.pomo-card');
+    if(!card) return;
+    e.preventDefault();
+    card.classList.remove('drag-over');
+    try{
+      const data = JSON.parse(e.dataTransfer.getData('application/json'));
+      if(data && data.type){ pomo.target = data; render(); }
+    }catch(err){}
+  });
 
   /* ============ 이벤트 위임 ============ */
   document.body.addEventListener('click', function(e){
