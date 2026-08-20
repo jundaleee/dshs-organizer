@@ -102,20 +102,43 @@
   .home-date{font-size:13px;color:var(--text-3);margin-bottom:6px;}
   .home-greeting{font-size:32px;font-weight:700;letter-spacing:-.02em;margin:0 0 40px;}
 
-  /* ---- home: 과목별 박스 그리드 ---- */
+  /* ---- home: 과목별 박스 그리드 (물방울처럼 떠다니는 버블) ---- */
   .box-grid{
     display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:14px;margin-bottom:40px;align-items:start;
+  }
+  .box-drag{position:relative;touch-action:none;will-change:transform;}
+  .box-drag.dragging{z-index:5;}
+  .box-float{
+    animation:boxFloat var(--float-dur,7s) ease-in-out infinite;
+    animation-delay:var(--float-delay,0s);
+    will-change:transform;
+  }
+  .box-drag.dragging .box-float{animation-play-state:paused;}
+  @keyframes boxFloat{
+    0%,100%{transform:translateY(0) rotate(0deg);}
+    50%{transform:translateY(-7px) rotate(var(--float-rot,.6deg));}
+  }
+  @keyframes boxDrop{
+    0%{transform:scale(1);} 35%{transform:scale(1.05);} 65%{transform:scale(.97);} 100%{transform:scale(1);}
   }
   .box-cell{
     background:var(--glass);
     -webkit-backdrop-filter:blur(var(--blur)) saturate(1.7);
     backdrop-filter:blur(var(--blur)) saturate(1.7);
     border:1px solid var(--border);border-top-color:var(--border-hi);
-    border-radius:var(--r-lg);padding:22px 22px 8px;text-align:left;
+    border-radius:34px;padding:22px 22px 8px;text-align:left;min-height:168px;
     position:relative;overflow:hidden;color:var(--text);isolation:isolate;
+    cursor:grab;transition:box-shadow var(--dur) var(--ease);
   }
-  .box-cell::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--qg);z-index:1;}
-  .box-cell::after{content:'';position:absolute;top:-55%;right:-35%;width:80%;height:150%;background:var(--qg);opacity:.22;filter:blur(44px);border-radius:50%;pointer-events:none;z-index:0;}
+  .box-cell button{cursor:pointer;}
+  .box-drag.dragging .box-cell{cursor:grabbing;box-shadow:0 24px 54px rgba(0,0,0,.5);}
+  .box-cell.drop-bounce{animation:boxDrop .38s ease;}
+  .box-cell::after{content:'';position:absolute;top:-55%;right:-35%;width:80%;height:150%;background:var(--qg);opacity:.28;filter:blur(44px);border-radius:50%;pointer-events:none;z-index:0;}
+  /* 박스마다 조금씩 다른 둥근 정도로 물방울 느낌 */
+  .box-grid > .box-drag:nth-child(4n+1) .box-cell{border-radius:46px 88px 54px 92px;}
+  .box-grid > .box-drag:nth-child(4n+2) .box-cell{border-radius:90px 46px 88px 50px;}
+  .box-grid > .box-drag:nth-child(4n+3) .box-cell{border-radius:54px 96px 46px 88px;}
+  .box-grid > .box-drag:nth-child(4n+4) .box-cell{border-radius:88px 52px 92px 48px;}
   .box-head{position:relative;z-index:1;display:block;width:100%;background:none;border:none;padding:6px 8px;margin:-6px -8px 10px;text-align:left;color:var(--text);border-radius:10px;transition:background var(--dur) var(--ease);}
   .box-head:hover{background:var(--glass-strong);}
   .box-label{font-size:19px;font-weight:700;letter-spacing:-.015em;margin-bottom:4px;}
@@ -705,6 +728,17 @@
   const BOX_KEYS = new Set(BOXES.map(b=>b.key));
   const BOX_TASK_LIMIT = 4;
 
+  // 박스마다 살짝 다르게 떠다니도록 key 기반으로 고정된 값을 뽑음 (매 렌더마다 안 바뀌게)
+  function hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))|0; } return Math.abs(h); }
+  function boxFloatVars(key){
+    const h = hashStr(key);
+    const dur = 6.5 + (h%30)/10;
+    const delay = -((h>>3)%100)/100*dur;
+    const rot = (0.5 + ((h>>5)%6)/10) * (h%2 ? 1 : -1);
+    return {dur, delay, rot};
+  }
+  const boxDragOffsets = {}; // 세션 동안만 유지 (새로고침하면 제자리로)
+
   function boxTeachers(box){
     return TEACHER_LIST.filter(x=>x.cat===box.cat && (!box.subj || x.subj===box.subj));
   }
@@ -756,12 +790,18 @@
       const tasksHtml = shown.length===0
         ? `<div class="box-empty">할 일 없음</div>`
         : shown.map(boxTaskRowHtml).join('') + (moreCount>0?`<button class="box-more" data-action="goCategory" data-cat="${box.cat}" ${subjAttr}>+${moreCount}개 더</button>`:'');
-      return `<div class="box-cell" style="--qc:${box.qc};--qg:${box.qg}">
-        <button class="box-head" data-action="goCategory" data-cat="${box.cat}" ${subjAttr}>
-          <div class="box-label">${box.label}</div>
-          <div class="box-meta">선생님 ${teachers.length}${todayCount>0?` · 오늘 수업 ${todayCount}`:''}</div>
-        </button>
-        <div class="box-tasks">${tasksHtml}</div>
+      const fv = boxFloatVars(box.key);
+      const off = boxDragOffsets[box.key] || {x:0, y:0};
+      return `<div class="box-drag" data-boxkey="${box.key}" style="transform:translate(${off.x}px,${off.y}px);">
+        <div class="box-float" style="--float-dur:${fv.dur}s;--float-delay:${fv.delay}s;--float-rot:${fv.rot}deg;">
+          <div class="box-cell" style="--qc:${box.qc};--qg:${box.qg}">
+            <button class="box-head" data-action="goCategory" data-cat="${box.cat}" ${subjAttr}>
+              <div class="box-label">${box.label}</div>
+              <div class="box-meta">선생님 ${teachers.length}${todayCount>0?` · 오늘 수업 ${todayCount}`:''}</div>
+            </button>
+            <div class="box-tasks">${tasksHtml}</div>
+          </div>
+        </div>
       </div>`;
     }).join('');
 
@@ -1616,8 +1656,53 @@ ${text}`}]
     reader.readAsText(file);
   }
 
+  /* ============ 홈 박스 드래그 (물방울처럼 마우스로 움직이기) ============ */
+  const BOX_DRAG_RANGE = 140;
+  let suppressNextClick = false;
+  let boxDrag = null;
+  document.body.addEventListener('pointerdown', function(e){
+    if(e.button!=null && e.button!==0) return;
+    const wrap = e.target.closest('.box-drag');
+    if(!wrap || e.target.closest('button')) return;
+    const key = wrap.dataset.boxkey;
+    const off = boxDragOffsets[key] || {x:0, y:0};
+    boxDrag = { key, el:wrap, startX:e.clientX, startY:e.clientY, origX:off.x, origY:off.y, moved:false, pointerId:e.pointerId };
+    wrap.classList.add('dragging');
+    try{ wrap.setPointerCapture(e.pointerId); }catch(err){}
+  });
+  document.body.addEventListener('pointermove', function(e){
+    if(!boxDrag || e.pointerId!==boxDrag.pointerId) return;
+    const dx = e.clientX - boxDrag.startX, dy = e.clientY - boxDrag.startY;
+    if(Math.abs(dx)>4 || Math.abs(dy)>4) boxDrag.moved = true;
+    if(boxDrag.moved){
+      const x = Math.max(-BOX_DRAG_RANGE, Math.min(BOX_DRAG_RANGE, boxDrag.origX+dx));
+      const y = Math.max(-BOX_DRAG_RANGE, Math.min(BOX_DRAG_RANGE, boxDrag.origY+dy));
+      boxDrag.el.style.transform = `translate(${x}px,${y}px)`;
+    }
+  });
+  function endBoxDrag(e){
+    if(!boxDrag || (e.pointerId!==undefined && e.pointerId!==boxDrag.pointerId)) return;
+    boxDrag.el.classList.remove('dragging');
+    if(boxDrag.moved){
+      const dx = e.clientX - boxDrag.startX, dy = e.clientY - boxDrag.startY;
+      const x = Math.max(-BOX_DRAG_RANGE, Math.min(BOX_DRAG_RANGE, boxDrag.origX+dx));
+      const y = Math.max(-BOX_DRAG_RANGE, Math.min(BOX_DRAG_RANGE, boxDrag.origY+dy));
+      boxDragOffsets[boxDrag.key] = {x, y};
+      suppressNextClick = true;
+      const cell = boxDrag.el.querySelector('.box-cell');
+      if(cell){
+        cell.classList.add('drop-bounce');
+        cell.addEventListener('animationend', ()=>cell.classList.remove('drop-bounce'), {once:true});
+      }
+    }
+    boxDrag = null;
+  }
+  document.body.addEventListener('pointerup', endBoxDrag);
+  document.body.addEventListener('pointercancel', endBoxDrag);
+
   /* ============ 이벤트 위임 ============ */
   document.body.addEventListener('click', function(e){
+    if(suppressNextClick){ suppressNextClick = false; return; }
     const el = e.target.closest('[data-action]'); if(!el) return;
     if(el.dataset.action==='closeModal' && el.classList.contains('modal-overlay') && e.target!==el) return;
     switch(el.dataset.action){
