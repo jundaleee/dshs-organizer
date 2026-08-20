@@ -103,50 +103,55 @@
   .home-date{font-size:13px;color:var(--text-3);margin-bottom:6px;}
   .home-greeting{font-size:32px;font-weight:700;letter-spacing:-.02em;margin:0 0 40px;}
 
-  /* ---- home: 과목별 물방울 버블 (진짜 원형) ---- */
-  .bubble-grid{
-    display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-bottom:28px;
+  /* ---- home: 과목별 박스 (실제 할 일 텍스트가 보여야 함 — 7개가 스크롤 없이 다 보이도록 촘촘하게) ---- */
+  .box-grid{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:24px;align-items:start;
   }
-  .bubble-drag{position:relative;touch-action:none;will-change:transform;}
-  .bubble-drag.dragging{z-index:5;}
-  .bubble-float{
-    animation:bubbleFloat var(--float-dur,7s) ease-in-out infinite;
+  .box-drag{position:relative;touch-action:none;will-change:transform;}
+  .box-drag.dragging{z-index:5;}
+  .box-float{
+    animation:boxFloat var(--float-dur,7s) ease-in-out infinite;
     animation-delay:var(--float-delay,0s);
     will-change:transform;
   }
-  .bubble-drag.dragging .bubble-float{animation-play-state:paused;}
-  @keyframes bubbleFloat{
+  .box-drag.dragging .box-float{animation-play-state:paused;}
+  @keyframes boxFloat{
     0%,100%{transform:translateY(0);}
-    50%{transform:translateY(-6px);}
+    50%{transform:translateY(-5px);}
   }
-  @keyframes bubbleDrop{
-    0%{transform:scale(1);} 35%{transform:scale(1.08);} 65%{transform:scale(.96);} 100%{transform:scale(1);}
+  @keyframes boxDrop{
+    0%{transform:scale(1);} 35%{transform:scale(1.04);} 65%{transform:scale(.98);} 100%{transform:scale(1);}
   }
-  .bubble{
-    width:100px;height:100px;border-radius:50%;padding:0;
-    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
+  .box-cell{
+    min-height:112px;display:flex;flex-direction:column;
     background:var(--glass);
     -webkit-backdrop-filter:blur(var(--blur)) saturate(1.8);
     backdrop-filter:blur(var(--blur)) saturate(1.8);
-    border:1px solid var(--border);
-    position:relative;overflow:hidden;color:var(--text);
+    border:1px solid var(--border);border-top-color:var(--border-hi);
+    border-radius:16px;padding:11px 12px 8px;
+    position:relative;overflow:hidden;color:var(--text);isolation:isolate;
     cursor:grab;transition:box-shadow var(--dur) var(--ease);
-    box-shadow:
-      inset 0 1px 1px rgba(255,255,255,.5),
-      inset 0 -8px 14px -6px rgba(0,0,0,.4),
-      0 10px 22px rgba(0,0,0,.35);
   }
-  .bubble-drag.dragging .bubble{cursor:grabbing;box-shadow:inset 0 1px 1px rgba(255,255,255,.5),inset 0 -8px 14px -6px rgba(0,0,0,.4),0 20px 40px rgba(0,0,0,.5);}
-  .bubble.drop-bounce{animation:bubbleDrop .38s ease;}
-  .bubble::before{content:'';position:absolute;inset:0;border-radius:50%;background:var(--qg);opacity:.32;pointer-events:none;}
-  .bubble::after{
-    content:'';position:absolute;top:8%;left:16%;width:42%;height:26%;border-radius:50%;
-    background:linear-gradient(135deg, rgba(255,255,255,.6), rgba(255,255,255,0) 75%);
-    filter:blur(1px);pointer-events:none;
+  .box-cell button{cursor:pointer;}
+  .box-drag.dragging .box-cell{cursor:grabbing;box-shadow:0 18px 40px rgba(0,0,0,.45);}
+  .box-cell.drop-bounce{animation:boxDrop .34s ease;}
+  .box-cell::after{content:'';position:absolute;top:-60%;right:-40%;width:85%;height:150%;background:var(--qg);opacity:.30;filter:blur(30px);border-radius:50%;pointer-events:none;z-index:0;}
+  .box-head{position:relative;z-index:1;display:block;width:100%;background:none;border:none;padding:3px 4px;margin:-3px -4px 6px;text-align:left;color:var(--text);border-radius:8px;transition:background var(--dur) var(--ease);}
+  .box-head:hover{background:var(--glass-strong);}
+  .box-label{font-size:12.5px;font-weight:700;letter-spacing:-.01em;line-height:1.2;}
+  .box-meta{font-size:9px;color:var(--text-3);margin-top:1px;}
+  .box-tasks{position:relative;z-index:1;display:flex;flex-direction:column;gap:4px;flex:1;min-width:0;}
+  .box-task-row{display:flex;align-items:center;gap:5px;min-width:0;}
+  .box-task-check{width:13px;height:13px;border-radius:50%;border:1.3px solid var(--border-strong);flex-shrink:0;background:var(--glass);display:flex;align-items:center;justify-content:center;padding:0;transition:border-color var(--dur) var(--ease);}
+  .box-task-check svg{width:8px;height:8px;opacity:0;transform:scale(.4);}
+  .box-task-check:hover{border-color:var(--qc,var(--blue));}
+  .box-task-text{font-size:10.5px;line-height:1.3;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .box-empty{font-size:9.5px;color:var(--text-3);}
+  .box-more{display:block;width:100%;background:none;border:none;text-align:left;font-size:9px;color:var(--text-3);padding:0;margin-top:auto;}
+  .box-more:hover{color:var(--text-2);text-decoration:underline;}
+  @media(max-width:639px){
+    .box-grid{grid-template-columns:repeat(2,1fr);}
   }
-  .bubble-count{font-size:19px;font-weight:800;position:relative;z-index:1;font-variant-numeric:tabular-nums;}
-  .bubble-label{font-size:10.5px;font-weight:700;letter-spacing:-.01em;text-align:center;line-height:1.2;position:relative;z-index:1;padding:0 10px;}
-  .bubble-today{position:absolute;top:12px;right:19px;width:7px;height:7px;border-radius:50%;background:var(--qc);box-shadow:0 0 6px var(--qc);z-index:1;}
 
   /* ---- 뽀모도로 타이머 ---- */
   .pomo-card{
@@ -811,6 +816,20 @@
     return items;
   }
 
+  const BOX_TASK_LIMIT = 2; // 박스가 좁아서(7개가 한 화면에 다 들어가야 함) 한 줄씩만 보여줌
+  function boxTaskRowHtml(q){
+    if(q.kind==='personal'){
+      return `<div class="box-task-row">
+        <button class="box-task-check" data-action="completePersonal" data-id="${q.item.id}">${icon('check')}</button>
+        <div class="box-task-text" title="${escapeHtml(q.item.text)}">${escapeHtml(q.item.text)}</div>
+      </div>`;
+    }
+    return `<div class="box-task-row">
+      <button class="box-task-check" data-action="completeItem" data-corner="${q.corner}" data-key="${q.x.key}" data-id="${q.item.id}">${icon('check')}</button>
+      <div class="box-task-text" title="${escapeHtml(q.item.text)}">${escapeHtml(q.item.text)}</div>
+    </div>`;
+  }
+
   // 과목별 학습 시간을 재는 기능이 없어서(체크 여부만 있음), "이번 주 완료 개수"를 시간 대신 프록시로 씀.
   // 정확도는 떨어지지만 "이번 주 이 과목 하나도 안 건드림" 정도는 충분히 잡아냄.
   function weekBoxCompletionCounts(){
@@ -917,20 +936,27 @@
   function renderHome(){
     const name = getStudentName();
 
-    const bubbleHtml = BOXES.map(box=>{
+    const boxHtml = BOXES.map(box=>{
       const teachers = boxTeachers(box);
       const todayCount = teachers.filter(x=>hasClassToday(x.teacher)).length;
-      const count = boxTaskItems(box).length;
+      const all = boxTaskItems(box);
+      const shown = all.slice(0, BOX_TASK_LIMIT);
+      const moreCount = all.length - shown.length;
       const subjAttr = box.subj?`data-subj="${box.subj}"`:'';
+      const tasksHtml = shown.length===0
+        ? `<div class="box-empty">할 일 없음</div>`
+        : shown.map(boxTaskRowHtml).join('') + (moreCount>0?`<button class="box-more" data-action="goCategory" data-cat="${box.cat}" ${subjAttr}>+${moreCount}개 더</button>`:'');
       const fv = boxFloatVars(box.key);
       const off = boxDragOffsets[box.key] || {x:0, y:0};
-      return `<div class="bubble-drag" data-boxkey="${box.key}" style="transform:translate(${off.x}px,${off.y}px);">
-        <div class="bubble-float" style="--float-dur:${fv.dur}s;--float-delay:${fv.delay}s;">
-          <button class="bubble" style="--qc:${box.qc};--qg:${box.qg}" data-action="goCategory" data-cat="${box.cat}" ${subjAttr}>
-            ${todayCount>0?`<div class="bubble-today"></div>`:''}
-            <div class="bubble-count">${count}</div>
-            <div class="bubble-label">${box.label}</div>
-          </button>
+      return `<div class="box-drag" data-boxkey="${box.key}" style="transform:translate(${off.x}px,${off.y}px);">
+        <div class="box-float" style="--float-dur:${fv.dur}s;--float-delay:${fv.delay}s;">
+          <div class="box-cell" style="--qc:${box.qc};--qg:${box.qg}">
+            <button class="box-head" data-action="goCategory" data-cat="${box.cat}" ${subjAttr}>
+              <div class="box-label">${box.label}</div>
+              <div class="box-meta">${todayCount>0?`오늘 수업 ${todayCount}`:`선생님 ${teachers.length}`}</div>
+            </button>
+            <div class="box-tasks">${tasksHtml}</div>
+          </div>
         </div>
       </div>`;
     }).join('');
@@ -947,7 +973,7 @@
 
       ${renderPomoCard(allPending)}
 
-      <div class="bubble-grid">${bubbleHtml}</div>
+      <div class="box-grid">${boxHtml}</div>
 
       ${renderBalanceWarning()}
 
@@ -1903,14 +1929,14 @@ ${text}`}]
     reader.readAsText(file);
   }
 
-  /* ============ 홈 버블 드래그 (물방울처럼 마우스로 움직이기) ============ */
+  /* ============ 홈 박스 드래그 (물방울처럼 마우스로 움직이기) ============ */
   const BOX_DRAG_RANGE = 90;
   let suppressNextClick = false;
   let boxDrag = null;
   document.body.addEventListener('pointerdown', function(e){
     if(e.button!=null && e.button!==0) return;
-    const wrap = e.target.closest('.bubble-drag');
-    if(!wrap) return;
+    const wrap = e.target.closest('.box-drag');
+    if(!wrap || e.target.closest('button')) return;
     const key = wrap.dataset.boxkey;
     const off = boxDragOffsets[key] || {x:0, y:0};
     boxDrag = { key, el:wrap, startX:e.clientX, startY:e.clientY, origX:off.x, origY:off.y, moved:false, pointerId:e.pointerId };
@@ -1938,7 +1964,7 @@ ${text}`}]
       const y = Math.max(-BOX_DRAG_RANGE, Math.min(BOX_DRAG_RANGE, boxDrag.origY+dy));
       boxDragOffsets[boxDrag.key] = {x, y};
       suppressNextClick = true;
-      const cell = boxDrag.el.querySelector('.bubble');
+      const cell = boxDrag.el.querySelector('.box-cell');
       if(cell){
         cell.classList.add('drop-bounce');
         cell.addEventListener('animationend', ()=>cell.classList.remove('drop-bounce'), {once:true});
