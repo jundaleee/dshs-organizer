@@ -103,64 +103,72 @@
   .home-date{font-size:13px;color:var(--text-3);margin-bottom:6px;}
   .home-greeting{font-size:32px;font-weight:700;letter-spacing:-.02em;margin:0 0 40px;}
 
-  /* ---- home: 과목별 박스 그리드 (물방울처럼 떠다니는 버블) ---- */
-  .box-grid{
-    display:grid;grid-template-columns:repeat(auto-fill,minmax(228px,1fr));gap:14px;margin-bottom:40px;align-items:start;
+  /* ---- home: 과목별 물방울 버블 (진짜 원형) ---- */
+  .bubble-grid{
+    display:flex;flex-wrap:wrap;justify-content:center;gap:14px;margin-bottom:28px;
   }
-  .box-drag{position:relative;touch-action:none;will-change:transform;}
-  .box-drag.dragging{z-index:5;}
-  .box-float{
-    animation:boxFloat var(--float-dur,7s) ease-in-out infinite;
+  .bubble-drag{position:relative;touch-action:none;will-change:transform;}
+  .bubble-drag.dragging{z-index:5;}
+  .bubble-float{
+    animation:bubbleFloat var(--float-dur,7s) ease-in-out infinite;
     animation-delay:var(--float-delay,0s);
     will-change:transform;
   }
-  .box-drag.dragging .box-float{animation-play-state:paused;}
-  @keyframes boxFloat{
-    0%,100%{transform:translateY(0) rotate(0deg);}
-    50%{transform:translateY(-7px) rotate(var(--float-rot,.6deg));}
+  .bubble-drag.dragging .bubble-float{animation-play-state:paused;}
+  @keyframes bubbleFloat{
+    0%,100%{transform:translateY(0);}
+    50%{transform:translateY(-6px);}
   }
-  @keyframes boxDrop{
-    0%{transform:scale(1);} 35%{transform:scale(1.05);} 65%{transform:scale(.97);} 100%{transform:scale(1);}
+  @keyframes bubbleDrop{
+    0%{transform:scale(1);} 35%{transform:scale(1.08);} 65%{transform:scale(.96);} 100%{transform:scale(1);}
   }
-  .box-cell{
+  .bubble{
+    width:100px;height:100px;border-radius:50%;padding:0;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;
     background:var(--glass);
-    -webkit-backdrop-filter:blur(var(--blur)) saturate(1.7);
-    backdrop-filter:blur(var(--blur)) saturate(1.7);
-    border:1px solid var(--border);border-top-color:var(--border-hi);
-    border-radius:34px;padding:22px 22px 8px;text-align:left;min-height:168px;
-    position:relative;overflow:hidden;color:var(--text);isolation:isolate;
+    -webkit-backdrop-filter:blur(var(--blur)) saturate(1.8);
+    backdrop-filter:blur(var(--blur)) saturate(1.8);
+    border:1px solid var(--border);
+    position:relative;overflow:hidden;color:var(--text);
     cursor:grab;transition:box-shadow var(--dur) var(--ease);
+    box-shadow:
+      inset 0 1px 1px rgba(255,255,255,.5),
+      inset 0 -8px 14px -6px rgba(0,0,0,.4),
+      0 10px 22px rgba(0,0,0,.35);
   }
-  .box-cell button{cursor:pointer;}
-  .box-drag.dragging .box-cell{cursor:grabbing;box-shadow:0 24px 54px rgba(0,0,0,.5);}
-  .box-cell.drop-bounce{animation:boxDrop .38s ease;}
-  .box-cell::after{content:'';position:absolute;top:-55%;right:-35%;width:80%;height:150%;background:var(--qg);opacity:.28;filter:blur(44px);border-radius:50%;pointer-events:none;z-index:0;}
-  /* 박스마다 조금씩 다른 둥근 정도로 물방울 느낌 */
-  .box-grid > .box-drag:nth-child(4n+1) .box-cell{border-radius:46px 88px 54px 92px;}
-  .box-grid > .box-drag:nth-child(4n+2) .box-cell{border-radius:90px 46px 88px 50px;}
-  .box-grid > .box-drag:nth-child(4n+3) .box-cell{border-radius:54px 96px 46px 88px;}
-  .box-grid > .box-drag:nth-child(4n+4) .box-cell{border-radius:88px 52px 92px 48px;}
-  .box-head{position:relative;z-index:1;display:block;width:100%;background:none;border:none;padding:6px 8px;margin:-6px -8px 10px;text-align:left;color:var(--text);border-radius:10px;transition:background var(--dur) var(--ease);}
-  .box-head:hover{background:var(--glass-strong);}
-  .box-label{font-size:19px;font-weight:700;letter-spacing:-.015em;margin-bottom:4px;}
-  .box-meta{font-size:11.5px;color:var(--text-3);}
-  .box-tasks{position:relative;z-index:1;display:flex;flex-direction:column;}
-  .box-task-row{display:flex;align-items:flex-start;gap:9px;padding:7px 0;border-bottom:1px solid var(--border);}
-  .box-task-row:last-child{border-bottom:none;}
-  .box-task-check{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border-strong);flex-shrink:0;margin-top:1px;background:var(--glass);display:flex;align-items:center;justify-content:center;padding:0;transition:border-color var(--dur) var(--ease);}
-  .box-task-check svg{width:11px;height:11px;opacity:0;transform:scale(.4);}
-  .box-task-check:hover{border-color:var(--qc,var(--blue));}
-  .box-task-text{font-size:12.5px;line-height:1.45;word-break:break-word;}
-  .box-task-tag{font-size:10.5px;color:var(--text-3);margin-top:1px;}
-  .box-empty{font-size:11.5px;color:var(--text-3);padding:6px 0;}
-  .box-more{display:block;width:100%;background:none;border:none;text-align:left;font:inherit;color:var(--text-3);}
-  .box-more:hover{color:var(--text-2);text-decoration:underline;}
-  @media(max-width:900px){
-    .box-grid{grid-template-columns:1fr 1fr;}
+  .bubble-drag.dragging .bubble{cursor:grabbing;box-shadow:inset 0 1px 1px rgba(255,255,255,.5),inset 0 -8px 14px -6px rgba(0,0,0,.4),0 20px 40px rgba(0,0,0,.5);}
+  .bubble.drop-bounce{animation:bubbleDrop .38s ease;}
+  .bubble::before{content:'';position:absolute;inset:0;border-radius:50%;background:var(--qg);opacity:.32;pointer-events:none;}
+  .bubble::after{
+    content:'';position:absolute;top:8%;left:16%;width:42%;height:26%;border-radius:50%;
+    background:linear-gradient(135deg, rgba(255,255,255,.6), rgba(255,255,255,0) 75%);
+    filter:blur(1px);pointer-events:none;
   }
-  @media(max-width:639px){
-    .box-grid{grid-template-columns:1fr;}
+  .bubble-count{font-size:19px;font-weight:800;position:relative;z-index:1;font-variant-numeric:tabular-nums;}
+  .bubble-label{font-size:10.5px;font-weight:700;letter-spacing:-.01em;text-align:center;line-height:1.2;position:relative;z-index:1;padding:0 10px;}
+  .bubble-today{position:absolute;top:12px;right:19px;width:7px;height:7px;border-radius:50%;background:var(--qc);box-shadow:0 0 6px var(--qc);z-index:1;}
+
+  /* ---- 뽀모도로 타이머 ---- */
+  .pomo-card{
+    display:flex;align-items:center;gap:18px;
+    background:var(--glass);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.7);backdrop-filter:blur(var(--blur)) saturate(1.7);
+    border:1px solid var(--border);border-top-color:var(--border-hi);border-radius:var(--r-lg);
+    padding:16px 20px;margin-bottom:28px;flex-wrap:wrap;
   }
+  .pomo-ring{
+    width:76px;height:76px;border-radius:50%;flex-shrink:0;
+    background:conic-gradient(var(--pomo-c, var(--blue)) var(--deg,0deg), rgba(255,255,255,.12) 0);
+    display:flex;align-items:center;justify-content:center;position:relative;transition:background .3s linear;
+  }
+  .pomo-ring.done{animation:pomoPulse 1s ease-in-out infinite;}
+  @keyframes pomoPulse{0%,100%{box-shadow:0 0 0 0 rgba(48,209,88,.5);}50%{box-shadow:0 0 0 8px rgba(48,209,88,0);}}
+  .pomo-ring::before{content:'';position:absolute;inset:6px;border-radius:50%;background:var(--bg);}
+  .pomo-display{position:relative;z-index:1;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .pomo-body{flex:1;min-width:220px;display:flex;flex-direction:column;gap:8px;}
+  .pomo-select{width:100%;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:7px 13px;font-size:12.5px;}
+  .pomo-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  .pomo-preset{background:var(--glass);border:1px solid var(--border);color:var(--text-2);border-radius:var(--r-pill);padding:5px 12px;font-size:12px;font-weight:600;}
+  .pomo-preset.active{background:var(--blue);border-color:var(--blue);color:#fff;}
 
   .section{margin-bottom:36px;}
   .section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;gap:10px;}
@@ -772,7 +780,6 @@
     { key:'hum',       label:'문과',      cat:'hum',  subj:null,   qc:'var(--orange)', qg:'linear-gradient(135deg,var(--orange),var(--pink))' }
   ];
   const BOX_KEYS = new Set(BOXES.map(b=>b.key));
-  const BOX_TASK_LIMIT = 4;
 
   // 박스마다 살짝 다르게 떠다니도록 key 기반으로 고정된 값을 뽑음 (매 렌더마다 안 바뀌게)
   function hashStr(s){ let h=0; for(let i=0;i<s.length;i++){ h=(h*31 + s.charCodeAt(i))|0; } return Math.abs(h); }
@@ -802,25 +809,6 @@
     });
     items.sort((a,b)=>b.days-a.days);
     return items;
-  }
-
-  function boxTaskRowHtml(q){
-    if(q.kind==='personal'){
-      return `<div class="box-task-row">
-        <button class="box-task-check" data-action="completePersonal" data-id="${q.item.id}">${icon('check')}</button>
-        <div>
-          <div class="box-task-text">${escapeHtml(q.item.text)}</div>
-          <div class="box-task-tag">개인 학습</div>
-        </div>
-      </div>`;
-    }
-    return `<div class="box-task-row">
-      <button class="box-task-check" data-action="completeItem" data-corner="${q.corner}" data-key="${q.x.key}" data-id="${q.item.id}">${icon('check')}</button>
-      <div>
-        <div class="box-task-text">${escapeHtml(q.item.text)}</div>
-        <div class="box-task-tag">${q.x.teacher} · ${q.corner==='review'?'복습':'자율'}</div>
-      </div>
-    </div>`;
   }
 
   // 과목별 학습 시간을 재는 기능이 없어서(체크 여부만 있음), "이번 주 완료 개수"를 시간 대신 프록시로 씀.
@@ -853,35 +841,102 @@
     return `<div class="balance-warn">이번 주 <b>${neglected.map(b=>escapeHtml(b.label)).join(', ')}</b> 완료한 게 하나도 없어 — 다른 과목엔 몰려있는데 여긴 비어있어.${extra}</div>`;
   }
 
+  /* ---- 뽀모도로: 정해진 시간 안에 과제 하나를 끝내는 용도 ---- */
+  const pomo = { running:false, remaining:25*60, total:25*60, assignmentId:null, intervalId:null };
+  function pomoFormat(sec){
+    sec = Math.max(0, sec);
+    const m = Math.floor(sec/60), s = sec%60;
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+  function pomoTick(){
+    pomo.remaining--;
+    if(pomo.remaining<=0){
+      pomo.remaining = 0;
+      clearInterval(pomo.intervalId);
+      pomo.running = false;
+      render();
+      return;
+    }
+    const dEl = document.getElementById('pomoDisplay');
+    if(dEl) dEl.textContent = pomoFormat(pomo.remaining);
+    const ring = document.getElementById('pomoRing');
+    if(ring) ring.style.setProperty('--deg', ((1-pomo.remaining/pomo.total)*360)+'deg');
+  }
+  function pomoStart(){
+    if(pomo.running) return;
+    if(pomo.remaining<=0) pomo.remaining = pomo.total;
+    pomo.running = true;
+    pomo.intervalId = setInterval(pomoTick, 1000);
+    render();
+  }
+  function pomoPause(){
+    clearInterval(pomo.intervalId);
+    pomo.running = false;
+    render();
+  }
+  function pomoReset(){
+    clearInterval(pomo.intervalId);
+    pomo.running = false;
+    pomo.remaining = pomo.total;
+    render();
+  }
+  function pomoSetDuration(min){
+    clearInterval(pomo.intervalId);
+    pomo.running = false;
+    pomo.total = min*60;
+    pomo.remaining = pomo.total;
+    render();
+  }
+  function renderPomoCard(pendingAssignments){
+    const pct = pomo.total>0 ? Math.max(0, Math.min(1, 1-pomo.remaining/pomo.total)) : 0;
+    const done = pomo.remaining<=0 && pomo.total>0;
+    const linked = pomo.assignmentId ? state.data.assignments.find(a=>a.id===pomo.assignmentId) : null;
+    return `<div class="pomo-card">
+      <div class="pomo-ring ${done?'done':''}" id="pomoRing" style="--deg:${pct*360}deg;--pomo-c:${done?'var(--green)':'var(--blue)'}">
+        <div class="pomo-display" id="pomoDisplay">${done?'완료!':pomoFormat(pomo.remaining)}</div>
+      </div>
+      <div class="pomo-body">
+        <select class="pomo-select" id="pomoAssignmentSelect">
+          <option value="">집중 타이머 — 과제 선택 안 함</option>
+          ${pendingAssignments.map(a=>`<option value="${a.id}" ${pomo.assignmentId===a.id?'selected':''}>${escapeHtml(a.title)}</option>`).join('')}
+        </select>
+        <div class="pomo-row">
+          <button class="pomo-preset ${pomo.total===15*60?'active':''}" data-action="pomoSetDuration" data-min="15">15분</button>
+          <button class="pomo-preset ${pomo.total===25*60?'active':''}" data-action="pomoSetDuration" data-min="25">25분</button>
+          <button class="pomo-preset ${pomo.total===45*60?'active':''}" data-action="pomoSetDuration" data-min="45">45분</button>
+          ${pomo.running
+            ? `<button class="btn-outline" data-action="pomoPause">일시정지</button>`
+            : `<button class="btn" data-action="pomoStart">${pomo.remaining<pomo.total && pomo.remaining>0 ? '계속' : '시작'}</button>`}
+          <button class="btn-outline" data-action="pomoReset">초기화</button>
+          ${linked && done ? `<button class="btn" data-action="toggleAssignment" data-id="${linked.id}">"${escapeHtml(linked.title)}" 완료 처리</button>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }
+
   function renderHome(){
     const name = getStudentName();
 
-    const boxHtml = BOXES.map(box=>{
+    const bubbleHtml = BOXES.map(box=>{
       const teachers = boxTeachers(box);
       const todayCount = teachers.filter(x=>hasClassToday(x.teacher)).length;
-      const all = boxTaskItems(box);
-      const shown = all.slice(0, BOX_TASK_LIMIT);
-      const moreCount = all.length - shown.length;
+      const count = boxTaskItems(box).length;
       const subjAttr = box.subj?`data-subj="${box.subj}"`:'';
-      const tasksHtml = shown.length===0
-        ? `<div class="box-empty">할 일 없음</div>`
-        : shown.map(boxTaskRowHtml).join('') + (moreCount>0?`<button class="box-more" data-action="goCategory" data-cat="${box.cat}" ${subjAttr}>+${moreCount}개 더</button>`:'');
       const fv = boxFloatVars(box.key);
       const off = boxDragOffsets[box.key] || {x:0, y:0};
-      return `<div class="box-drag" data-boxkey="${box.key}" style="transform:translate(${off.x}px,${off.y}px);">
-        <div class="box-float" style="--float-dur:${fv.dur}s;--float-delay:${fv.delay}s;--float-rot:${fv.rot}deg;">
-          <div class="box-cell" style="--qc:${box.qc};--qg:${box.qg}">
-            <button class="box-head" data-action="goCategory" data-cat="${box.cat}" ${subjAttr}>
-              <div class="box-label">${box.label}</div>
-              <div class="box-meta">선생님 ${teachers.length}${todayCount>0?` · 오늘 수업 ${todayCount}`:''}</div>
-            </button>
-            <div class="box-tasks">${tasksHtml}</div>
-          </div>
+      return `<div class="bubble-drag" data-boxkey="${box.key}" style="transform:translate(${off.x}px,${off.y}px);">
+        <div class="bubble-float" style="--float-dur:${fv.dur}s;--float-delay:${fv.delay}s;">
+          <button class="bubble" style="--qc:${box.qc};--qg:${box.qg}" data-action="goCategory" data-cat="${box.cat}" ${subjAttr}>
+            ${todayCount>0?`<div class="bubble-today"></div>`:''}
+            <div class="bubble-count">${count}</div>
+            <div class="bubble-label">${box.label}</div>
+          </button>
         </div>
       </div>`;
     }).join('');
 
-    const pending = state.data.assignments.filter(a=>!a.done).sort((a,b)=>a.dueDate.localeCompare(b.dueDate)).slice(0,3);
+    const allPending = state.data.assignments.filter(a=>!a.done).sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
+    const pending = allPending.slice(0,3);
     const asgHtml = pending.length===0
       ? `<div class="empty">등록된 과제가 없어.</div>`
       : pending.map(a=>assignmentRowHtml(a,false)).join('');
@@ -890,7 +945,9 @@
       <div class="home-date">${todayDateStr}</div>
       <h1 class="home-greeting">${greetingWord()}${name?', '+escapeHtml(name):''}</h1>
 
-      <div class="box-grid">${boxHtml}</div>
+      ${renderPomoCard(allPending)}
+
+      <div class="bubble-grid">${bubbleHtml}</div>
 
       ${renderBalanceWarning()}
 
@@ -1846,19 +1903,21 @@ ${text}`}]
     reader.readAsText(file);
   }
 
-  /* ============ 홈 박스 드래그 (물방울처럼 마우스로 움직이기) ============ */
-  const BOX_DRAG_RANGE = 140;
+  /* ============ 홈 버블 드래그 (물방울처럼 마우스로 움직이기) ============ */
+  const BOX_DRAG_RANGE = 90;
   let suppressNextClick = false;
   let boxDrag = null;
   document.body.addEventListener('pointerdown', function(e){
     if(e.button!=null && e.button!==0) return;
-    const wrap = e.target.closest('.box-drag');
-    if(!wrap || e.target.closest('button')) return;
+    const wrap = e.target.closest('.bubble-drag');
+    if(!wrap) return;
     const key = wrap.dataset.boxkey;
     const off = boxDragOffsets[key] || {x:0, y:0};
     boxDrag = { key, el:wrap, startX:e.clientX, startY:e.clientY, origX:off.x, origY:off.y, moved:false, pointerId:e.pointerId };
     wrap.classList.add('dragging');
-    try{ wrap.setPointerCapture(e.pointerId); }catch(err){}
+    // setPointerCapture는 일부러 안 씀 — 캡처를 걸면 click 이벤트의 target이 wrap(래퍼)으로
+    // 바뀌어서 안쪽 <button data-action>을 closest()로 못 찾게 됨. document.body에서
+    // pointerId로 걸러 듣고 있어서 캡처 없이도 드래그 추적에는 문제 없음.
   });
   document.body.addEventListener('pointermove', function(e){
     if(!boxDrag || e.pointerId!==boxDrag.pointerId) return;
@@ -1879,7 +1938,7 @@ ${text}`}]
       const y = Math.max(-BOX_DRAG_RANGE, Math.min(BOX_DRAG_RANGE, boxDrag.origY+dy));
       boxDragOffsets[boxDrag.key] = {x, y};
       suppressNextClick = true;
-      const cell = boxDrag.el.querySelector('.box-cell');
+      const cell = boxDrag.el.querySelector('.bubble');
       if(cell){
         cell.classList.add('drop-bounce');
         cell.addEventListener('animationend', ()=>cell.classList.remove('drop-bounce'), {once:true});
@@ -1940,6 +1999,10 @@ ${text}`}]
         break;
       }
       case 'setAsgSortMode': state.asgSortMode = el.dataset.mode; render(); break;
+      case 'pomoStart': pomoStart(); break;
+      case 'pomoPause': pomoPause(); break;
+      case 'pomoReset': pomoReset(); break;
+      case 'pomoSetDuration': pomoSetDuration(parseInt(el.dataset.min,10)); break;
       case 'otParse': otParse(el.dataset.key); break;
       case 'classifyTasks': classifyTasks(); break;
       case 'addPersonal': {
@@ -2007,7 +2070,10 @@ ${text}`}]
 
   let debTimer = null;
   document.body.addEventListener('input', function(e){
-    if(e.target.dataset.role==='memo' || e.target.dataset.role==='info'){
+    if(e.target.id==='pomoAssignmentSelect'){
+      pomo.assignmentId = e.target.value || null;
+      render();
+    } else if(e.target.dataset.role==='memo' || e.target.dataset.role==='info'){
       const role = e.target.dataset.role, key=e.target.dataset.key, val=e.target.value;
       clearTimeout(debTimer);
       debTimer = setTimeout(()=>{ state.data.teachers[key][role] = val; persist(); }, 400);
