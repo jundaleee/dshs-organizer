@@ -382,6 +382,12 @@
   .rot-btn{background:none;border:none;color:var(--text-2);border-radius:var(--r-pill);padding:6px 13px;font-size:11.5px;transition:all var(--dur) var(--ease);}
   .rot-btn.active{background:var(--blue);color:#fff;font-weight:600;}
 
+  .tpl-item{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);}
+  .tpl-item:last-of-type{border-bottom:none;}
+  .tpl-head{display:flex;gap:6px;align-items:center;margin-bottom:6px;}
+  .tpl-name{flex:1;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:7px 12px;font-size:13px;font-weight:600;min-width:0;}
+  .tpl-content{width:100%;min-height:70px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text);padding:9px 11px;font-size:12.5px;line-height:1.5;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;resize:vertical;}
+
   .completed-modal .item{padding:11px 4px;border-bottom:1px solid var(--border);}
   .completed-modal .item:last-child{border-bottom:none;}
   .completed-modal .item-top{display:flex;align-items:flex-start;gap:10px;}
@@ -610,6 +616,23 @@
   function getStudentName(){ try{ return localStorage.getItem(STUDENT_NAME_KEY) || ''; }catch(e){ return ''; } }
   function setStudentName(name){
     try{ if(name) localStorage.setItem(STUDENT_NAME_KEY, name); else localStorage.removeItem(STUDENT_NAME_KEY); }catch(e){}
+  }
+
+  const TEMPLATES_KEY = 'organizer-templates';
+  const DEFAULT_TEMPLATES = [
+    {id:'tpl-physics', name:'물리 보고서', content:'초록(Abstract)\n\n서론(Introduction)\n\n이론적 배경\n\n실험 방법\n\n결과 및 분석\n\n결론\n\n참고문헌'},
+    {id:'tpl-chem', name:'화학 보고서', content:'실험 목적\n\n실험 원리\n\n실험 기구 및 시약\n\n실험 과정\n\n실험 결과\n\n고찰\n\n결론'},
+    {id:'tpl-cpp', name:'C++ 기본 세팅', content:'#include <iostream>\nusing namespace std;\n\nint main() {\n    \n    return 0;\n}'}
+  ];
+  function getTemplates(){
+    try{
+      const raw = localStorage.getItem(TEMPLATES_KEY);
+      if(raw!==null) return JSON.parse(raw);
+    }catch(e){}
+    return DEFAULT_TEMPLATES.slice();
+  }
+  function setTemplates(list){
+    try{ localStorage.setItem(TEMPLATES_KEY, JSON.stringify(list)); }catch(e){}
   }
 
   /* ============ 상태 ============ */
@@ -1321,6 +1344,17 @@
 
   /* ---- Settings ---- */
   function renderSettingsModal(){
+    const templates = getTemplates();
+    const tplRows = templates.map(t=>`
+      <div class="tpl-item">
+        <div class="tpl-head">
+          <input type="text" class="tpl-name" data-role="templateName" data-id="${t.id}" value="${escapeHtml(t.name)}">
+          <button class="btn-outline" data-action="copyTemplate" data-id="${t.id}">${templateCopyStatus===t.id?'복사됨!':'복사'}</button>
+          <button class="task-del" style="opacity:1;" title="삭제" data-action="deleteTemplate" data-id="${t.id}">${icon('trash')}</button>
+        </div>
+        <textarea class="tpl-content" data-role="templateContent" data-id="${t.id}" rows="4">${escapeHtml(t.content)}</textarea>
+      </div>`).join('');
+
     const rotationRows = Object.keys(ROTATIONS).map(rotKey=>{
       const cfg = ROTATIONS[rotKey];
       const override = getRotationOverride(rotKey);
@@ -1369,6 +1403,16 @@
               <button class="btn-outline" data-action="saveGithubToken">저장</button>
               <button class="btn-outline" data-action="clearGithubToken">삭제</button>
               <span class="settings-status">${githubTokenStatus}</span>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <h3>보고서 템플릿</h3>
+            <div class="desc">자주 쓰는 보고서 뼈대나 기본 코드를 저장해두고 "복사" 버튼으로 바로 클립보드에 복사해서 붙여넣을 수 있어. 여기서 자유롭게 수정·추가·삭제해줘 (이 브라우저에만 저장, 내보내기 백업에는 포함 안 됨).</div>
+            ${tplRows}
+            <div class="add-row">
+              <input type="text" class="add-input" id="newTplName" placeholder="새 템플릿 이름 (예: 정보 수행평가)">
+              <button class="btn-outline" data-action="addTemplate">추가</button>
             </div>
           </div>
 
@@ -1460,6 +1504,7 @@
 
   /* ============ 액션: 설정 ============ */
   let settingsStatus = '', githubTokenStatus = '', otStatus = '', syncStatus = '', taskClassifyStatus = '';
+  let templateCopyStatus = ''; // 방금 복사한 템플릿 id (버튼에 "복사됨!" 잠깐 표시용)
   // Classroom 동기화 상태 — 자동 동기화가 조용히 실패하는 걸 막기 위해 수동/자동 구분 없이 항상 기록
   let lastSyncCheckedAt = null; // Apps Script가 마지막으로 Gmail을 확인해서 파일을 쓴 시각 (upstream, payload.lastCheckedAt)
   let lastSyncError = ''; // 클라이언트의 가장 최근 fetch 시도가 실패한 이유 (성공하면 비움)
@@ -1859,6 +1904,33 @@ ${text}`}]
         break;
       }
       case 'plannerToday': state.plannerDate = todayISO; render(); break;
+      case 'copyTemplate': {
+        const t = getTemplates().find(x=>x.id===el.dataset.id);
+        if(t){
+          navigator.clipboard.writeText(t.content).then(()=>{
+            templateCopyStatus = el.dataset.id;
+            render();
+            setTimeout(()=>{ if(templateCopyStatus===el.dataset.id){ templateCopyStatus=''; render(); } }, 1500);
+          }).catch(()=>{});
+        }
+        break;
+      }
+      case 'addTemplate': {
+        const input = document.getElementById('newTplName');
+        const name = (input.value||'').trim();
+        if(!name) break;
+        const list = getTemplates();
+        list.push({id:genId(), name, content:''});
+        setTemplates(list);
+        input.value = '';
+        render();
+        break;
+      }
+      case 'deleteTemplate': {
+        setTemplates(getTemplates().filter(t=>t.id!==el.dataset.id));
+        render();
+        break;
+      }
     }
   });
 
@@ -1889,6 +1961,15 @@ ${text}`}]
         const a = state.data.assignments.find(x=>x.id===id);
         if(a && val>0){ a.estHours = val; persist(); render(); }
       }, 500);
+    } else if(e.target.dataset.role==='templateName' || e.target.dataset.role==='templateContent'){
+      const field = e.target.dataset.role==='templateName' ? 'name' : 'content';
+      const id = e.target.dataset.id, val = e.target.value;
+      clearTimeout(debTimer);
+      debTimer = setTimeout(()=>{
+        const list = getTemplates();
+        const t = list.find(x=>x.id===id);
+        if(t){ t[field] = val; setTemplates(list); }
+      }, 400);
     }
   });
 
