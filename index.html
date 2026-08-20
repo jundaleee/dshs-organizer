@@ -209,6 +209,12 @@
   .asg-row:hover .asg-del{opacity:1;}
   .asg-del:hover{color:var(--red);}
   .asg-hours-input{width:100px;background:var(--glass);border:1px solid var(--orange);border-radius:var(--r-pill);color:var(--text);padding:6px 12px;font-size:12px;text-align:center;}
+  .asg-priority{display:flex;align-items:center;gap:6px;margin-top:7px;}
+  .asg-priority-label{font-size:11px;color:var(--text-3);}
+  .pri-btn{background:var(--glass);border:1px solid var(--border);color:var(--text-3);border-radius:var(--r-pill);padding:3px 11px;font-size:11px;font-weight:600;}
+  .pri-btn.active[data-val="high"]{background:var(--red);border-color:var(--red);color:#fff;}
+  .pri-btn.active[data-val="mid"]{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .pri-btn.active[data-val="low"]{background:rgba(255,255,255,.22);border-color:var(--border-strong);color:var(--text);}
 
   .cap-line{font-size:13px;color:var(--text-2);padding:10px 4px 18px;border-bottom:1px solid var(--border);margin-bottom:6px;}
   .cap-line b{color:var(--text);font-weight:600;}
@@ -642,7 +648,7 @@
     view:'home', expandedTeacher:null, cornerTab:'review',
     modal:null, completedTeacherKey:null,
     quickAddKey:null, quickAddCorner:'review',
-    plannerDate: todayISO,
+    plannerDate: todayISO, asgSortMode:'due',
     data:buildSkeleton()
   };
   function getTD(key){ return state.data.teachers[key]; }
@@ -842,7 +848,9 @@
     if(total<4) return ''; // 활동이 너무 적으면(주 초반 등) 비교 자체가 의미 없음
     const neglected = BOXES.filter(b=>counts[b.key]===0);
     if(neglected.length===0) return '';
-    return `<div class="balance-warn">이번 주 <b>${neglected.map(b=>escapeHtml(b.label)).join(', ')}</b> 완료한 게 하나도 없어 — 다른 과목엔 몰려있는데 여긴 비어있어.</div>`;
+    const hasLowTagged = state.data.assignments.some(a=>!a.done && a.priority==='low');
+    const extra = hasLowTagged ? ' 가성비 "하"로 태그해둔 과제가 있다면 그것 때문에 아예 손 놓은 건 아닌지 확인해봐.' : '';
+    return `<div class="balance-warn">이번 주 <b>${neglected.map(b=>escapeHtml(b.label)).join(', ')}</b> 완료한 게 하나도 없어 — 다른 과목엔 몰려있는데 여긴 비어있어.${extra}</div>`;
   }
 
   function renderHome(){
@@ -893,6 +901,8 @@
     </div>`;
   }
 
+  const PRIORITY_LABELS = {high:'상', mid:'중', low:'하'};
+  const PRIORITY_RANK = {high:0, mid:1, low:2};
   function assignmentRowHtml(a, showCheckbox){
     const dueMid = new Date(a.dueDate+'T00:00:00').getTime();
     const dLeft = Math.round((dueMid-todayMid)/86400000);
@@ -908,12 +918,17 @@
         sub = `<input type="number" class="asg-hours-input" step="0.5" min="0.5" placeholder="예상 h 입력" data-role="asgHours" data-id="${a.id}">`;
       }
     }
+    const priorityRow = (showCheckbox && !a.done) ? `<div class="asg-priority">
+      <span class="asg-priority-label">가성비</span>
+      ${['high','mid','low'].map(p=>`<button class="pri-btn ${a.priority===p?'active':''}" data-action="setAssignmentPriority" data-id="${a.id}" data-val="${p}">${PRIORITY_LABELS[p]}</button>`).join('')}
+    </div>` : '';
     return `<div class="asg-row ${a.done?'done':''}">
       <button class="asg-check" data-action="toggleAssignment" data-id="${a.id}">${icon('check')}</button>
       <div class="asg-main">
         ${a.tag?`<div class="asg-tag">${escapeHtml(a.tag)}</div>`:''}
         <div class="asg-title">${a.link?`<a href="${escapeHtml(a.link)}" target="_blank" rel="noopener noreferrer" class="row-link">${escapeHtml(a.title)} ${icon('external')}</a>`:escapeHtml(a.title)}</div>
         ${sub}
+        ${priorityRow}
       </div>
       <div class="asg-due ${ddClass}">${ddLabel}</div>
       <button class="asg-del" title="삭제" data-action="deleteAssignment" data-id="${a.id}">${icon('trash')}</button>
@@ -1080,6 +1095,10 @@
     const cap = state.data.dailyCapacity||5;
     const sorted = state.data.assignments.slice().sort((a,b)=>{
       if(a.done!==b.done) return a.done?1:-1;
+      if(state.asgSortMode==='priority' && !a.done){
+        const ra = PRIORITY_RANK[a.priority]??1, rb = PRIORITY_RANK[b.priority]??1;
+        if(ra!==rb) return ra-rb;
+      }
       return a.dueDate.localeCompare(b.dueDate);
     });
     const load = peakDailyLoad(sorted);
@@ -1111,6 +1130,10 @@
         <input type="text" class="tag" id="asgTag" placeholder="관련 과목">
         <button class="btn" data-action="addAssignment">추가</button>
       </div>
+      ${sorted.length>0?`<div class="corner-tabs" style="margin-bottom:14px;">
+        <button class="corner-tab ${state.asgSortMode==='due'?'active':''}" data-action="setAsgSortMode" data-mode="due">마감일순</button>
+        <button class="corner-tab ${state.asgSortMode==='priority'?'active':''}" data-action="setAsgSortMode" data-mode="priority">가성비순</button>
+      </div>`:''}
       ${sorted.length===0?`<div class="empty">등록된 과제가 없어.</div>`:rows}
       ${noticesHtml}
     </div>`;
@@ -1911,6 +1934,12 @@ ${text}`}]
       case 'addAssignment': addAssignment(); break;
       case 'toggleAssignment': toggleAssignment(el.dataset.id); break;
       case 'deleteAssignment': deleteAssignment(el.dataset.id); break;
+      case 'setAssignmentPriority': {
+        const a = state.data.assignments.find(x=>x.id===el.dataset.id);
+        if(a){ a.priority = a.priority===el.dataset.val ? null : el.dataset.val; persist(); render(); }
+        break;
+      }
+      case 'setAsgSortMode': state.asgSortMode = el.dataset.mode; render(); break;
       case 'otParse': otParse(el.dataset.key); break;
       case 'classifyTasks': classifyTasks(); break;
       case 'addPersonal': {
