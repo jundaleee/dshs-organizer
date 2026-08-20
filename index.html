@@ -147,8 +147,6 @@
   .box-task-check:hover{border-color:var(--qc,var(--blue));}
   .box-task-text{font-size:10.5px;line-height:1.3;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .box-empty{font-size:9.5px;color:var(--text-3);}
-  .box-more{display:block;width:100%;background:none;border:none;text-align:left;font-size:9px;color:var(--text-3);padding:0;margin-top:auto;}
-  .box-more:hover{color:var(--text-2);text-decoration:underline;}
   @media(max-width:639px){
     .box-grid{grid-template-columns:repeat(2,1fr);}
   }
@@ -816,7 +814,6 @@
     return items;
   }
 
-  const BOX_TASK_LIMIT = 2; // 박스가 좁아서(7개가 한 화면에 다 들어가야 함) 한 줄씩만 보여줌
   function boxTaskRowHtml(q){
     if(q.kind==='personal'){
       return `<div class="box-task-row">
@@ -861,7 +858,34 @@
   }
 
   /* ---- 뽀모도로: 정해진 시간 안에 과제 하나를 끝내는 용도 ---- */
-  const pomo = { running:false, remaining:25*60, total:25*60, assignmentId:null, intervalId:null };
+  const pomo = { running:false, remaining:25*60, total:25*60, target:null, intervalId:null };
+  function pomoTargetLabel(){
+    if(!pomo.target) return null;
+    const t = pomo.target;
+    if(t.type==='assignment'){
+      const a = state.data.assignments.find(x=>x.id===t.id);
+      return a ? a.title : null;
+    }
+    if(t.type==='personal'){
+      const p = (state.data.personal?.tasks||[]).find(x=>x.id===t.id);
+      return p ? p.text : null;
+    }
+    if(t.type==='teacher'){
+      const td = state.data.teachers[t.key];
+      const item = td && td[t.corner] && td[t.corner].find(x=>x.id===t.id);
+      return item ? item.text : null;
+    }
+    return null;
+  }
+  function pomoCompleteLinked(){
+    if(!pomo.target) return;
+    const t = pomo.target;
+    if(t.type==='assignment') toggleAssignment(t.id);
+    else if(t.type==='personal') completePersonalTask(t.id);
+    else if(t.type==='teacher') completeItem(t.key, t.corner, t.id);
+    pomo.target = null;
+    render();
+  }
   function pomoFormat(sec){
     sec = Math.max(0, sec);
     const m = Math.floor(sec/60), s = sec%60;
@@ -906,18 +930,43 @@
     pomo.remaining = pomo.total;
     render();
   }
-  function renderPomoCard(pendingAssignments){
+  function renderPomoCard(){
     const pct = pomo.total>0 ? Math.max(0, Math.min(1, 1-pomo.remaining/pomo.total)) : 0;
     const done = pomo.remaining<=0 && pomo.total>0;
-    const linked = pomo.assignmentId ? state.data.assignments.find(a=>a.id===pomo.assignmentId) : null;
+    const targetLabel = pomoTargetLabel();
+
+    const pendingAssignments = state.data.assignments.filter(a=>!a.done).sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
+    const t = pomo.target;
+    const asgOptions = pendingAssignments.map(a=>{
+      const sel = t && t.type==='assignment' && t.id===a.id;
+      return `<option value="assignment:${a.id}" ${sel?'selected':''}>${escapeHtml(a.title)}</option>`;
+    }).join('');
+    const boxGroups = BOXES.map(box=>{
+      const items = boxTaskItems(box);
+      if(items.length===0) return '';
+      const opts = items.map(q=>{
+        let val, sel;
+        if(q.kind==='personal'){
+          val = `personal:${q.item.id}`;
+          sel = t && t.type==='personal' && t.id===q.item.id;
+        } else {
+          val = `teacher:${q.x.key}:${q.corner}:${q.item.id}`;
+          sel = t && t.type==='teacher' && t.key===q.x.key && t.corner===q.corner && t.id===q.item.id;
+        }
+        return `<option value="${val}" ${sel?'selected':''}>${escapeHtml(q.item.text)}</option>`;
+      }).join('');
+      return `<optgroup label="${escapeHtml(box.label)}">${opts}</optgroup>`;
+    }).join('');
+
     return `<div class="pomo-card">
       <div class="pomo-ring ${done?'done':''}" id="pomoRing" style="--deg:${pct*360}deg;--pomo-c:${done?'var(--green)':'var(--blue)'}">
         <div class="pomo-display" id="pomoDisplay">${done?'완료!':pomoFormat(pomo.remaining)}</div>
       </div>
       <div class="pomo-body">
-        <select class="pomo-select" id="pomoAssignmentSelect">
-          <option value="">집중 타이머 — 과제 선택 안 함</option>
-          ${pendingAssignments.map(a=>`<option value="${a.id}" ${pomo.assignmentId===a.id?'selected':''}>${escapeHtml(a.title)}</option>`).join('')}
+        <select class="pomo-select" id="pomoTargetSelect">
+          <option value="">집중 타이머 — 항목 선택 안 함</option>
+          ${asgOptions?`<optgroup label="과제">${asgOptions}</optgroup>`:''}
+          ${boxGroups}
         </select>
         <div class="pomo-row">
           <button class="pomo-preset ${pomo.total===15*60?'active':''}" data-action="pomoSetDuration" data-min="15">15분</button>
@@ -927,7 +976,7 @@
             ? `<button class="btn-outline" data-action="pomoPause">일시정지</button>`
             : `<button class="btn" data-action="pomoStart">${pomo.remaining<pomo.total && pomo.remaining>0 ? '계속' : '시작'}</button>`}
           <button class="btn-outline" data-action="pomoReset">초기화</button>
-          ${linked && done ? `<button class="btn" data-action="toggleAssignment" data-id="${linked.id}">"${escapeHtml(linked.title)}" 완료 처리</button>` : ''}
+          ${targetLabel && done ? `<button class="btn" data-action="pomoCompleteLinked">"${escapeHtml(targetLabel)}" 완료 처리</button>` : ''}
         </div>
       </div>
     </div>`;
@@ -940,12 +989,10 @@
       const teachers = boxTeachers(box);
       const todayCount = teachers.filter(x=>hasClassToday(x.teacher)).length;
       const all = boxTaskItems(box);
-      const shown = all.slice(0, BOX_TASK_LIMIT);
-      const moreCount = all.length - shown.length;
       const subjAttr = box.subj?`data-subj="${box.subj}"`:'';
-      const tasksHtml = shown.length===0
+      const tasksHtml = all.length===0
         ? `<div class="box-empty">할 일 없음</div>`
-        : shown.map(boxTaskRowHtml).join('') + (moreCount>0?`<button class="box-more" data-action="goCategory" data-cat="${box.cat}" ${subjAttr}>+${moreCount}개 더</button>`:'');
+        : all.map(boxTaskRowHtml).join('');
       const fv = boxFloatVars(box.key);
       const off = boxDragOffsets[box.key] || {x:0, y:0};
       return `<div class="box-drag" data-boxkey="${box.key}" style="transform:translate(${off.x}px,${off.y}px);">
@@ -971,7 +1018,7 @@
       <div class="home-date">${todayDateStr}</div>
       <h1 class="home-greeting">${greetingWord()}${name?', '+escapeHtml(name):''}</h1>
 
-      ${renderPomoCard(allPending)}
+      ${renderPomoCard()}
 
       <div class="box-grid">${boxHtml}</div>
 
@@ -2029,6 +2076,7 @@ ${text}`}]
       case 'pomoPause': pomoPause(); break;
       case 'pomoReset': pomoReset(); break;
       case 'pomoSetDuration': pomoSetDuration(parseInt(el.dataset.min,10)); break;
+      case 'pomoCompleteLinked': pomoCompleteLinked(); break;
       case 'otParse': otParse(el.dataset.key); break;
       case 'classifyTasks': classifyTasks(); break;
       case 'addPersonal': {
@@ -2096,8 +2144,15 @@ ${text}`}]
 
   let debTimer = null;
   document.body.addEventListener('input', function(e){
-    if(e.target.id==='pomoAssignmentSelect'){
-      pomo.assignmentId = e.target.value || null;
+    if(e.target.id==='pomoTargetSelect'){
+      const v = e.target.value;
+      if(!v){ pomo.target = null; }
+      else {
+        const parts = v.split(':');
+        if(parts[0]==='assignment'){ pomo.target = {type:'assignment', id:parts[1]}; }
+        else if(parts[0]==='personal'){ pomo.target = {type:'personal', id:parts[1]}; }
+        else if(parts[0]==='teacher'){ pomo.target = {type:'teacher', key:parts[1], corner:parts[2], id:parts[3]}; }
+      }
       render();
     } else if(e.target.dataset.role==='memo' || e.target.dataset.role==='info'){
       const role = e.target.dataset.role, key=e.target.dataset.key, val=e.target.value;
