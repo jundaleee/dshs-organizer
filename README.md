@@ -12,7 +12,7 @@
 - 코드가 업데이트되면(푸시 후) GitHub Pages가 재배포하는 데 1분 정도 걸려. 그 이후 새로고침하면 반영돼. 저장된 데이터(localStorage)는 코드 업데이트와 무관하게 그대로 남아.
 - 폰에서는 **홈 화면에 추가**해두면 전용 아이콘으로, Safari 주소창 없이 앱처럼 바로 열려 (Safari/Chrome 공유 메뉴 → 홈 화면에 추가).
 
-이 저장소는 **공개**야 (교사 이름·시간표 구조가 URL을 아는 사람에게 보일 수 있음, 검색엔진 노출은 안 됨). 직접 입력하는 메모·학습 기록은 브라우저 로컬에만 있어서 안전하지만, **`data/assignments-sync.json`은 예외야 — Classroom에서 자동으로 가져온 실제 과제 제목·마감일·반 이름·공지 내용이 이 저장소에 커밋으로 남고, 저장소가 공개라서 URL만 알면 로그인 없이 누구나 볼 수 있어.** 아래 Classroom 동기화 섹션에 이 부분 개선 계획을 적어뒀어.
+이 저장소는 **공개**야 (교사 이름·시간표 구조가 URL을 아는 사람에게 보일 수 있음, 검색엔진 노출은 안 됨). 직접 입력하는 메모·학습 기록은 브라우저 로컬에만 있어서 안전해. Classroom에서 자동으로 가져오는 실제 과제·공지 내용은 별도의 **비공개** 저장소(`jundaleee/dshs-organizer-data`)에 있어서 이 공개 저장소에는 안 남아 — 자세한 건 아래 Classroom 동기화 섹션 참고.
 
 ## 화면 구성
 
@@ -45,29 +45,27 @@
 
 ## Classroom 자동 동기화 (과제 + 공지 + 자료)
 
-Gmail로 오는 Google Classroom 알림(과제/공지/자료/성적공지 등 전부)을 감지해서 앱에 자동으로 반영하는 기능. 두 부분으로 나뉘어 있어:
+Gmail로 오는 Google Classroom 알림(과제/공지/자료/성적공지 등 전부)을 감지해서 앱에 자동으로 반영하는 기능. 실제 동기화 데이터(`data/assignments-sync.json`)는 이 공개 저장소가 아니라 **별도의 비공개 저장소 `jundaleee/dshs-organizer-data`**에 있어 — 처음엔 같은 저장소에 뒀다가, 공개 저장소라 URL만 알면 누구나 실제 과제·공지 내용을 볼 수 있는 문제를 발견해서 분리했어. 세 부분으로 나뉘어 있어:
 
-- **클라이언트 쪽 (앱, 완료)**: 앱은 열릴 때마다, 그리고 과제 탭의 "Classroom 동기화" 버튼을 누를 때마다 저장소의 `data/assignments-sync.json`을 읽어와 병합해.
+- **클라이언트 쪽 (앱, 완료)**: 앱은 열릴 때마다, 그리고 과제 탭의 "Classroom 동기화" 버튼을 누를 때마다 `jundaleee/dshs-organizer-data`의 `data/assignments-sync.json`을 읽어와 병합해.
   - **기한이 있는 항목** → **과제** 탭에 자동 추가
-  - **기한이 없는 항목**(공지/자료/성적공지 등) → **홈** 화면 하단 "공지·자료" 섹션에 표시
+  - **기한이 없는 항목**(공지/자료/성적공지 등) → **과제** 탭 하단 "공지·자료" 섹션에 표시
   - 이미 가져온 항목은 `id`로 추적해서 중복 추가되지 않고, 사용자가 지워도 다시 나타나지 않아.
+  - 자동 동기화가 조용히 실패하는 걸 막기 위해, 과제 탭에 마지막으로 확인된 시각을 항상 표시하고 24시간 넘게 갱신이 없으면 경고가 떠.
 
-- **Gmail 쪽 (`tools/classroom-sync.gs.js`, Google Apps Script)**: 실제로 Gmail을 읽어서 위 JSON 파일에 새 항목을 커밋해주는 쪽. 원래 Claude Code Remote의 예약 작업(Routine)으로 만들었는데, **Gmail 커넥터가 대화창마다 다시 켜야 하는 문제 때문에 신뢰할 수 없어서 폐기했어.** 대신 Google Apps Script로 옮겼어 — Google 계정 안에서 직접 도는 방식이라 커넥터/세션 개념 자체가 없고, 한 번 설정하면 그냥 계속 돌아가.
+- **Gmail 쪽 (`tools/classroom-sync.gs.js`, Google Apps Script)**: 실제로 Gmail을 읽어서 `dshs-organizer-data`의 JSON 파일에 새 항목을 커밋해주는 쪽. 원래 Claude Code Remote의 예약 작업(Routine)으로 만들었는데, **Gmail 커넥터가 대화창마다 다시 켜야 하는 문제 때문에 신뢰할 수 없어서 폐기했어.** 대신 Google Apps Script로 옮겼어 — Google 계정 안에서 직접 도는 방식이라 커넥터/세션 개념 자체가 없고, 한 번 설정하면 그냥 계속 돌아가.
 
   설정 방법은 `tools/classroom-sync.gs.js` 파일 맨 위 주석에 있어. 요약하면:
   1. https://script.google.com 에서 새 프로젝트 만들고 그 파일 내용을 붙여넣기
-  2. 스크립트 속성에 `ANTHROPIC_API_KEY`(앱 설정에 넣은 키 재사용 가능)와 `GITHUB_TOKEN`(**앱의 읽기 전용 토큰과 별개로, Contents: Read and write 권한으로 새로 발급**) 등록
+  2. 스크립트 속성에 `ANTHROPIC_API_KEY`(앱 설정에 넣은 키 재사용 가능)와 `GITHUB_TOKEN`(**앱의 읽기 전용 토큰과 별개로, `dshs-organizer-data`에 Contents: Read and write 권한으로 새로 발급**) 등록
   3. `syncClassroom` 함수 한 번 수동 실행 → 권한 승인
   4. 트리거 추가: `syncClassroom`을 1시간마다 실행
 
-앱이 동기화 파일을 읽으려면 읽기 전용 GitHub 토큰이 필요해 (Apps Script가 쓰는 쓰기용 토큰과는 다른, 앱 전용 토큰):
-
-1. https://github.com/settings/personal-access-tokens/new 에서 fine-grained 토큰 발급
-2. Repository access → **Only select repositories** → `dshs-organizer` 선택
-3. Repository permissions → **Contents: Read-only**
-4. 발급받은 토큰을 **설정 → GitHub 동기화 토큰**에 등록
-
-⚠️ **주의**: 지금 이 저장소는 공개 상태라서, 위 토큰은 실제로 접근을 막아주지 않아 (공개 저장소는 인증 없이도 `data/assignments-sync.json`을 그대로 읽을 수 있음). 진짜 비공개로 만들려면 이 파일을 별도의 비공개 저장소로 분리해야 해 — 아직 안 했어.
+- **읽기 전용 GitHub 토큰 (앱)**: `dshs-organizer-data`가 비공개라서, 앱이 그 파일을 읽으려면 반드시 이 토큰이 있어야 해 (Apps Script가 쓰는 쓰기용 토큰과는 다른, 앱 전용 토큰):
+  1. https://github.com/settings/personal-access-tokens/new 에서 fine-grained 토큰 발급
+  2. Repository access → **Only select repositories** → `dshs-organizer-data` 선택 (`dshs-organizer` 아님!)
+  3. Repository permissions → **Contents: Read-only**
+  4. 발급받은 토큰을 **설정 → GitHub 동기화 토큰**에 등록
 
 Classroom에서 온 과제는 예상 학습 시간이 없으니(기한만 있음), 과제 목록에서 "예상 h 입력" 칸에 직접 채워야 하루 학습량 계산에 반영돼.
 
@@ -93,6 +91,6 @@ Classroom에서 온 과제는 예상 학습 시간이 없으니(기한만 있음
 
 ## 다음 단계 후보
 
-- **PWA화**: 이제 실제 https 주소로 호스팅되니 `manifest.json` + service worker 추가가 훨씬 수월해짐 (오프라인 캐싱, 설치 프롬프트 등)
+- **PWA 오프라인 캐싱**: `manifest.json`(아이콘/설치 프롬프트)은 이미 있음 — service worker를 추가하면 오프라인에서도 열림
 - **과목별 학습 모델 고도화**: 현재는 수학/물리만 반복 풀이 가중치 적용 — 다른 과목 학습법을 알려주면 과목별 알고리즘 추가 가능 (제시 예정)
 - **디자인 세부 조정**: 다크 Liquid Glass 테마로 전환 완료, 이후 피드백에 따라 계속 다듬는 중

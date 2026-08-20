@@ -566,7 +566,7 @@
   const API_KEY_STORAGE_KEY = 'organizer-anthropic-key';
   const GITHUB_TOKEN_STORAGE_KEY = 'organizer-github-token';
   const STUDENT_NAME_KEY = 'organizer-student-name';
-  const CLASSROOM_SYNC_API_URL = 'https://api.github.com/repos/jundaleee/dshs-organizer/contents/data/assignments-sync.json?ref=claude/jundal-study-organizer-migration-3z0jb8';
+  const CLASSROOM_SYNC_API_URL = 'https://api.github.com/repos/jundaleee/dshs-organizer-data/contents/data/assignments-sync.json?ref=main';
   let storageOK = true;
   (function testStorage(){
     try{
@@ -1316,7 +1316,7 @@
 
           <div class="settings-group">
             <h3>GitHub 동기화 토큰</h3>
-            <div class="desc">오직 <b>과제 탭의 "Classroom 동기화"</b> 기능에서만 쓰여. 비공개 저장소의 동기화 파일(data/assignments-sync.json)을 읽어올 때만 사용돼. github.com/settings/personal-access-tokens/new 에서 dshs-organizer 저장소 하나만, Contents: Read-only 권한으로 발급받아줘.</div>
+            <div class="desc">오직 <b>과제 탭의 "Classroom 동기화"</b> 기능에서만 쓰여. 비공개 저장소의 동기화 파일(data/assignments-sync.json)을 읽어올 때만 사용돼. github.com/settings/personal-access-tokens/new 에서 dshs-organizer-data 저장소 하나만, Contents: Read-only 권한으로 발급받아줘.</div>
             <input type="password" id="githubTokenInput" placeholder="github_pat_..." autocomplete="off" spellcheck="false">
             <div class="settings-actions">
               <button class="btn-outline" data-action="saveGithubToken">저장</button>

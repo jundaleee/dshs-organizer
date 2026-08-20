@@ -11,7 +11,7 @@
  *      ANTHROPIC_API_KEY = (console.anthropic.com에서 발급받은 키, 앱 설정에 넣은 것과 같아도 됨)
  *      GITHUB_TOKEN = (아래 설명 참고 — 앱에서 쓰는 읽기전용 토큰과는 "다른", 쓰기 권한 있는 토큰이어야 함)
  * 3. GITHUB_TOKEN 발급: https://github.com/settings/personal-access-tokens/new
- *      - Repository access → Only select repositories → dshs-organizer
+ *      - Repository access → Only select repositories → dshs-organizer-data (dshs-organizer 아님! 데이터는 별도 비공개 저장소에 있음)
  *      - Repository permissions → Contents → Read and write
  *    (앱의 "GitHub 동기화 토큰"은 읽기 전용이라 이 자동화가 커밋을 못 함 — 반드시 새로 하나 더 발급)
  * 4. 함수 목록에서 syncClassroom 선택 → 실행(▶) → 처음 실행 시 권한 승인 화면이 뜨면 전부 허용
@@ -22,8 +22,8 @@
  */
 
 const REPO_OWNER = 'jundaleee';
-const REPO_NAME = 'dshs-organizer';
-const REPO_BRANCH = 'claude/jundal-study-organizer-migration-3z0jb8';
+const REPO_NAME = 'dshs-organizer-data'; // 비공개 데이터 저장소 (앱 코드가 있는 dshs-organizer는 public이라 데이터를 분리함)
+const REPO_BRANCH = 'main';
 const SYNC_PATH = 'data/assignments-sync.json';
 const PROCESSED_LABEL = 'Classroom-Synced';
 const CLAUDE_MODEL = 'claude-sonnet-5';
