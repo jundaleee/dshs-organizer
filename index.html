@@ -217,6 +217,18 @@
   .sync-health{font-size:12px;color:var(--text-3);padding:0 0 14px;}
   .sync-health.warn{color:var(--orange);font-weight:600;}
 
+  /* ---- D-day 역산 타임라인 ---- */
+  .dday-timeline{position:relative;height:92px;margin:4px 14px 28px;}
+  .dday-track{position:absolute;left:0;right:0;bottom:26px;height:2px;background:var(--border);}
+  .dday-today{position:absolute;bottom:20px;width:2px;height:14px;background:var(--blue);box-shadow:0 0 8px rgba(10,132,255,.7);}
+  .dday-cluster{position:absolute;bottom:26px;display:flex;flex-direction:column-reverse;align-items:center;gap:3px;transform:translateX(-50%);cursor:default;}
+  .dday-dot{width:9px;height:9px;border-radius:50%;background:var(--orange);flex-shrink:0;border:1.5px solid var(--bg);box-shadow:0 0 0 1px var(--border);}
+  .dday-dot.overdue{background:var(--red);}
+  .dday-count{font-size:9.5px;color:var(--text-3);}
+  .dday-label{position:absolute;bottom:0;font-size:10.5px;color:var(--text-3);white-space:nowrap;}
+  .dday-label.start{left:0;color:var(--blue);font-weight:600;}
+  .dday-label.end{right:0;}
+
   .asg-form{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--border);align-items:center;}
   .asg-form input{background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:9px 14px;font-size:13px;}
   .asg-form input.title{flex:2;min-width:180px;}
@@ -975,6 +987,40 @@
     return `${MONTHNAME[d.getMonth()]} ${d.getDate()}일(${DAYNAME[d.getDay()]})`;
   }
 
+  // 마감일들을 가로 타임라인에 흩뿌려서 특정 날짜에 몰려있는지 한눈에 보이게 함
+  // (peakDailyLoad와 같은 문제의식: 합계/평균만으로는 클러스터링이 안 보임)
+  function renderDdayTimeline(assignments){
+    const pending = assignments.filter(a=>!a.done);
+    if(pending.length===0) return '';
+    const dueTimes = pending.map(a=>new Date(a.dueDate+'T00:00:00').getTime());
+    let maxDue = Math.max.apply(null, dueTimes.concat([todayMid]));
+    const minSpan = 7*86400000; // 폭이 너무 좁으면(전부 임박) 점들이 뭉개지니 최소 폭 보장
+    if(maxDue - todayMid < minSpan) maxDue = todayMid + minSpan;
+    const span = maxDue - todayMid;
+
+    const byDate = {};
+    pending.forEach(a=>{ (byDate[a.dueDate] = byDate[a.dueDate] || []).push(a); });
+
+    const clusters = Object.keys(byDate).map(dateStr=>{
+      const dueMs = new Date(dateStr+'T00:00:00').getTime();
+      const overdue = dueMs < todayMid;
+      const pct = Math.max(0, Math.min(100, ((dueMs-todayMid)/span)*100));
+      const items = byDate[dateStr];
+      const shown = items.slice(0,4);
+      const dotsHtml = shown.map(a=>`<div class="dday-dot ${overdue?'overdue':''}" title="${escapeHtml(fmtShortDate(dateStr))} · ${escapeHtml(a.title)}"></div>`).join('');
+      const moreHtml = items.length>4 ? `<div class="dday-count">+${items.length-4}</div>` : '';
+      return `<div class="dday-cluster" style="left:${pct}%;" title="${escapeHtml(fmtShortDate(dateStr))} · 과제 ${items.length}개">${dotsHtml}${moreHtml}</div>`;
+    }).join('');
+
+    return `<div class="dday-timeline">
+      <div class="dday-track"></div>
+      <div class="dday-today" style="left:0%;"></div>
+      ${clusters}
+      <div class="dday-label start">오늘</div>
+      <div class="dday-label end">${fmtShortDate(toISODate(new Date(maxDue)))}</div>
+    </div>`;
+  }
+
   function renderAssignmentsPage(){
     const cap = state.data.dailyCapacity||5;
     const sorted = state.data.assignments.slice().sort((a,b)=>{
@@ -996,6 +1042,7 @@
     return `<div class="fade-in">
       <div class="page-head"><h1>과제</h1><button class="iconbtn" data-action="syncClassroom">${icon('arrowRight')} Classroom 동기화</button></div>
       ${syncStatus?`<div class="empty" style="padding:0 0 14px;">${syncStatus}</div>`:syncHealthHtml()}
+      ${renderDdayTimeline(sorted)}
       <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2);margin-bottom:18px;">
         <span>하루 가용 학습시간</span>
         <input type="number" min="0.5" step="0.5" value="${cap}" data-role="capacity" style="width:64px;background:var(--glass);border:1px solid var(--border);border-radius:999px;color:var(--text);padding:6px 10px;text-align:center;">
