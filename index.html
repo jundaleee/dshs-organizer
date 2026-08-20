@@ -8,6 +8,7 @@
 <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
 <link rel="icon" type="image/png" sizes="512x512" href="assets/icon-512.png">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="manifest" href="manifest.json">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Organizer">
@@ -213,6 +214,8 @@
   .cap-line b{color:var(--text);font-weight:600;}
   .cap-line.over{color:var(--red);}
   .cap-line.over b{color:var(--red);}
+  .sync-health{font-size:12px;color:var(--text-3);padding:0 0 14px;}
+  .sync-health.warn{color:var(--orange);font-weight:600;}
 
   .asg-form{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;padding-bottom:24px;border-bottom:1px solid var(--border);align-items:center;}
   .asg-form input{background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:9px 14px;font-size:13px;}
@@ -949,19 +952,37 @@
   }
 
   /* ---- Assignments ---- */
+  // 미완료 과제들의 예상 시간을 오늘~마감일에 균등 분배해서 날짜별로 쌓고, 가장 빡센 날을 찾음
+  // (단순 평균은 과제가 여러 날에 흩어져 있든 하루에 몰려있든 똑같이 보여서 crunch를 못 잡음)
+  function peakDailyLoad(assignments){
+    const buckets = {};
+    assignments.forEach(a=>{
+      if(a.done || typeof a.estHours!=='number') return;
+      const dLeft = Math.max(1, Math.round((new Date(a.dueDate+'T00:00:00').getTime()-todayMid)/86400000));
+      const perDay = a.estHours/dLeft;
+      for(let i=0;i<dLeft;i++){
+        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate()+i);
+        const key = toISODate(d);
+        buckets[key] = (buckets[key]||0) + perDay;
+      }
+    });
+    let peakDate=null, peakHours=0;
+    Object.keys(buckets).forEach(k=>{ if(buckets[k]>peakHours){ peakHours=buckets[k]; peakDate=k; } });
+    return {peakDate, peakHours};
+  }
+  function fmtShortDate(iso){
+    const d = new Date(iso+'T00:00:00');
+    return `${MONTHNAME[d.getMonth()]} ${d.getDate()}일(${DAYNAME[d.getDay()]})`;
+  }
+
   function renderAssignmentsPage(){
     const cap = state.data.dailyCapacity||5;
     const sorted = state.data.assignments.slice().sort((a,b)=>{
       if(a.done!==b.done) return a.done?1:-1;
       return a.dueDate.localeCompare(b.dueDate);
     });
-    let demand=0;
-    sorted.forEach(a=>{
-      if(a.done || typeof a.estHours!=='number') return;
-      const dLeft = Math.round((new Date(a.dueDate+'T00:00:00').getTime()-todayMid)/86400000);
-      demand += a.estHours/Math.max(1,dLeft);
-    });
-    const over = demand>cap;
+    const load = peakDailyLoad(sorted);
+    const peakOver = load.peakDate!==null && load.peakHours>cap;
     const rows = sorted.map(a=>assignmentRowHtml(a,true)).join('');
 
     const notices = (state.data.notices||[]).slice().sort((a,b)=>(b.postedAt||'').localeCompare(a.postedAt||'')).slice(0,8);
@@ -974,13 +995,13 @@
 
     return `<div class="fade-in">
       <div class="page-head"><h1>과제</h1><button class="iconbtn" data-action="syncClassroom">${icon('arrowRight')} Classroom 동기화</button></div>
-      ${syncStatus?`<div class="empty" style="padding:0 0 14px;">${syncStatus}</div>`:''}
+      ${syncStatus?`<div class="empty" style="padding:0 0 14px;">${syncStatus}</div>`:syncHealthHtml()}
       <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2);margin-bottom:18px;">
         <span>하루 가용 학습시간</span>
         <input type="number" min="0.5" step="0.5" value="${cap}" data-role="capacity" style="width:64px;background:var(--glass);border:1px solid var(--border);border-radius:999px;color:var(--text);padding:6px 10px;text-align:center;">
         <span>시간</span>
       </div>
-      ${state.data.assignments.length>0?`<div class="cap-line ${over?'over':''}">대기 과제 기준 하루 평균 <b>${demand.toFixed(1)}시간</b> 필요 (가용 ${cap}시간) ${over?`— 초과 ${(demand-cap).toFixed(1)}시간`:`— 여유 ${(cap-demand).toFixed(1)}시간`}</div>`:''}
+      ${load.peakDate?`<div class="cap-line ${peakOver?'over':''}">대기 과제 기준 가장 빡센 날은 <b>${fmtShortDate(load.peakDate)}</b> — <b>${load.peakHours.toFixed(1)}시간</b> 필요 (가용 ${cap}시간) ${peakOver?`— 초과 ${(load.peakHours-cap).toFixed(1)}시간`:`— 여유 ${(cap-load.peakHours).toFixed(1)}시간`}</div>`:''}
       <div class="asg-form">
         <input type="text" class="title" id="asgTitle" placeholder="과제명">
         <input type="date" class="date" id="asgDate">
@@ -1392,6 +1413,26 @@
 
   /* ============ 액션: 설정 ============ */
   let settingsStatus = '', githubTokenStatus = '', otStatus = '', syncStatus = '', taskClassifyStatus = '';
+  // Classroom 동기화 상태 — 자동 동기화가 조용히 실패하는 걸 막기 위해 수동/자동 구분 없이 항상 기록
+  let lastSyncCheckedAt = null; // Apps Script가 마지막으로 Gmail을 확인해서 파일을 쓴 시각 (upstream, payload.lastCheckedAt)
+  let lastSyncError = ''; // 클라이언트의 가장 최근 fetch 시도가 실패한 이유 (성공하면 비움)
+  function syncHealthHtml(){
+    if(!getGithubToken()){
+      return `<div class="sync-health">Classroom 자동 동기화가 꺼져 있어 — 설정에서 GitHub 토큰을 등록하면 켜져.</div>`;
+    }
+    if(!lastSyncCheckedAt){
+      return lastSyncError
+        ? `<div class="sync-health warn">Classroom 동기화 확인 실패 — ${escapeHtml(lastSyncError)}</div>`
+        : `<div class="sync-health">아직 Classroom 동기화 확인 전이야.</div>`;
+    }
+    const hrs = (Date.now() - new Date(lastSyncCheckedAt).getTime())/3600000;
+    const label = hrs<1 ? '방금' : hrs<24 ? `${Math.round(hrs)}시간 전` : `${Math.floor(hrs/24)}일 전`;
+    const stale = hrs>24;
+    return `<div class="sync-health ${stale||lastSyncError?'warn':''}">
+      마지막 Classroom 확인: ${label}${stale?' — 24시간 넘게 새 내용이 없어. Apps Script 트리거나 GitHub 토큰이 살아있는지 확인해봐.':''}
+      ${lastSyncError?` · 방금 시도 실패: ${escapeHtml(lastSyncError)}`:''}
+    </div>`;
+  }
   function saveApiKey(){
     const input = document.getElementById('apiKeyInput');
     const val = input ? input.value.trim() : '';
@@ -1584,6 +1625,8 @@ ${text}`}]
       if(res.status===401 || res.status===403) throw new Error('토큰이 유효하지 않거나 권한이 없어');
       if(!res.ok) throw new Error('HTTP '+res.status);
       const payload = await res.json();
+      if(payload.lastCheckedAt) lastSyncCheckedAt = payload.lastCheckedAt;
+      lastSyncError = '';
       const incomingAsg = Array.isArray(payload.assignments) ? payload.assignments : [];
       const incomingNotices = Array.isArray(payload.notices) ? payload.notices : [];
       const knownAsg = new Set(state.data.importedClassroomIds || []);
@@ -1616,11 +1659,11 @@ ${text}`}]
       if(manual) syncStatus = (addedAsg>0||addedNotices>0)
         ? `과제 ${addedAsg}개, 공지·자료 ${addedNotices}개를 불러왔어${skippedNoDate>0?` (기한 불명확 ${skippedNoDate}개 제외)`:''}.`
         : '새로 불러올 항목이 없어.';
-      if(addedAsg>0 || addedNotices>0) render();
     }catch(err){
-      if(manual) syncStatus = `동기화 실패 — ${err.message || '오프라인이거나 알 수 없는 오류'}.`;
+      lastSyncError = err.message || '오프라인이거나 알 수 없는 오류';
+      if(manual) syncStatus = `동기화 실패 — ${lastSyncError}.`;
     }
-    if(manual) render();
+    render();
   }
 
   /* ============ 내보내기/가져오기 ============ */
