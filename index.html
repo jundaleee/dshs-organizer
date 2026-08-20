@@ -729,6 +729,7 @@
   ];
 
   /* ============ 렌더 ============ */
+  let lastRenderedView = null; // 같은 화면 안에서 다시 그릴 땐(체크박스 클릭 등) fade-in을 안 태우려고 추적
   function render(){
     const sidebarSlot = document.getElementById('sidebarSlot');
     const bottomNavSlot = document.getElementById('bottomNavSlot');
@@ -736,6 +737,8 @@
     bottomNavSlot.innerHTML = renderBottomNav();
 
     const app = document.getElementById('app');
+    const viewChanged = state.view !== lastRenderedView;
+    lastRenderedView = state.view;
     let html = renderTopbarMini();
     if(!storageOK) html += `<div class="empty" style="color:var(--danger);">이 브라우저에서는 로컬 저장이 안 돼(시크릿 모드이거나 저장 공간이 꽉 찼을 수 있어). 작업 후 꼭 설정에서 내보내기로 백업해줘.</div>`;
     if(state.view==='home') html += renderHome();
@@ -745,6 +748,11 @@
     else if(state.view==='teachers') html += renderTeachersPage();
     else if(state.view==='planner') html += renderPlannerPage();
     app.innerHTML = html;
+    if(!viewChanged){
+      // 클릭할 때마다 화면 전체가 깜빡이는 것 방지 — 실제로 다른 화면으로 이동할 때만 페이드인
+      const fadeEl = app.querySelector('.fade-in');
+      if(fadeEl) fadeEl.classList.remove('fade-in');
+    }
 
     document.querySelectorAll('.modal-overlay').forEach(el=>el.remove());
     if(state.modal==='settings') document.body.insertAdjacentHTML('beforeend', renderSettingsModal());
