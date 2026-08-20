@@ -217,6 +217,8 @@
   .sync-health{font-size:12px;color:var(--text-3);padding:0 0 14px;}
   .sync-health.warn{color:var(--orange);font-weight:600;}
 
+  .balance-warn{font-size:12.5px;color:var(--orange);font-weight:600;line-height:1.55;background:var(--glass);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));border:1px solid var(--border);border-radius:var(--r-md);padding:11px 15px;margin-bottom:28px;}
+
   /* ---- D-day 역산 타임라인 ---- */
   .dday-timeline{position:relative;height:92px;margin:4px 14px 28px;}
   .dday-track{position:absolute;left:0;right:0;bottom:26px;height:2px;background:var(--border);}
@@ -815,6 +817,34 @@
     </div>`;
   }
 
+  // 과목별 학습 시간을 재는 기능이 없어서(체크 여부만 있음), "이번 주 완료 개수"를 시간 대신 프록시로 씀.
+  // 정확도는 떨어지지만 "이번 주 이 과목 하나도 안 건드림" 정도는 충분히 잡아냄.
+  function weekBoxCompletionCounts(){
+    const weekStart = mondayOf(now).getTime();
+    const counts = {};
+    BOXES.forEach(b=>{ counts[b.key] = 0; });
+    TEACHER_LIST.forEach(x=>{
+      const box = BOXES.find(b=>b.cat===x.cat && (!b.subj || b.subj===x.subj));
+      if(!box) return;
+      const td = state.data.teachers[x.key];
+      td.completed.forEach(it=>{
+        if((it.corner==='review'||it.corner==='self') && it.completedAt>=weekStart) counts[box.key]++;
+      });
+    });
+    (state.data.personal?.completed||[]).forEach(it=>{
+      if(BOX_KEYS.has(it.boxKey) && it.completedAt>=weekStart) counts[it.boxKey]++;
+    });
+    return counts;
+  }
+  function renderBalanceWarning(){
+    const counts = weekBoxCompletionCounts();
+    const total = Object.values(counts).reduce((a,b)=>a+b,0);
+    if(total<4) return ''; // 활동이 너무 적으면(주 초반 등) 비교 자체가 의미 없음
+    const neglected = BOXES.filter(b=>counts[b.key]===0);
+    if(neglected.length===0) return '';
+    return `<div class="balance-warn">이번 주 <b>${neglected.map(b=>escapeHtml(b.label)).join(', ')}</b> 완료한 게 하나도 없어 — 다른 과목엔 몰려있는데 여긴 비어있어.</div>`;
+  }
+
   function renderHome(){
     const name = getStudentName();
 
@@ -853,6 +883,8 @@
       <h1 class="home-greeting">${greetingWord()}${name?', '+escapeHtml(name):''}</h1>
 
       <div class="box-grid">${boxHtml}</div>
+
+      ${renderBalanceWarning()}
 
       <div class="section">
         <div class="section-head"><div class="section-title">임박한 과제</div><button class="section-link" data-action="goView" data-view="assignments">전체 보기</button></div>
