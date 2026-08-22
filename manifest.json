@@ -1,6 +1,6 @@
 {
-  "name": "Study Organizer",
-  "short_name": "Organizer",
+  "name": "Sorganizer",
+  "short_name": "Sorganizer",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
