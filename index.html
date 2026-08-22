@@ -242,14 +242,20 @@
   .asg-tag{font-size:12px;color:var(--text-3);}
   .asg-title{font-size:14.5px;margin-top:1px;word-break:break-word;}
   .asg-row.done .asg-title{text-decoration:line-through;text-decoration-color:var(--border-strong);}
-  .asg-sub{font-size:12px;color:var(--text-3);margin-top:3px;}
   .asg-due{font-size:12.5px;color:var(--text-2);flex-shrink:0;font-variant-numeric:tabular-nums;white-space:nowrap;}
   .asg-due.urgent{color:var(--orange);font-weight:600;}
   .asg-due.overdue{color:var(--red);font-weight:600;}
   .asg-del{width:24px;height:24px;border-radius:50%;border:none;background:none;color:var(--text-3);flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity var(--dur);}
   .asg-row:hover .asg-del{opacity:1;}
   .asg-del:hover{color:var(--red);}
-  .asg-hours-input{width:100px;background:var(--glass);border:1px solid var(--orange);border-radius:var(--r-pill);color:var(--text);padding:6px 12px;font-size:12px;text-align:center;}
+  .asg-row.asg-complete-anim{pointer-events:none;overflow:hidden;animation:asgCollapse 260ms cubic-bezier(.4,0,.2,1) 260ms forwards;}
+  .asg-row.asg-complete-anim .asg-check{background:var(--green);border-color:var(--green);transform:scale(1.08);transition:all 240ms cubic-bezier(.34,1.56,.64,1);}
+  .asg-row.asg-complete-anim .asg-check svg{opacity:1;transform:scale(1);transition:all 240ms cubic-bezier(.34,1.56,.64,1) 30ms;}
+  .asg-row.asg-complete-anim .asg-title{text-decoration:line-through;text-decoration-color:var(--border-strong);transition:text-decoration-color 200ms var(--ease);}
+  @keyframes asgCollapse{
+    0%{opacity:1;max-height:200px;transform:scale(1);}
+    100%{opacity:0;max-height:0;margin-top:0;margin-bottom:0;padding-top:0;padding-bottom:0;border-bottom-width:0;transform:scale(.97);}
+  }
   .asg-priority{display:flex;align-items:center;gap:6px;margin-top:7px;}
   .asg-priority-label{font-size:11px;color:var(--text-3);}
   .pri-btn{background:var(--glass);border:1px solid var(--border);color:var(--text-3);border-radius:var(--r-pill);padding:3px 11px;font-size:11px;font-weight:600;}
@@ -257,10 +263,6 @@
   .pri-btn.active[data-val="mid"]{background:var(--blue);border-color:var(--blue);color:#fff;}
   .pri-btn.active[data-val="low"]{background:rgba(255,255,255,.22);border-color:var(--border-strong);color:var(--text);}
 
-  .cap-line{font-size:13px;color:var(--text-2);padding:10px 4px 18px;border-bottom:1px solid var(--border);margin-bottom:6px;}
-  .cap-line b{color:var(--text);font-weight:600;}
-  .cap-line.over{color:var(--red);}
-  .cap-line.over b{color:var(--red);}
   .sync-health{font-size:12px;color:var(--text-3);padding:0 0 14px;}
   .sync-health.warn{color:var(--orange);font-weight:600;}
 
@@ -282,7 +284,6 @@
   .asg-form input{background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:9px 14px;font-size:13px;}
   .asg-form input.title{flex:2;min-width:180px;}
   .asg-form input.date{flex:1;min-width:130px;}
-  .asg-form input.hours{width:88px;}
   .asg-form input.tag{flex:1;min-width:110px;}
   .btn{background:var(--blue);color:#fff;border:none;border-radius:var(--r-pill);padding:9px 20px;font-size:13.5px;font-weight:600;transition:filter var(--dur) var(--ease),transform var(--dur) var(--ease);}
   .btn:hover{filter:brightness(1.12);}
@@ -371,14 +372,11 @@
   .completed-link{font-size:12.5px;color:var(--text-3);background:none;border:none;padding:0;margin-top:8px;}
   .completed-link:hover{color:var(--text);}
 
-  /* ---- notices ---- */
-  .notice-row{display:flex;gap:12px;padding:11px 4px;border-bottom:1px solid var(--border);}
-  .notice-row:last-child{border-bottom:none;}
-  .notice-kind{font-size:10.5px;color:var(--purple);width:38px;flex-shrink:0;padding-top:1px;font-weight:600;}
-  .notice-main{flex:1;min-width:0;}
-  .notice-tag{font-size:12px;color:var(--text-3);}
-  .notice-title{font-size:13.5px;margin-top:1px;}
-  .notice-snippet{font-size:12.5px;color:var(--text-2);margin-top:3px;line-height:1.5;}
+  /* ---- materials/notices ---- */
+  .mat-row{display:flex;flex-direction:column;gap:2px;padding:11px 4px;border-bottom:1px solid var(--border);}
+  .mat-row:last-child{border-bottom:none;}
+  .mat-title{font-size:13.5px;}
+  .mat-tag{font-size:12px;color:var(--text-3);}
   .row-link{color:var(--blue);text-decoration:none;display:inline-flex;align-items:center;gap:4px;}
   .row-link:hover{text-decoration:underline;}
   .row-link svg{opacity:.8;flex-shrink:0;}
@@ -399,13 +397,6 @@
   .task-subgroup{margin-bottom:20px;}
   .task-subgroup:last-child{margin-bottom:0;}
   .task-subgroup-label{font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin:2px 0 4px;}
-
-  /* ---- planner ---- */
-  .date-nav{display:flex;align-items:center;gap:14px;margin-bottom:30px;}
-  .date-nav button{width:32px;height:32px;border-radius:50%;border:1px solid var(--border);background:var(--glass);color:var(--text-2);display:flex;align-items:center;justify-content:center;}
-  .date-nav button:hover{background:var(--glass-strong);color:var(--text);}
-  .date-nav .dn-label{font-size:19px;font-weight:700;letter-spacing:-.01em;flex:1;}
-  .date-nav .dn-today{font-size:12px;color:var(--text-2);background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);padding:6px 13px;width:auto;height:auto;}
 
   /* ---- settings modal ---- */
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:80;padding:20px;}
@@ -690,7 +681,7 @@
     view:'home', expandedTeacher:null, cornerTab:'review',
     modal:null, completedTeacherKey:null,
     quickAddKey:null, quickAddCorner:'review',
-    plannerDate: todayISO, asgSortMode:'due',
+    asgSortMode:'due',
     data:buildSkeleton()
   };
   function getTD(key){ return state.data.teachers[key]; }
@@ -720,7 +711,7 @@
       assignments:'<path d="M5 3h7l3 3v11H5z"/><path d="M12 3v3h3"/><path d="M7.5 10h5M7.5 13h5"/>',
       schedule:'<rect x="3.5" y="4" width="13" height="12" rx="2"/><path d="M3.5 8h13M7 2.5v3M13 2.5v3"/>',
       teachers:'<circle cx="10" cy="7" r="3"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6"/>',
-      planner:'<rect x="3.5" y="4" width="13" height="12" rx="2"/><path d="M3.5 8h13M6.5 11h1M9.5 11h1M12.5 11h1M6.5 13.5h1M9.5 13.5h1"/>',
+      materials:'<path d="M3 6a1 1 0 0 1 1-1h4l1.5 2H16a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6z"/>',
       settings:'<circle cx="10" cy="10" r="2.6"/><path d="M10 3v2M10 15v2M3 10h2M15 10h2M5 5l1.4 1.4M13.6 13.6 15 15M15 5l-1.4 1.4M6.4 13.6 5 15"/>',
       check:'<path d="M4 8.5 7 11.5 12 5"/>',
       close:'<path d="M4.5 4.5l7 7M11.5 4.5l-7 7"/>',
@@ -741,7 +732,7 @@
     {view:'assignments', label:'과제', icon:'assignments', color:'var(--orange)'},
     {view:'schedule', label:'시간표', icon:'schedule', color:'var(--purple)'},
     {view:'teachers', label:'선생님', icon:'teachers', color:'var(--pink)'},
-    {view:'planner', label:'플래너', icon:'planner', color:'var(--indigo)'}
+    {view:'materials', label:'자료', icon:'materials', color:'var(--indigo)'}
   ];
 
   /* ============ 렌더 ============ */
@@ -762,7 +753,7 @@
     else if(state.view==='assignments') html += renderAssignmentsPage();
     else if(state.view==='schedule') html += renderSchedulePage();
     else if(state.view==='teachers') html += renderTeachersPage();
-    else if(state.view==='planner') html += renderPlannerPage();
+    else if(state.view==='materials') html += renderMaterialsPage();
     app.innerHTML = html;
     if(!viewChanged){
       // 클릭할 때마다 화면 전체가 깜빡이는 것 방지 — 실제로 다른 화면으로 이동할 때만 페이드인
@@ -1084,26 +1075,15 @@
     const dLeft = Math.round((dueMid-todayMid)/86400000);
     const ddLabel = dLeft>0?`D-${dLeft}`:(dLeft===0?'D-DAY':`D+${Math.abs(dLeft)} 지남`);
     const ddClass = dLeft<0?'overdue':(dLeft<=2?'urgent':'');
-    const hasHours = typeof a.estHours==='number';
-    let sub = '';
-    if(!a.done){
-      if(hasHours){
-        const perDay = a.estHours/Math.max(1,dLeft);
-        sub = `<div class="asg-sub">총 ${a.estHours}h · 하루 ${perDay.toFixed(1)}h 필요</div>`;
-      } else {
-        sub = `<input type="number" class="asg-hours-input" step="0.5" min="0.5" placeholder="예상 h 입력" data-role="asgHours" data-id="${a.id}">`;
-      }
-    }
     const priorityRow = (showCheckbox && !a.done) ? `<div class="asg-priority">
       <span class="asg-priority-label">가성비</span>
       ${['high','mid','low'].map(p=>`<button class="pri-btn ${a.priority===p?'active':''}" data-action="setAssignmentPriority" data-id="${a.id}" data-val="${p}">${PRIORITY_LABELS[p]}</button>`).join('')}
     </div>` : '';
-    return `<div class="asg-row ${a.done?'done':''}">
+    return `<div class="asg-row ${a.done?'done':''}" data-row-id="${a.id}">
       <button class="asg-check" data-action="toggleAssignment" data-id="${a.id}">${icon('check')}</button>
       <div class="asg-main">
         ${a.tag?`<div class="asg-tag">${escapeHtml(a.tag)}</div>`:''}
         <div class="asg-title">${a.link?`<a href="${escapeHtml(a.link)}" target="_blank" rel="noopener noreferrer" class="row-link">${escapeHtml(a.title)} ${icon('external')}</a>`:escapeHtml(a.title)}</div>
-        ${sub}
         ${priorityRow}
       </div>
       <div class="asg-due ${ddClass}">${ddLabel}</div>
@@ -1111,14 +1091,10 @@
     </div>`;
   }
 
-  function noticeRowHtml(n){
-    return `<div class="notice-row">
-      <div class="notice-kind">${n.type==='material'?'자료':'공지'}</div>
-      <div class="notice-main">
-        <div class="notice-tag">${escapeHtml(n.tag||'')}</div>
-        <div class="notice-title">${n.link?`<a href="${escapeHtml(n.link)}" target="_blank" rel="noopener noreferrer" class="row-link">${escapeHtml(n.title||'')} ${icon('external')}</a>`:escapeHtml(n.title||'')}</div>
-        ${n.snippet?`<div class="notice-snippet">${escapeHtml(n.snippet)}</div>`:''}
-      </div>
+  function materialRowHtml(n){
+    return `<div class="mat-row">
+      <div class="mat-title">${n.link?`<a href="${escapeHtml(n.link)}" target="_blank" rel="noopener noreferrer" class="row-link">${escapeHtml(n.title||'')} ${icon('external')}</a>`:escapeHtml(n.title||'')}</div>
+      ${n.tag?`<div class="mat-tag">${escapeHtml(n.tag)}</div>`:''}
     </div>`;
   }
 
@@ -1210,24 +1186,6 @@
   }
 
   /* ---- Assignments ---- */
-  // 미완료 과제들의 예상 시간을 오늘~마감일에 균등 분배해서 날짜별로 쌓고, 가장 빡센 날을 찾음
-  // (단순 평균은 과제가 여러 날에 흩어져 있든 하루에 몰려있든 똑같이 보여서 crunch를 못 잡음)
-  function peakDailyLoad(assignments){
-    const buckets = {};
-    assignments.forEach(a=>{
-      if(a.done || typeof a.estHours!=='number') return;
-      const dLeft = Math.max(1, Math.round((new Date(a.dueDate+'T00:00:00').getTime()-todayMid)/86400000));
-      const perDay = a.estHours/dLeft;
-      for(let i=0;i<dLeft;i++){
-        const d = new Date(now.getFullYear(), now.getMonth(), now.getDate()+i);
-        const key = toISODate(d);
-        buckets[key] = (buckets[key]||0) + perDay;
-      }
-    });
-    let peakDate=null, peakHours=0;
-    Object.keys(buckets).forEach(k=>{ if(buckets[k]>peakHours){ peakHours=buckets[k]; peakDate=k; } });
-    return {peakDate, peakHours};
-  }
   function fmtShortDate(iso){
     const d = new Date(iso+'T00:00:00');
     return `${MONTHNAME[d.getMonth()]} ${d.getDate()}일(${DAYNAME[d.getDay()]})`;
@@ -1268,41 +1226,22 @@
   }
 
   function renderAssignmentsPage(){
-    const cap = state.data.dailyCapacity||5;
-    const sorted = state.data.assignments.slice().sort((a,b)=>{
-      if(a.done!==b.done) return a.done?1:-1;
-      if(state.asgSortMode==='priority' && !a.done){
+    const sorted = state.data.assignments.filter(a=>!a.done).slice().sort((a,b)=>{
+      if(state.asgSortMode==='priority'){
         const ra = PRIORITY_RANK[a.priority]??1, rb = PRIORITY_RANK[b.priority]??1;
         if(ra!==rb) return ra-rb;
       }
       return a.dueDate.localeCompare(b.dueDate);
     });
-    const load = peakDailyLoad(sorted);
-    const peakOver = load.peakDate!==null && load.peakHours>cap;
     const rows = sorted.map(a=>assignmentRowHtml(a,true)).join('');
-
-    const notices = (state.data.notices||[]).slice().sort((a,b)=>(b.postedAt||'').localeCompare(a.postedAt||'')).slice(0,8);
-    const noticesHtml = notices.length===0 ? '' : `
-      <div class="section" style="margin-top:32px;">
-        <div class="section-head"><div class="section-title">공지 · 자료</div></div>
-        <div class="personal-note">파란 링크가 있는 항목은 눌러서 바로 Classroom으로 이동해 (학교 계정 로그인 필요, 거기서 첨부파일 다운로드).</div>
-        ${notices.map(n=>noticeRowHtml(n)).join('')}
-      </div>`;
 
     return `<div class="fade-in">
       <div class="page-head"><h1>과제</h1><button class="iconbtn" data-action="syncClassroom">${icon('arrowRight')} Classroom 동기화</button></div>
       ${syncStatus?`<div class="empty" style="padding:0 0 14px;">${syncStatus}</div>`:syncHealthHtml()}
       ${renderDdayTimeline(sorted)}
-      <div style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--text-2);margin-bottom:18px;">
-        <span>하루 가용 학습시간</span>
-        <input type="number" min="0.5" step="0.5" value="${cap}" data-role="capacity" style="width:64px;background:var(--glass);border:1px solid var(--border);border-radius:999px;color:var(--text);padding:6px 10px;text-align:center;">
-        <span>시간</span>
-      </div>
-      ${load.peakDate?`<div class="cap-line ${peakOver?'over':''}">대기 과제 기준 가장 빡센 날은 <b>${fmtShortDate(load.peakDate)}</b> — <b>${load.peakHours.toFixed(1)}시간</b> 필요 (가용 ${cap}시간) ${peakOver?`— 초과 ${(load.peakHours-cap).toFixed(1)}시간`:`— 여유 ${(cap-load.peakHours).toFixed(1)}시간`}</div>`:''}
       <div class="asg-form">
         <input type="text" class="title" id="asgTitle" placeholder="과제명">
         <input type="date" class="date" id="asgDate">
-        <input type="number" class="hours" id="asgHours" step="0.5" min="0.5" placeholder="예상 h">
         <input type="text" class="tag" id="asgTag" placeholder="관련 과목">
         <button class="btn" data-action="addAssignment">추가</button>
       </div>
@@ -1311,7 +1250,26 @@
         <button class="corner-tab ${state.asgSortMode==='priority'?'active':''}" data-action="setAsgSortMode" data-mode="priority">가성비순</button>
       </div>`:''}
       ${sorted.length===0?`<div class="empty">등록된 과제가 없어.</div>`:rows}
-      ${noticesHtml}
+    </div>`;
+  }
+
+  /* ---- Materials (자료/공지) ---- */
+  function renderMaterialsPage(){
+    const all = (state.data.notices||[]).slice().sort((a,b)=>(b.postedAt||'').localeCompare(a.postedAt||''));
+    const materials = all.filter(n=>n.type==='material');
+    const notices = all.filter(n=>n.type!=='material');
+    return `<div class="fade-in">
+      <div class="page-head"><h1>자료</h1><button class="iconbtn" data-action="syncClassroom">${icon('arrowRight')} Classroom 동기화</button></div>
+      ${syncStatus?`<div class="empty" style="padding:0 0 14px;">${syncStatus}</div>`:syncHealthHtml()}
+      <div class="personal-note">파란 링크가 있는 항목은 눌러서 바로 Classroom으로 이동해 (학교 계정 로그인 필요, 거기서 첨부파일 다운로드).</div>
+      <div class="section">
+        <div class="section-head"><div class="section-title">자료</div></div>
+        ${materials.length===0?`<div class="empty">받은 자료가 없어.</div>`:materials.map(n=>materialRowHtml(n)).join('')}
+      </div>
+      <div class="section">
+        <div class="section-head"><div class="section-title">공지</div></div>
+        ${notices.length===0?`<div class="empty">받은 공지가 없어.</div>`:notices.map(n=>materialRowHtml(n)).join('')}
+      </div>
     </div>`;
   }
 
@@ -1532,47 +1490,6 @@
     </div>`;
   }
 
-  /* ---- Planner ---- */
-  function renderPlannerPage(){
-    const d = new Date(state.plannerDate+'T00:00:00');
-    const dow = d.getDay();
-    const dayKey = DAYKEY[dow] || null;
-    const periods = dayKey ? TIMETABLE[dayKey] : [];
-    const label = `${MONTHNAME[d.getMonth()]} ${d.getDate()}일 ${DAYNAME_FULL[dow]}`;
-
-    const dueToday = state.data.assignments.filter(a=>a.dueDate===state.plannerDate);
-    const asgHtml = dueToday.length===0 ? `<div class="empty">이 날 마감인 과제가 없어.</div>` : dueToday.map(a=>assignmentRowHtml(a,true)).join('');
-
-    let scheduleHtml;
-    if(periods.length===0){
-      scheduleHtml = `<div class="empty">등교일이 아니야.</div>`;
-    } else {
-      scheduleHtml = periods.map(p=>{
-        const t = entryTeacherFor(p, d);
-        const tk = t ? teacherKeyByName(t) : null;
-        return `<div class="sched-row ${tk?'clickable':''}" ${tk?`data-action="quickAdd" data-key="${tk}"`:''}><div class="p">${p.p}교시</div><div class="s-main">${p.subject||p.label}${t?`<div class="s-teacher">${t}${p.room?' · '+p.room:''}</div>`:(p.room?`<div class="s-teacher">${p.room}</div>`:'')}</div>${tk?`<div class="sched-add">${icon('sparkle')}</div>`:''}</div>`;
-      }).join('');
-    }
-
-    return `<div class="fade-in">
-      <div class="page-head"><h1>플래너</h1></div>
-      <div class="date-nav">
-        <button data-action="plannerShift" data-delta="-1">${icon('arrowLeft')}</button>
-        <div class="dn-label">${label}</div>
-        <button data-action="plannerShift" data-delta="1">${icon('arrowRight')}</button>
-        <button class="dn-today" data-action="plannerToday">오늘</button>
-      </div>
-      <div class="section">
-        <div class="section-head"><div class="section-title">마감 과제</div></div>
-        ${asgHtml}
-      </div>
-      <div class="section">
-        <div class="section-head"><div class="section-title">시간표</div></div>
-        ${scheduleHtml}
-      </div>
-    </div>`;
-  }
-
   /* ---- Settings ---- */
   function renderSettingsModal(){
     const templates = getTemplates();
@@ -1718,10 +1635,9 @@
   function addAssignment(){
     const title = document.getElementById('asgTitle').value.trim();
     const date = document.getElementById('asgDate').value;
-    const hours = parseFloat(document.getElementById('asgHours').value);
     const tag = document.getElementById('asgTag').value.trim();
-    if(!title || !date || !hours){ return; }
-    state.data.assignments.push({id:genId(), title, dueDate:date, estHours:hours, tag, done:false, createdAt:Date.now(), source:'manual'});
+    if(!title || !date){ return; }
+    state.data.assignments.push({id:genId(), title, dueDate:date, tag, done:false, createdAt:Date.now(), source:'manual'});
     persist(); render();
   }
   function toggleAssignment(id){
@@ -2176,7 +2092,18 @@ ${text}`}]
       case 'exportData': exportData(); break;
       case 'importTrigger': document.getElementById('importFile').click(); break;
       case 'addAssignment': addAssignment(); break;
-      case 'toggleAssignment': toggleAssignment(el.dataset.id); break;
+      case 'toggleAssignment': {
+        const id = el.dataset.id;
+        const a = state.data.assignments.find(x=>x.id===id);
+        const row = el.closest('.asg-row');
+        if(a && !a.done && row && !row.classList.contains('asg-complete-anim')){
+          row.classList.add('asg-complete-anim');
+          setTimeout(()=>toggleAssignment(id), 520);
+        } else {
+          toggleAssignment(id);
+        }
+        break;
+      }
       case 'deleteAssignment': deleteAssignment(el.dataset.id); break;
       case 'setAssignmentPriority': {
         const a = state.data.assignments.find(x=>x.id===el.dataset.id);
@@ -2206,14 +2133,6 @@ ${text}`}]
       case 'saveStudentName': saveStudentName(); break;
       case 'setRotation': setRotationOverride(el.dataset.rot, el.dataset.val || null); render(); break;
       case 'syncClassroom': syncClassroom(true); break;
-      case 'plannerShift': {
-        const d = new Date(state.plannerDate+'T00:00:00');
-        d.setDate(d.getDate() + parseInt(el.dataset.delta,10));
-        state.plannerDate = toISODate(d);
-        render();
-        break;
-      }
-      case 'plannerToday': state.plannerDate = todayISO; render(); break;
       case 'copyTemplate': {
         const t = getTemplates().find(x=>x.id===el.dataset.id);
         if(t){
@@ -2270,17 +2189,6 @@ ${text}`}]
       const role = e.target.dataset.role, key=e.target.dataset.key, val=e.target.value;
       clearTimeout(debTimer);
       debTimer = setTimeout(()=>{ state.data.teachers[key][role] = val; persist(); }, 400);
-    } else if(e.target.dataset.role==='capacity'){
-      const val = parseFloat(e.target.value)||5;
-      clearTimeout(debTimer);
-      debTimer = setTimeout(()=>{ state.data.dailyCapacity = val; persist(); render(); }, 500);
-    } else if(e.target.dataset.role==='asgHours'){
-      const id = e.target.dataset.id, val = parseFloat(e.target.value);
-      clearTimeout(debTimer);
-      debTimer = setTimeout(()=>{
-        const a = state.data.assignments.find(x=>x.id===id);
-        if(a && val>0){ a.estHours = val; persist(); render(); }
-      }, 500);
     } else if(e.target.dataset.role==='templateName' || e.target.dataset.role==='templateContent'){
       const field = e.target.dataset.role==='templateName' ? 'name' : 'content';
       const id = e.target.dataset.id, val = e.target.value;
