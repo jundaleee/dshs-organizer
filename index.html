@@ -256,6 +256,19 @@
   .task-stale-badge{font-size:10.5px;color:var(--orange);font-weight:600;margin-top:3px;}
   .box-task-row.stale .box-task-tag{color:var(--orange);font-weight:600;}
 
+  /* ---- 연구 관리: 흐름도 ---- */
+  .flow-diagram{padding:4px 2px 2px;}
+  .flow-step{display:flex;align-items:flex-start;gap:11px;position:relative;padding-bottom:20px;}
+  .flow-step:last-child{padding-bottom:6px;}
+  .flow-step:not(:last-child)::before{content:'';position:absolute;left:4.5px;top:15px;bottom:0;width:1.5px;background:var(--border);}
+  .flow-dot{width:10px;height:10px;border-radius:50%;background:var(--glass);border:1.5px solid var(--border-strong);flex-shrink:0;margin-top:5px;position:relative;z-index:1;padding:0;transition:background var(--dur) var(--ease),border-color var(--dur) var(--ease);}
+  .flow-step.done .flow-dot{background:var(--teal);border-color:var(--teal);}
+  .flow-text{font-size:14px;line-height:1.5;flex:1;padding-top:1px;transition:color var(--dur) var(--ease);}
+  .flow-step.done .flow-text{color:var(--text-3);text-decoration:line-through;text-decoration-color:var(--border-strong);}
+  .flow-del{width:20px;height:20px;border-radius:50%;border:none;background:none;color:var(--text-3);flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity var(--dur) var(--ease);padding:0;}
+  .flow-step:hover .flow-del{opacity:1;}
+  .flow-del:hover{color:var(--red);}
+
   /* ---- assignment rows ---- */
   .asg-row{display:flex;align-items:center;gap:14px;padding:13px 4px;border-bottom:1px solid var(--border);}
   .asg-row:last-child{border-bottom:none;}
@@ -614,6 +627,47 @@
   function teacherKeyByName(name){ const x = TEACHER_LIST.find(t=>t.teacher===name); return x?x.key:null; }
   function splitTKey(key){ const [cat,subj,teacher]=key.split('|'); return {cat,subj,teacher}; }
   function defaultTeacherData(){ return {review:[],self:[],tips:[],completed:[],memo:'',info:''}; }
+  function genId(){ return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+
+  /* ---- 연구 관리 기본값 ---- */
+  const RESEARCH_LABELS = {rne:'RnE', jayul:'자율연구'};
+  function emptyResearchProject(){ return {tasks:[],goals:[],issues:[],pending:[],flow:[]}; }
+  function seedRneProject(){
+    const t = Date.now();
+    const mk = arr => arr.map((text,i)=>({id:genId(), text, createdAt:t-i, done:false}));
+    return {
+      tasks: mk([
+        '프라이머 3종 발주 진행 — 선생님 승인 받기',
+        '마이크로 원심분리기 학교 보유 여부 확인 (없으면 최우선 구매)',
+        '보고서용 파이프라인 다이어그램 제작',
+        '학습에 쓰이지 않은 새 샘플로 진짜 블라인드 세트 재구성'
+      ]),
+      goals: mk([
+        'DDI 지표로 가열 여부(기준 온도) 분류 — Blind Test 정확도 목표치 이상 달성',
+        '양념 노이즈(매트릭스 간섭·산성 분해)를 열 손상 신호와 분리해서 온도 예측 오차 줄이기',
+        '실측 qPCR 데이터 투입 후 파이프라인 1차 모델 완성'
+      ]),
+      issues: mk([
+        '표본 수가 적은 조건이 있어 일부 결론은 통계적 한계가 있음',
+        '현재까지는 시뮬레이션 데이터로만 검증됨 — 실측 데이터 아직 없음',
+        '재현성 문제를 겪은 뒤로 분석 스크립트는 실행 즉시 버전관리하기로 규칙화함'
+      ]),
+      pending: mk([
+        '프라이머 발주 — 선생님 승인 대기 중',
+        '마이크로 원심분리기 구매 여부 확인 필요'
+      ]),
+      flow: mk([
+        '시료 준비 (열처리군 · 교란군 · 대조군)',
+        'DNA 추출 및 농도·순도 측정',
+        'qPCR 증폭으로 Ct값 측정',
+        '지표 계산 및 데이터 정리',
+        'ML 모델 학습 및 사전등록 기준표로 검증'
+      ])
+    };
+  }
+  function defaultResearchData(){
+    return { rne: seedRneProject(), jayul: emptyResearchProject() };
+  }
   function buildSkeleton(){
     const teachers = {};
     TEACHER_LIST.forEach(x=>{ teachers[x.key] = defaultTeacherData(); });
@@ -621,10 +675,10 @@
       teachers, assignments:[], notices:[], dailyCapacity:5,
       importedClassroomIds:[], importedNoticeIds:[],
       personal:{ tasks:[], completed:[] },
-      ddays:[]
+      ddays:[],
+      research: defaultResearchData()
     };
   }
-  function genId(){ return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
 
   /* ============ 오늘 정보 ============ */
   const now = new Date();
@@ -707,6 +761,7 @@
     modal:null, completedTeacherKey:null,
     quickAddKey:null, quickAddCorner:'review',
     asgSortMode:'due',
+    researchProject:'rne',
     data:buildSkeleton()
   };
   function getTD(key){ return state.data.teachers[key]; }
@@ -748,7 +803,8 @@
       external:'<path d="M8 5H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-3"/><path d="M11 4h5v5"/><path d="M9.5 10.5 16 4"/>',
       sparkle:'<path d="M10 3v3M10 14v3M3 10h3M14 10h3M5.5 5.5l2 2M12.5 12.5l2 2M14.5 5.5l-2 2M7.5 12.5l-2 2"/>',
       eye:'<path d="M2 10s3-5.5 8-5.5S18 10 18 10s-3 5.5-8 5.5S2 10 2 10z"/><circle cx="10" cy="10" r="2.3"/>',
-      eyeOff:'<path d="M2 10s3-5.5 8-5.5c1.5 0 2.8.4 4 1M18 10s-3 5.5-8 5.5c-1.5 0-2.8-.4-4-1"/><path d="M3.5 3.5l13 13"/>'
+      eyeOff:'<path d="M2 10s3-5.5 8-5.5c1.5 0 2.8.4 4 1M18 10s-3 5.5-8 5.5c-1.5 0-2.8-.4-4-1"/><path d="M3.5 3.5l13 13"/>',
+      research:'<path d="M8 3h4M8.5 3v4.2L4.8 13.7a1.8 1.8 0 0 0 1.6 2.7h7.2a1.8 1.8 0 0 0 1.6-2.7L11.5 7.2V3"/><path d="M6.5 11h7"/>'
     }[name] || '';
     return `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
   }
@@ -759,7 +815,8 @@
     {view:'assignments', label:'과제', icon:'assignments', color:'var(--orange)'},
     {view:'schedule', label:'시간표', icon:'schedule', color:'var(--purple)'},
     {view:'teachers', label:'선생님', icon:'teachers', color:'var(--pink)'},
-    {view:'materials', label:'자료', icon:'materials', color:'var(--indigo)'}
+    {view:'materials', label:'자료', icon:'materials', color:'var(--indigo)'},
+    {view:'research', label:'연구', icon:'research', color:'var(--teal)'}
   ];
 
   /* ============ 렌더 ============ */
@@ -781,6 +838,7 @@
     else if(state.view==='schedule') html += renderSchedulePage();
     else if(state.view==='teachers') html += renderTeachersPage();
     else if(state.view==='materials') html += renderMaterialsPage();
+    else if(state.view==='research') html += renderResearchPage();
     app.innerHTML = html;
     if(!viewChanged){
       // 클릭할 때마다 화면 전체가 깜빡이는 것 방지 — 실제로 다른 화면으로 이동할 때만 페이드인
@@ -1328,6 +1386,75 @@
     </div>`;
   }
 
+  /* ---- 연구 관리 ---- */
+  const RESEARCH_CORNERS = [
+    {key:'tasks',   label:'수행해야될 과제 (추천)',       placeholder:'추가할 과제 입력 후 Enter'},
+    {key:'goals',   label:'기술적으로 목표하는 것',       placeholder:'목표 입력 후 Enter'},
+    {key:'issues',  label:'연구의 문제점과 다양한 평가',   placeholder:'문제점 · 평가 입력 후 Enter'},
+    {key:'pending', label:'배달 · 결재 진행 중인 물품',    placeholder:'물품 · 항목 입력 후 Enter'}
+  ];
+  function resRowHtml(project, corner, it){
+    return `<div class="task-row ${it.done?'done':''}">
+      <button class="task-check" data-action="toggleResearchItem" data-project="${project}" data-corner="${corner}" data-id="${it.id}">${icon('check')}</button>
+      <div class="task-body"><div class="task-text">${escapeHtml(it.text)}</div></div>
+      <button class="task-del" title="삭제" data-action="deleteResearchItem" data-project="${project}" data-corner="${corner}" data-id="${it.id}">${icon('trash')}</button>
+    </div>`;
+  }
+  function resFlowRowHtml(project, it){
+    return `<div class="flow-step ${it.done?'done':''}">
+      <button class="flow-dot" data-action="toggleResearchFlowStep" data-project="${project}" data-id="${it.id}" title="${it.done?'완료 취소':'완료로 표시'}"></button>
+      <div class="flow-text">${escapeHtml(it.text)}</div>
+      <button class="flow-del" title="삭제" data-action="deleteResearchFlowStep" data-project="${project}" data-id="${it.id}">${icon('trash')}</button>
+    </div>`;
+  }
+  function renderResearchPage(){
+    const projectKey = state.researchProject;
+    const proj = state.data.research[projectKey];
+    const switcherHtml = Object.keys(RESEARCH_LABELS).map(k=>`<button class="corner-tab ${projectKey===k?'active':''}" data-action="setResearchProject" data-project="${k}">${RESEARCH_LABELS[k]}</button>`).join('');
+
+    const cornersHtml = RESEARCH_CORNERS.map(cfg=>{
+      const items = proj[cfg.key]||[];
+      const rows = items.length===0?`<div class="empty">아직 등록된 항목이 없어.</div>`:items.map(it=>resRowHtml(projectKey,cfg.key,it)).join('');
+      return `<div class="section">
+        <div class="section-head"><div class="section-title">${cfg.label}</div></div>
+        <div class="add-row">
+          <input type="text" class="add-input" data-role="resAddInput" data-project="${projectKey}" data-corner="${cfg.key}" placeholder="${cfg.placeholder}">
+          <button class="btn-outline" data-action="addResearchItem" data-project="${projectKey}" data-corner="${cfg.key}">추가</button>
+        </div>
+        ${rows}
+      </div>`;
+    }).join('');
+
+    const flow = proj.flow||[];
+    const flowHtml = flow.length===0?`<div class="empty">등록된 단계가 없어.</div>`:flow.map(it=>resFlowRowHtml(projectKey,it)).join('');
+
+    return `<div class="fade-in">
+      <div class="page-head"><h1>연구 관리</h1></div>
+      <div class="corner-tabs" style="margin-bottom:20px;">${switcherHtml}</div>
+
+      <div class="ai-box">
+        <div class="ai-head">${icon('sparkle')} 진행 상황 붙여넣기 → 자동 분류</div>
+        <div class="ai-desc">회의 내용, 진행 상황, 새로 떠오른 문제나 목표를 자유롭게 적으면 ${RESEARCH_LABELS[projectKey]} 연구의 과제 · 목표 · 문제점 · 진행 물품 · 흐름도 항목으로 알아서 나눠서 추가해줘.</div>
+        <textarea class="ai-textarea" id="researchClassifyInput" placeholder="예: 프라이머 발주 넣었고 승인 대기 중. 분류 정확도가 아직 목표치 아래라 데이터가 더 필요할 듯."></textarea>
+        <div class="ai-row">
+          <button class="btn-ai" data-action="classifyResearch">${icon('sparkle')} AI로 분류해서 추가</button>
+          <span class="ai-status" id="researchClassifyStatus">${researchClassifyStatus}</span>
+        </div>
+      </div>
+
+      ${cornersHtml}
+
+      <div class="section">
+        <div class="section-head"><div class="section-title">앞으로 진행할 실험 흐름도</div></div>
+        <div class="flow-diagram">${flowHtml}</div>
+        <div class="add-row">
+          <input type="text" class="add-input" data-role="resFlowAddInput" data-project="${projectKey}" placeholder="단계 추가 후 Enter">
+          <button class="btn-outline" data-action="addResearchFlowStep" data-project="${projectKey}">추가</button>
+        </div>
+      </div>
+    </div>`;
+  }
+
   /* ---- Schedule ---- */
   function renderSchedulePage(){
     const days=['mon','tue','wed','thu','fri'];
@@ -1705,7 +1832,7 @@
   }
 
   /* ============ 액션: 설정 ============ */
-  let settingsStatus = '', githubTokenStatus = '', otStatus = '', syncStatus = '', taskClassifyStatus = '';
+  let settingsStatus = '', githubTokenStatus = '', otStatus = '', syncStatus = '', taskClassifyStatus = '', researchClassifyStatus = '';
   let templateCopyStatus = ''; // 방금 복사한 템플릿 id (버튼에 "복사됨!" 잠깐 표시용)
   // Classroom 동기화 상태 — 자동 동기화가 조용히 실패하는 걸 막기 위해 수동/자동 구분 없이 항상 기록
   let lastSyncCheckedAt = null; // Apps Script가 마지막으로 Gmail을 확인해서 파일을 쓴 시각 (upstream, payload.lastCheckedAt)
@@ -1926,6 +2053,104 @@ ${text}`}]
     }
   }
 
+  /* ============ 액션: 연구 관리 ============ */
+  function setResearchProject(key){
+    if(!RESEARCH_LABELS[key]) return;
+    state.researchProject = key;
+    render();
+  }
+  function addResearchItem(project, corner, text){
+    text = (text||'').trim(); if(!text) return;
+    const proj = state.data.research[project]; if(!proj || !proj[corner]) return;
+    proj[corner].push({id:genId(), text, createdAt:Date.now(), done:false});
+    persist(); render();
+  }
+  function toggleResearchItem(project, corner, id){
+    const proj = state.data.research[project]; if(!proj) return;
+    const it = (proj[corner]||[]).find(x=>x.id===id); if(!it) return;
+    it.done = !it.done; persist(); render();
+  }
+  function deleteResearchItem(project, corner, id){
+    const proj = state.data.research[project]; if(!proj) return;
+    proj[corner] = (proj[corner]||[]).filter(x=>x.id!==id);
+    persist(); render();
+  }
+  function addResearchFlowStep(project, text){
+    text = (text||'').trim(); if(!text) return;
+    const proj = state.data.research[project]; if(!proj) return;
+    proj.flow.push({id:genId(), text, createdAt:Date.now(), done:false});
+    persist(); render();
+  }
+  function toggleResearchFlowStep(project, id){
+    const proj = state.data.research[project]; if(!proj) return;
+    const it = proj.flow.find(x=>x.id===id); if(!it) return;
+    it.done = !it.done; persist(); render();
+  }
+  function deleteResearchFlowStep(project, id){
+    const proj = state.data.research[project]; if(!proj) return;
+    proj.flow = proj.flow.filter(x=>x.id!==id);
+    persist(); render();
+  }
+  async function classifyResearch(){
+    const ta = document.getElementById('researchClassifyInput');
+    const statusEl = document.getElementById('researchClassifyStatus');
+    const text = ta.value.trim();
+    if(!text) return;
+    const apiKey = getApiKey();
+    if(!apiKey){ statusEl.textContent = 'API 키가 필요해 — 설정에서 먼저 등록해줘.'; return; }
+    const project = state.researchProject;
+    statusEl.textContent = '분류 중...';
+    try{
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model:'claude-sonnet-5',
+          max_tokens:1200,
+          messages:[{role:'user', content:
+`다음은 학생이 자유롭게 적은 연구 진행 상황 텍스트야 (${RESEARCH_LABELS[project]} 연구). 한 줄 또는 한 항목씩 나눠서, 아래 JSON 배열 형식으로만 출력해(다른 설명, 코드블록 금지):
+[{"kind":"tasks 또는 goals 또는 issues 또는 pending 또는 flow","text":"한국어 한 문장으로 정리"}]
+
+분류 기준:
+- tasks: 앞으로 수행해야 할 과제 (추천 포함)
+- goals: 기술적으로 목표하는 것
+- issues: 연구의 문제점이나 다양한 평가 · 한계
+- pending: 물품 배달 중이거나 결재 · 승인 과정을 거치고 있는 항목
+- flow: 앞으로 진행해야 할 실험 절차의 한 단계 (순서가 있는 흐름도에 들어갈 항목)
+
+원문:
+${text}`}]
+        })
+      });
+      if(!res.ok){
+        const errBody = await res.json().catch(()=>({}));
+        throw new Error((errBody.error && errBody.error.message) || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const raw = (data.content||[]).map(b=>b.text||'').join('').trim();
+      const clean = raw.replace(/^```json/i,'').replace(/```$/,'').trim();
+      const items = JSON.parse(clean);
+      const proj = state.data.research[project];
+      const counts = {tasks:0, goals:0, issues:0, pending:0, flow:0};
+      const t = Date.now();
+      items.forEach(it=>{
+        if(!it || !it.text || !proj[it.kind]) return;
+        proj[it.kind].push({id:genId(), text:it.text, createdAt:t, done:false});
+        counts[it.kind]++;
+      });
+      ta.value = '';
+      researchClassifyStatus = `과제 ${counts.tasks}개 · 목표 ${counts.goals}개 · 문제점 ${counts.issues}개 · 진행 물품 ${counts.pending}개 · 흐름 ${counts.flow}개 추가함.`;
+      persist(); render();
+    }catch(err){
+      statusEl.textContent = `실패 — ${err.message || '알 수 없는 오류'}. API 키가 맞는지 확인해줘.`;
+    }
+  }
+
   /* ============ 액션: Classroom 자동 동기화 ============ */
   const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
   async function syncClassroom(manual){
@@ -2007,10 +2232,11 @@ ${text}`}]
             importedClassroomIds: parsed.importedClassroomIds || [],
             importedNoticeIds: parsed.importedNoticeIds || [],
             personal: parsed.personal || { tasks:[], completed:[] },
-            ddays: parsed.ddays || []
+            ddays: parsed.ddays || [],
+            research: parsed.research || defaultResearchData()
           };
         } else {
-          state.data = { teachers: Object.assign(skeleton.teachers, parsed), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[] };
+          state.data = { teachers: Object.assign(skeleton.teachers, parsed), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[], research: defaultResearchData() };
         }
         persist(); render();
       }catch(err){ alert('파일을 읽지 못했어. JSON 형식이 맞는지 확인해줘.'); }
@@ -2176,6 +2402,24 @@ ${text}`}]
       case 'swCompleteLinked': swCompleteLinked(); break;
       case 'otParse': otParse(el.dataset.key); break;
       case 'classifyTasks': classifyTasks(); break;
+      case 'setResearchProject': setResearchProject(el.dataset.project); break;
+      case 'addResearchItem': {
+        const row = el.closest('.add-row');
+        const input = row ? row.querySelector('input') : null;
+        addResearchItem(el.dataset.project, el.dataset.corner, input?input.value:'');
+        break;
+      }
+      case 'toggleResearchItem': toggleResearchItem(el.dataset.project, el.dataset.corner, el.dataset.id); break;
+      case 'deleteResearchItem': deleteResearchItem(el.dataset.project, el.dataset.corner, el.dataset.id); break;
+      case 'addResearchFlowStep': {
+        const row = el.closest('.add-row');
+        const input = row ? row.querySelector('input') : null;
+        addResearchFlowStep(el.dataset.project, input?input.value:'');
+        break;
+      }
+      case 'toggleResearchFlowStep': toggleResearchFlowStep(el.dataset.project, el.dataset.id); break;
+      case 'deleteResearchFlowStep': deleteResearchFlowStep(el.dataset.project, el.dataset.id); break;
+      case 'classifyResearch': classifyResearch(); break;
       case 'addPersonal': {
         const input = document.getElementById('personalAddInput');
         const boxSel = document.getElementById('personalAddBox');
@@ -2226,6 +2470,10 @@ ${text}`}]
     if(e.target.id==='personalAddInput'){
       const boxSel = document.getElementById('personalAddBox');
       addPersonalTask(e.target.value, boxSel ? boxSel.value : null);
+    } else if(e.target.dataset.role==='resAddInput'){
+      addResearchItem(e.target.dataset.project, e.target.dataset.corner, e.target.value);
+    } else if(e.target.dataset.role==='resFlowAddInput'){
+      addResearchFlowStep(e.target.dataset.project, e.target.value);
     } else if(e.target.classList.contains('add-input')){
       addItem(e.target.dataset.key, e.target.dataset.corner, e.target.value);
     }
@@ -2278,10 +2526,11 @@ ${text}`}]
           importedClassroomIds: saved.importedClassroomIds || [],
           importedNoticeIds: saved.importedNoticeIds || [],
           personal: saved.personal || { tasks:[], completed:[] },
-          ddays: saved.ddays || []
+          ddays: saved.ddays || [],
+          research: saved.research || defaultResearchData()
         };
       } else {
-        state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[] };
+        state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[], research: defaultResearchData() };
       }
     }
     render();
