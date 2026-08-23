@@ -169,7 +169,26 @@
     .box-grid{grid-template-columns:1fr;}
   }
 
-  /* ---- 뽀모도로 타이머 ---- */
+  /* ---- 디데이 ---- */
+  .dday-card{
+    background:var(--glass);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.7);backdrop-filter:blur(var(--blur)) saturate(1.7);
+    border:1px solid var(--border);border-top-color:var(--border-hi);border-radius:var(--r-lg);
+    padding:16px 20px;margin-bottom:20px;
+  }
+  .dday-card-head{font-size:11px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+  .dday-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
+  .dday-item:last-of-type{border-bottom:none;}
+  .dday-item-name{flex:1;font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .dday-item-val{font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--blue);flex-shrink:0;}
+  .dday-item-val.masked{font-size:12.5px;font-weight:600;color:var(--text-3);}
+  .dday-eye,.dday-del{width:24px;height:24px;border-radius:50%;border:none;background:none;color:var(--text-3);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:color var(--dur) var(--ease);padding:0;}
+  .dday-eye:hover{color:var(--text);}
+  .dday-del:hover{color:var(--red);}
+  .dday-add-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
+  .dday-add-input{flex:1;min-width:100px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:7px 13px;font-size:12.5px;}
+  .dday-add-date{background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:7px 13px;font-size:12.5px;}
+
+  /* ---- 스톱워치 ---- */
   .pomo-card{
     display:flex;align-items:center;gap:18px;position:relative;
     background:var(--glass);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.7);backdrop-filter:blur(var(--blur)) saturate(1.7);
@@ -190,18 +209,20 @@
   .pomo-card.linked-flash{animation:pomoLinked .55s ease;}
   .pomo-ring{
     width:76px;height:76px;border-radius:50%;flex-shrink:0;
-    background:conic-gradient(var(--pomo-c, var(--blue)) var(--deg,0deg), rgba(255,255,255,.12) 0);
-    display:flex;align-items:center;justify-content:center;position:relative;transition:background .3s linear;
+    border:3px solid var(--border);
+    display:flex;align-items:center;justify-content:center;position:relative;
   }
-  .pomo-ring.done{animation:pomoPulse 1s ease-in-out infinite;}
-  @keyframes pomoPulse{0%,100%{box-shadow:0 0 0 0 rgba(48,209,88,.5);}50%{box-shadow:0 0 0 8px rgba(48,209,88,0);}}
-  .pomo-ring::before{content:'';position:absolute;inset:6px;border-radius:50%;background:var(--bg);}
-  .pomo-display{position:relative;z-index:1;font-size:15px;font-weight:700;font-variant-numeric:tabular-nums;}
+  .pomo-ring::after{
+    content:'';position:absolute;inset:-3px;border-radius:50%;
+    border:3px solid transparent;border-top-color:var(--blue);
+    opacity:0;
+  }
+  .pomo-ring.running::after{opacity:1;animation:swSpin 1.6s linear infinite;}
+  @keyframes swSpin{to{transform:rotate(360deg);}}
+  .pomo-display{position:relative;z-index:1;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;}
   .pomo-body{flex:1;min-width:220px;display:flex;flex-direction:column;gap:8px;}
   .pomo-select{width:100%;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:7px 13px;font-size:12.5px;}
   .pomo-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
-  .pomo-preset{background:var(--glass);border:1px solid var(--border);color:var(--text-2);border-radius:var(--r-pill);padding:5px 12px;font-size:12px;font-weight:600;}
-  .pomo-preset.active{background:var(--blue);border-color:var(--blue);color:#fff;}
 
   .section{margin-bottom:36px;}
   .section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;gap:10px;}
@@ -229,6 +250,11 @@
   .task-del{width:22px;height:22px;border-radius:50%;border:none;background:none;color:var(--text-3);flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity var(--dur) var(--ease);}
   .task-row:hover .task-del{opacity:1;}
   .task-del:hover{color:var(--red);}
+  .task-row.stale{position:relative;padding-left:13px;}
+  .task-row.stale::before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:3px;border-radius:3px;background:var(--orange);animation:taskStaleGlow 2.4s ease-in-out infinite;}
+  @keyframes taskStaleGlow{0%,100%{opacity:.4;}50%{opacity:1;}}
+  .task-stale-badge{font-size:10.5px;color:var(--orange);font-weight:600;margin-top:3px;}
+  .box-task-row.stale .box-task-tag{color:var(--orange);font-weight:600;}
 
   /* ---- assignment rows ---- */
   .asg-row{display:flex;align-items:center;gap:14px;padding:13px 4px;border-bottom:1px solid var(--border);}
@@ -395,12 +421,6 @@
   .ai-status{font-size:11.5px;color:var(--text-3);}
   .btn-ai{background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;border:none;border-radius:var(--r-pill);padding:9px 18px;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:filter var(--dur) var(--ease);}
   .btn-ai:hover{filter:brightness(1.12);}
-
-  /* ---- personal study ---- */
-  .personal-note{font-size:12px;color:var(--text-3);margin-bottom:10px;}
-  .task-subgroup{margin-bottom:20px;}
-  .task-subgroup:last-child{margin-bottom:0;}
-  .task-subgroup-label{font-size:10.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.06em;margin:2px 0 4px;}
 
   /* ---- settings modal ---- */
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:80;padding:20px;}
@@ -576,7 +596,7 @@
   function entryTeacher(entry){ return entryTeacherFor(entry, now); }
 
   const CORNERS = [
-    {key:'review', label:'수업 복습'},
+    {key:'review', label:'수업 과제'},
     {key:'self',   label:'자율 학습'},
     {key:'tips',   label:'꿀팁'}
   ];
@@ -600,7 +620,8 @@
     return {
       teachers, assignments:[], notices:[], dailyCapacity:5,
       importedClassroomIds:[], importedNoticeIds:[],
-      personal:{ tasks:[], completed:[] }
+      personal:{ tasks:[], completed:[] },
+      ddays:[]
     };
   }
   function genId(){ return 'i'+Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
@@ -725,7 +746,9 @@
       arrowRight:'<path d="M7 4l4 4-4 4"/>',
       retry:'<path d="M3.5 8a4.5 4.5 0 1 1 1.4 3.3M3.5 8V5M3.5 8h3"/>',
       external:'<path d="M8 5H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-3"/><path d="M11 4h5v5"/><path d="M9.5 10.5 16 4"/>',
-      sparkle:'<path d="M10 3v3M10 14v3M3 10h3M14 10h3M5.5 5.5l2 2M12.5 12.5l2 2M14.5 5.5l-2 2M7.5 12.5l-2 2"/>'
+      sparkle:'<path d="M10 3v3M10 14v3M3 10h3M14 10h3M5.5 5.5l2 2M12.5 12.5l2 2M14.5 5.5l-2 2M7.5 12.5l-2 2"/>',
+      eye:'<path d="M2 10s3-5.5 8-5.5S18 10 18 10s-3 5.5-8 5.5S2 10 2 10z"/><circle cx="10" cy="10" r="2.3"/>',
+      eyeOff:'<path d="M2 10s3-5.5 8-5.5c1.5 0 2.8.4 4 1M18 10s-3 5.5-8 5.5c-1.5 0-2.8-.4-4-1"/><path d="M3.5 3.5l13 13"/>'
     }[name] || '';
     return `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
   }
@@ -849,20 +872,21 @@
   }
 
   function boxTaskRowHtml(q){
+    const stale = q.days>=5;
     if(q.kind==='personal'){
-      return `<div class="box-task-row" draggable="true" data-drag-type="personal" data-drag-id="${q.item.id}">
+      return `<div class="box-task-row ${stale?'stale':''}" draggable="true" data-drag-type="personal" data-drag-id="${q.item.id}">
         <button class="box-task-check" data-action="completePersonal" data-id="${q.item.id}">${icon('check')}</button>
         <div class="box-task-main">
           <div class="box-task-text" title="${escapeHtml(q.item.text)}">${escapeHtml(q.item.text)}</div>
-          <div class="box-task-tag">개인 학습</div>
+          <div class="box-task-tag">자율${stale?` · ${q.days}일째`:''}</div>
         </div>
       </div>`;
     }
-    return `<div class="box-task-row" draggable="true" data-drag-type="teacher" data-drag-key="${q.x.key}" data-drag-corner="${q.corner}" data-drag-id="${q.item.id}">
+    return `<div class="box-task-row ${stale?'stale':''}" draggable="true" data-drag-type="teacher" data-drag-key="${q.x.key}" data-drag-corner="${q.corner}" data-drag-id="${q.item.id}">
       <button class="box-task-check" data-action="completeItem" data-corner="${q.corner}" data-key="${q.x.key}" data-id="${q.item.id}">${icon('check')}</button>
       <div class="box-task-main">
         <div class="box-task-text" title="${escapeHtml(q.item.text)}">${escapeHtml(q.item.text)}</div>
-        <div class="box-task-tag">${q.x.teacher} · ${q.corner==='review'?'복습':'자율'}</div>
+        <div class="box-task-tag">${q.x.teacher} · ${q.corner==='review'?'과제':'자율'}${stale?` · ${q.days}일째`:''}</div>
       </div>
     </div>`;
   }
@@ -897,11 +921,11 @@
     return `<div class="balance-warn">이번 주 <b>${neglected.map(b=>escapeHtml(b.label)).join(', ')}</b> 완료한 게 하나도 없어 — 다른 과목엔 몰려있는데 여긴 비어있어.${extra}</div>`;
   }
 
-  /* ---- 뽀모도로: 정해진 시간 안에 과제 하나를 끝내는 용도 ---- */
-  const pomo = { running:false, remaining:25*60, total:25*60, target:null, intervalId:null };
-  function pomoTargetLabel(){
-    if(!pomo.target) return null;
-    const t = pomo.target;
+  /* ---- 스톱워치: 항목에 연결해서 얼마나 붙잡고 있었는지 재는 용도 ---- */
+  const sw = { running:false, elapsedSec:0, target:null, intervalId:null };
+  function swTargetLabel(){
+    if(!sw.target) return null;
+    const t = sw.target;
     if(t.type==='assignment'){
       const a = state.data.assignments.find(x=>x.id===t.id);
       return a ? a.title : null;
@@ -917,66 +941,48 @@
     }
     return null;
   }
-  function pomoCompleteLinked(){
-    if(!pomo.target) return;
-    const t = pomo.target;
+  function swCompleteLinked(){
+    if(!sw.target) return;
+    const t = sw.target;
     if(t.type==='assignment') toggleAssignment(t.id);
     else if(t.type==='personal') completePersonalTask(t.id);
     else if(t.type==='teacher') completeItem(t.key, t.corner, t.id);
-    pomo.target = null;
-    render();
+    sw.target = null;
+    swReset();
   }
-  function pomoFormat(sec){
+  function swFormat(sec){
     sec = Math.max(0, sec);
-    const m = Math.floor(sec/60), s = sec%60;
+    const h = Math.floor(sec/3600), m = Math.floor((sec%3600)/60), s = sec%60;
+    if(h>0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
     return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   }
-  function pomoTick(){
-    pomo.remaining--;
-    if(pomo.remaining<=0){
-      pomo.remaining = 0;
-      clearInterval(pomo.intervalId);
-      pomo.running = false;
-      render();
-      return;
-    }
-    const dEl = document.getElementById('pomoDisplay');
-    if(dEl) dEl.textContent = pomoFormat(pomo.remaining);
-    const ring = document.getElementById('pomoRing');
-    if(ring) ring.style.setProperty('--deg', ((1-pomo.remaining/pomo.total)*360)+'deg');
+  function swTick(){
+    sw.elapsedSec++;
+    const dEl = document.getElementById('swDisplay');
+    if(dEl) dEl.textContent = swFormat(sw.elapsedSec);
   }
-  function pomoStart(){
-    if(pomo.running) return;
-    if(pomo.remaining<=0) pomo.remaining = pomo.total;
-    pomo.running = true;
-    pomo.intervalId = setInterval(pomoTick, 1000);
+  function swStart(){
+    if(sw.running) return;
+    sw.running = true;
+    sw.intervalId = setInterval(swTick, 1000);
     render();
   }
-  function pomoPause(){
-    clearInterval(pomo.intervalId);
-    pomo.running = false;
+  function swPause(){
+    clearInterval(sw.intervalId);
+    sw.running = false;
     render();
   }
-  function pomoReset(){
-    clearInterval(pomo.intervalId);
-    pomo.running = false;
-    pomo.remaining = pomo.total;
+  function swReset(){
+    clearInterval(sw.intervalId);
+    sw.running = false;
+    sw.elapsedSec = 0;
     render();
   }
-  function pomoSetDuration(min){
-    clearInterval(pomo.intervalId);
-    pomo.running = false;
-    pomo.total = min*60;
-    pomo.remaining = pomo.total;
-    render();
-  }
-  function renderPomoCard(){
-    const pct = pomo.total>0 ? Math.max(0, Math.min(1, 1-pomo.remaining/pomo.total)) : 0;
-    const done = pomo.remaining<=0 && pomo.total>0;
-    const targetLabel = pomoTargetLabel();
+  function renderStopwatchCard(){
+    const targetLabel = swTargetLabel();
 
     const pendingAssignments = state.data.assignments.filter(a=>!a.done).sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
-    const t = pomo.target;
+    const t = sw.target;
     const asgOptions = pendingAssignments.map(a=>{
       const sel = t && t.type==='assignment' && t.id===a.id;
       return `<option value="assignment:${a.id}" ${sel?'selected':''}>${escapeHtml(a.title)}</option>`;
@@ -999,26 +1005,67 @@
     }).join('');
 
     return `<div class="pomo-card">
-      <div class="pomo-drop-hint">여기에 놓으면 타이머에 연결돼</div>
-      <div class="pomo-ring ${done?'done':''}" id="pomoRing" style="--deg:${pct*360}deg;--pomo-c:${done?'var(--green)':'var(--blue)'}">
-        <div class="pomo-display" id="pomoDisplay">${done?'완료!':pomoFormat(pomo.remaining)}</div>
+      <div class="pomo-drop-hint">여기에 놓으면 스톱워치에 연결돼</div>
+      <div class="pomo-ring ${sw.running?'running':''}" id="swRing">
+        <div class="pomo-display" id="swDisplay">${swFormat(sw.elapsedSec)}</div>
       </div>
       <div class="pomo-body">
-        <select class="pomo-select" id="pomoTargetSelect">
-          <option value="">집중 타이머 — 항목 선택 안 함</option>
+        <select class="pomo-select" id="swTargetSelect">
+          <option value="">스톱워치 — 항목 선택 안 함</option>
           ${asgOptions?`<optgroup label="과제">${asgOptions}</optgroup>`:''}
           ${boxGroups}
         </select>
         <div class="pomo-row">
-          <button class="pomo-preset ${pomo.total===15*60?'active':''}" data-action="pomoSetDuration" data-min="15">15분</button>
-          <button class="pomo-preset ${pomo.total===25*60?'active':''}" data-action="pomoSetDuration" data-min="25">25분</button>
-          <button class="pomo-preset ${pomo.total===45*60?'active':''}" data-action="pomoSetDuration" data-min="45">45분</button>
-          ${pomo.running
-            ? `<button class="btn-outline" data-action="pomoPause">일시정지</button>`
-            : `<button class="btn" data-action="pomoStart">${pomo.remaining<pomo.total && pomo.remaining>0 ? '계속' : '시작'}</button>`}
-          <button class="btn-outline" data-action="pomoReset">초기화</button>
-          ${targetLabel && done ? `<button class="btn" data-action="pomoCompleteLinked">"${escapeHtml(targetLabel)}" 완료 처리</button>` : ''}
+          ${sw.running
+            ? `<button class="btn-outline" data-action="swPause">일시정지</button>`
+            : `<button class="btn" data-action="swStart">${sw.elapsedSec>0 ? '계속' : '시작'}</button>`}
+          <button class="btn-outline" data-action="swReset">초기화</button>
+          ${targetLabel ? `<button class="btn" data-action="swCompleteLinked">"${escapeHtml(targetLabel)}" 완료 처리</button>` : ''}
         </div>
+      </div>
+    </div>`;
+  }
+
+  /* ---- 디데이 (사용자 설정) ---- */
+  function addDday(){
+    const nameEl = document.getElementById('ddayName');
+    const dateEl = document.getElementById('ddayDate');
+    const name = nameEl.value.trim();
+    const date = dateEl.value;
+    if(!name || !date) return;
+    state.data.ddays = state.data.ddays || [];
+    state.data.ddays.push({id:genId(), name, date, hidden:false, createdAt:Date.now()});
+    persist(); render();
+  }
+  function deleteDday(id){
+    state.data.ddays = (state.data.ddays||[]).filter(d=>d.id!==id);
+    persist(); render();
+  }
+  function toggleDdayHidden(id){
+    const d = (state.data.ddays||[]).find(x=>x.id===id); if(!d) return;
+    d.hidden = !d.hidden;
+    persist(); render();
+  }
+  function renderDdayCard(){
+    const list = (state.data.ddays||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
+    const rowsHtml = list.map(d=>{
+      const dueMid = new Date(d.date+'T00:00:00').getTime();
+      const dLeft = Math.round((dueMid-todayMid)/86400000);
+      const label = dLeft>0?`D-${dLeft}`:(dLeft===0?'D-DAY':`D+${Math.abs(dLeft)}`);
+      return `<div class="dday-item">
+        <div class="dday-item-name">${escapeHtml(d.name)}</div>
+        <div class="dday-item-val ${d.hidden?'masked':''}">${d.hidden?'가려짐':label}</div>
+        <button class="dday-eye" title="${d.hidden?'다시 보기':'가리기'}" data-action="toggleDdayHidden" data-id="${d.id}">${icon(d.hidden?'eyeOff':'eye')}</button>
+        <button class="dday-del" title="삭제" data-action="deleteDday" data-id="${d.id}">${icon('trash')}</button>
+      </div>`;
+    }).join('');
+    return `<div class="dday-card">
+      <div class="dday-card-head">디데이</div>
+      ${rowsHtml}
+      <div class="dday-add-row">
+        <input type="text" class="dday-add-input" id="ddayName" placeholder="이름 (예: 중간고사)">
+        <input type="date" class="dday-add-date" id="ddayDate">
+        <button class="btn-outline" data-action="addDday">추가</button>
       </div>
     </div>`;
   }
@@ -1059,7 +1106,9 @@
       <div class="home-date">${todayDateStr}</div>
       <h1 class="home-greeting">${greetingWord()}${name?', '+escapeHtml(name):''}</h1>
 
-      ${renderPomoCard()}
+      ${renderDdayCard()}
+
+      ${renderStopwatchCard()}
 
       <div class="box-grid">${boxHtml}</div>
 
@@ -1103,52 +1152,59 @@
   }
 
   /* ---- Tasks ---- */
+  function itemStaleDays(item){ return Math.floor((Date.now()-item.createdAt)/86400000); }
+
   function renderTasksPage(){
-    let review = [], self = [];
+    let review = [], free = [];
     TEACHER_LIST.forEach(x=>{
       const td = state.data.teachers[x.key];
       const rep = isRepetitionSubject(x.cat,x.subj);
       td.review.forEach(item=> review.push({x,item,u:urgency(item,rep)}));
-      td.self.forEach(item=> self.push({x,item}));
+      td.self.forEach(item=> free.push({kind:'teacher', x, item}));
     });
     review.sort((a,b)=>b.u.days-a.u.days);
-    self.sort((a,b)=>b.item.createdAt-a.item.createdAt);
+    (state.data.personal?.tasks||[]).forEach(item=> free.push({kind:'personal', item}));
+    free.sort((a,b)=>b.item.createdAt-a.item.createdAt);
 
-    const reviewHtml = review.length===0 ? `<div class="empty">복습할 항목이 없어.</div>` : review.map(q=>`
-      <div class="task-row">
+    const reviewHtml = review.length===0 ? `<div class="empty">수업 과제가 없어.</div>` : review.map(q=>{
+      const stale = q.u.days>=5;
+      return `<div class="task-row ${stale?'stale':''}">
         <button class="task-check" data-action="completeItem" data-corner="review" data-key="${q.x.key}" data-id="${q.item.id}">${icon('check')}</button>
         <div class="task-body">
           <div class="task-tag">${q.x.subjLabel} · ${q.x.teacher}</div>
           <div class="task-text">${escapeHtml(q.item.text)}</div>
+          ${stale?`<div class="task-stale-badge">${q.u.days}일째 그대로 — 서둘러줘</div>`:''}
         </div>
         <div class="task-badge">${q.u.label.split(' · ')[0]}</div>
-      </div>`).join('');
+      </div>`;
+    }).join('');
 
-    const selfHtml = self.length===0 ? `<div class="empty">자율 학습 항목이 없어.</div>` : self.map(q=>`
-      <div class="task-row">
-        <button class="task-check" data-action="completeItem" data-corner="self" data-key="${q.x.key}" data-id="${q.item.id}">${icon('check')}</button>
+    function freeRowHtml(entry){
+      const it = entry.item;
+      const days = itemStaleDays(it);
+      const stale = days>=5;
+      let tag, checkAttrs, delAttrs;
+      if(entry.kind==='teacher'){
+        tag = `${entry.x.subjLabel} · ${entry.x.teacher}`;
+        checkAttrs = `data-action="completeItem" data-corner="self" data-key="${entry.x.key}" data-id="${it.id}"`;
+        delAttrs = `data-action="deleteItem" data-corner="self" data-key="${entry.x.key}" data-id="${it.id}"`;
+      } else {
+        const box = BOX_KEYS.has(it.boxKey) ? BOXES.find(b=>b.key===it.boxKey) : null;
+        tag = box ? box.label : '';
+        checkAttrs = `data-action="completePersonal" data-id="${it.id}"`;
+        delAttrs = `data-action="deletePersonal" data-id="${it.id}"`;
+      }
+      return `<div class="task-row ${stale?'stale':''}">
+        <button class="task-check" ${checkAttrs}>${icon('check')}</button>
         <div class="task-body">
-          <div class="task-tag">${q.x.subjLabel} · ${q.x.teacher}</div>
-          <div class="task-text">${escapeHtml(q.item.text)}</div>
+          ${tag?`<div class="task-tag">${escapeHtml(tag)}</div>`:''}
+          <div class="task-text">${escapeHtml(it.text)}</div>
+          ${stale?`<div class="task-stale-badge">${days}일째 그대로 — 서둘러줘</div>`:''}
         </div>
-      </div>`).join('');
-
-    const personal = (state.data.personal?.tasks||[]).slice().sort((a,b)=>b.createdAt-a.createdAt);
-    function personalRowHtml(it){
-      return `<div class="task-row">
-        <button class="task-check" data-action="completePersonal" data-id="${it.id}">${icon('check')}</button>
-        <div class="task-body"><div class="task-text">${escapeHtml(it.text)}</div></div>
-        <button class="task-del" title="삭제" data-action="deletePersonal" data-id="${it.id}">${icon('trash')}</button>
+        <button class="task-del" title="삭제" ${delAttrs}>${icon('trash')}</button>
       </div>`;
     }
-    const personalGroupsHtml = BOXES.map(box=>{
-      const items = personal.filter(it=>it.boxKey===box.key);
-      if(items.length===0) return '';
-      return `<div class="task-subgroup"><div class="task-subgroup-label">${box.label}</div>${items.map(personalRowHtml).join('')}</div>`;
-    }).join('');
-    const unassigned = personal.filter(it=>!BOX_KEYS.has(it.boxKey));
-    const unassignedHtml = unassigned.length===0 ? '' : `<div class="task-subgroup"><div class="task-subgroup-label">미분류</div>${unassigned.map(personalRowHtml).join('')}</div>`;
-    const personalHtml = personal.length===0 ? `<div class="empty">개인 학습 항목이 없어.</div>` : personalGroupsHtml + unassignedHtml;
+    const freeHtml = free.length===0 ? `<div class="empty">자율학습 항목이 없어.</div>` : free.map(freeRowHtml).join('');
     const boxOptionsHtml = BOXES.map(b=>`<option value="${b.key}">${b.label}</option>`).join('');
 
     return `<div class="fade-in">
@@ -1156,7 +1212,7 @@
 
       <div class="ai-box">
         <div class="ai-head">${icon('sparkle')} 무엇이든 붙여넣기 → 자동 분류</div>
-        <div class="ai-desc">수업 내용, 할 일, 공부 계획을 자유롭게 적으면 학교 복습 · 자율 학습 · 개인 학습으로 알아서 나눠서 추가해줘. 특정 선생님 수업이면 그 선생님한테 연결되고, 개인 학습이어도 가능하면 관련 과목 박스에 연결돼. 정말 어느 과목인지도 알 수 없으면 미분류로 들어가.</div>
+        <div class="ai-desc">수업 내용, 할 일, 공부 계획을 자유롭게 적으면 수업 과제 · 자율학습으로 알아서 나눠서 추가해줘. 특정 선생님 수업이면 그 선생님한테 연결되고, 자율학습이어도 가능하면 관련 과목 박스에 연결돼. 정말 어느 과목인지도 알 수 없으면 미분류로 들어가.</div>
         <textarea class="ai-textarea" id="taskClassifyInput" placeholder="예: 내일까지 물리 3단원 다시 풀어보기 / 수학 기출 5개 풀기 / 영어단어 100개 외우기"></textarea>
         <div class="ai-row">
           <button class="btn-ai" data-action="classifyTasks">${icon('sparkle')} AI로 분류해서 추가</button>
@@ -1165,16 +1221,11 @@
       </div>
 
       <div class="section">
-        <div class="section-head"><div class="section-title">수업 복습</div></div>
+        <div class="section-head"><div class="section-title">수업 과제</div></div>
         ${reviewHtml}
       </div>
       <div class="section">
-        <div class="section-head"><div class="section-title">자율 학습</div></div>
-        ${selfHtml}
-      </div>
-      <div class="section">
-        <div class="section-head"><div class="section-title">개인 학습</div></div>
-        <div class="personal-note">특정 선생님 수업과 무관하게 혼자 공부하는 것들. 과목을 골라두면 홈 화면 해당 과목 박스에도 함께 보여.</div>
+        <div class="section-head"><div class="section-title">자율학습</div></div>
         <div class="add-row">
           <select class="add-input" id="personalAddBox" style="flex:0 0 128px;">
             <option value="">과목 미지정</option>
@@ -1183,7 +1234,7 @@
           <input type="text" class="add-input" id="personalAddInput" placeholder="추가할 내용 입력 후 Enter">
           <button class="btn-outline" data-action="addPersonal">추가</button>
         </div>
-        ${personalHtml}
+        ${freeHtml}
         <button class="completed-link" data-action="openCompletedPersonal">완료 목록 (${(state.data.personal?.completed||[]).length}) →</button>
       </div>
     </div>`;
@@ -1266,7 +1317,6 @@
     return `<div class="fade-in">
       <div class="page-head"><h1>자료</h1><button class="iconbtn" data-action="syncClassroom">${icon('arrowRight')} Classroom 동기화</button></div>
       ${syncStatus?`<div class="empty" style="padding:0 0 14px;">${syncStatus}</div>`:syncHealthHtml()}
-      <div class="personal-note">파란 링크가 있는 항목은 눌러서 바로 Classroom으로 이동해 (학교 계정 로그인 필요, 거기서 첨부파일 다운로드).</div>
       <div class="section">
         <div class="section-head"><div class="section-title">자료</div></div>
         ${materials.length===0?`<div class="empty">받은 자료가 없어.</div>`:materials.map(n=>materialRowHtml(n)).join('')}
@@ -1459,7 +1509,7 @@
     }).join('');
     return `<div class="modal-overlay" data-action="closeModal">
       <div class="modal completed-modal">
-        <div class="modal-head"><h2>완료 목록 — 개인 학습</h2><button class="modal-close" data-action="closeModal">${icon('close')}</button></div>
+        <div class="modal-head"><h2>완료 목록 — 자율학습</h2><button class="modal-close" data-action="closeModal">${icon('close')}</button></div>
         <div class="modal-body">${list.length===0?`<div class="empty">아직 완료한 항목이 없어.</div>`:rows}</div>
       </div>
     </div>`;
@@ -1471,7 +1521,7 @@
     if(!x) return '';
     const td = getTD(key);
     const corner = state.quickAddCorner;
-    const tabs = ['review','self'].map(c=>`<button class="corner-tab ${corner===c?'active':''}" data-action="setQuickAddCorner" data-corner="${c}">${c==='review'?'수업 복습':'자율 학습'}</button>`).join('');
+    const tabs = ['review','self'].map(c=>`<button class="corner-tab ${corner===c?'active':''}" data-action="setQuickAddCorner" data-corner="${c}">${c==='review'?'수업 과제':'자율학습'}</button>`).join('');
     const recent = td[corner].slice().sort((a,b)=>b.createdAt-a.createdAt).slice(0,4);
     const recentHtml = recent.length===0 ? `<div class="empty" style="padding:10px 0;">아직 항목이 없어.</div>` : recent.map(it=>`
       <div class="task-row">
@@ -1869,7 +1919,7 @@ ${text}`}]
         }
       });
       ta.value = '';
-      taskClassifyStatus = `학교 복습 ${addedReview}개 · 자율 학습 ${addedSelf}개 · 개인 학습 ${addedPersonal}개 추가함.`;
+      taskClassifyStatus = `수업 과제 ${addedReview}개 · 자율학습 ${addedSelf+addedPersonal}개 추가함.`;
       persist(); render();
     }catch(err){
       statusEl.textContent = `실패 — ${err.message || '알 수 없는 오류'}. API 키가 맞는지 확인해줘.`;
@@ -1956,10 +2006,11 @@ ${text}`}]
             dailyCapacity: parsed.dailyCapacity || 5,
             importedClassroomIds: parsed.importedClassroomIds || [],
             importedNoticeIds: parsed.importedNoticeIds || [],
-            personal: parsed.personal || { tasks:[], completed:[] }
+            personal: parsed.personal || { tasks:[], completed:[] },
+            ddays: parsed.ddays || []
           };
         } else {
-          state.data = { teachers: Object.assign(skeleton.teachers, parsed), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]} };
+          state.data = { teachers: Object.assign(skeleton.teachers, parsed), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[] };
         }
         persist(); render();
       }catch(err){ alert('파일을 읽지 못했어. JSON 형식이 맞는지 확인해줘.'); }
@@ -2013,7 +2064,7 @@ ${text}`}]
   document.body.addEventListener('pointerup', endBoxDrag);
   document.body.addEventListener('pointercancel', endBoxDrag);
 
-  /* ============ 할 일 항목을 뽀모도로 카드로 드래그해서 연결하기 ============ */
+  /* ============ 할 일 항목을 스톱워치 카드로 드래그해서 연결하기 ============ */
   document.body.addEventListener('dragstart', function(e){
     const row = e.target.closest('.box-task-row');
     if(!row) return;
@@ -2044,7 +2095,7 @@ ${text}`}]
     try{
       const data = JSON.parse(e.dataTransfer.getData('application/json'));
       if(data && data.type){
-        pomo.target = data;
+        sw.target = data;
         render();
         const newCard = document.querySelector('.pomo-card');
         if(newCard){
@@ -2097,6 +2148,9 @@ ${text}`}]
       case 'exportData': exportData(); break;
       case 'importTrigger': document.getElementById('importFile').click(); break;
       case 'addAssignment': addAssignment(); break;
+      case 'addDday': addDday(); break;
+      case 'deleteDday': deleteDday(el.dataset.id); break;
+      case 'toggleDdayHidden': toggleDdayHidden(el.dataset.id); break;
       case 'toggleAssignment': {
         const id = el.dataset.id;
         const a = state.data.assignments.find(x=>x.id===id);
@@ -2116,11 +2170,10 @@ ${text}`}]
         break;
       }
       case 'setAsgSortMode': state.asgSortMode = el.dataset.mode; render(); break;
-      case 'pomoStart': pomoStart(); break;
-      case 'pomoPause': pomoPause(); break;
-      case 'pomoReset': pomoReset(); break;
-      case 'pomoSetDuration': pomoSetDuration(parseInt(el.dataset.min,10)); break;
-      case 'pomoCompleteLinked': pomoCompleteLinked(); break;
+      case 'swStart': swStart(); break;
+      case 'swPause': swPause(); break;
+      case 'swReset': swReset(); break;
+      case 'swCompleteLinked': swCompleteLinked(); break;
       case 'otParse': otParse(el.dataset.key); break;
       case 'classifyTasks': classifyTasks(); break;
       case 'addPersonal': {
@@ -2180,14 +2233,14 @@ ${text}`}]
 
   let debTimer = null;
   document.body.addEventListener('input', function(e){
-    if(e.target.id==='pomoTargetSelect'){
+    if(e.target.id==='swTargetSelect'){
       const v = e.target.value;
-      if(!v){ pomo.target = null; }
+      if(!v){ sw.target = null; }
       else {
         const parts = v.split(':');
-        if(parts[0]==='assignment'){ pomo.target = {type:'assignment', id:parts[1]}; }
-        else if(parts[0]==='personal'){ pomo.target = {type:'personal', id:parts[1]}; }
-        else if(parts[0]==='teacher'){ pomo.target = {type:'teacher', key:parts[1], corner:parts[2], id:parts[3]}; }
+        if(parts[0]==='assignment'){ sw.target = {type:'assignment', id:parts[1]}; }
+        else if(parts[0]==='personal'){ sw.target = {type:'personal', id:parts[1]}; }
+        else if(parts[0]==='teacher'){ sw.target = {type:'teacher', key:parts[1], corner:parts[2], id:parts[3]}; }
       }
       render();
     } else if(e.target.dataset.role==='memo' || e.target.dataset.role==='info'){
@@ -2224,10 +2277,11 @@ ${text}`}]
           dailyCapacity: saved.dailyCapacity || 5,
           importedClassroomIds: saved.importedClassroomIds || [],
           importedNoticeIds: saved.importedNoticeIds || [],
-          personal: saved.personal || { tasks:[], completed:[] }
+          personal: saved.personal || { tasks:[], completed:[] },
+          ddays: saved.ddays || []
         };
       } else {
-        state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]} };
+        state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[] };
       }
     }
     render();
