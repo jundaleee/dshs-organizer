@@ -519,6 +519,9 @@
     flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity var(--dur) var(--ease);padding:0;}
   .city-grad-row:hover .city-grad-del{opacity:1;}
   .city-grad-del:hover{color:var(--red);}
+  .task-editing{display:block;padding:12px 4px;}
+  .task-edit-form{display:flex;flex-direction:column;gap:8px;}
+  .task-edit-line{display:flex;gap:8px;flex-wrap:wrap;}
   .asg-editing{display:block;padding:12px 4px;}
   .asg-edit-form{display:flex;flex-direction:column;gap:8px;}
   .asg-edit-line{display:flex;gap:8px;flex-wrap:wrap;}
@@ -774,7 +777,7 @@
     modal:null, completedTeacherKey:null,
     quickAddKey:null, quickAddCorner:'review',
     asgSortMode:'due',
-    cityView:'main', cityInspectTarget:null, editingAssignment:null,
+    cityView:'main', cityInspectTarget:null, editingAssignment:null, editingTask:null,
     data:buildSkeleton()
   };
   function getTD(key){ return state.data.teachers[key]; }
@@ -1268,6 +1271,27 @@
   /* ---- Tasks ---- */
   function itemStaleDays(item){ return Math.floor((Date.now()-item.createdAt)/86400000); }
 
+  // 할 일 인라인 수정 — 수업 과제 / 자율학습 / 망각의 시민이 같은 폼을 쓴다
+  function isEditingTask(kind, id, key, corner){
+    const e = state.editingTask;
+    return !!e && e.kind===kind && e.id===id
+        && (kind!=='teacher' || (e.key===key && e.corner===corner));
+  }
+  function taskEditRowHtml(o){
+    return `<div class="task-row task-editing">
+      <div class="task-edit-form">
+        <input type="text" class="add-input" id="taskEditText" data-role="taskEditText" value="${escapeHtml(o.text)}" placeholder="할 일 내용">
+        ${o.showBox ? `<select class="add-input" id="taskEditBox">
+            <option value="">과목 미지정</option>
+            ${BOXES.map(b=>`<option value="${b.key}" ${o.boxKey===b.key?'selected':''}>${escapeHtml(b.label)}</option>`).join('')}
+          </select>` : ''}
+        <div class="task-edit-line">
+          <button class="btn" ${o.saveAttrs}>저장</button>
+          <button class="btn-outline" data-action="cancelTaskEdit">취소</button>
+        </div>
+      </div>
+    </div>`;
+  }
   function renderTasksPage(){
     let review = [], free = [];
     TEACHER_LIST.forEach(x=>{
@@ -1282,6 +1306,10 @@
 
     const reviewHtml = review.length===0 ? `<div class="empty">수업 과제가 없어.</div>` : review.map(q=>{
       const stale = q.u.days>=5;
+      if(isEditingTask('teacher', q.item.id, q.x.key, 'review')){
+        return taskEditRowHtml({text:q.item.text,
+          saveAttrs:`data-action="saveTaskEdit" data-kind="teacher" data-key="${q.x.key}" data-corner="review" data-id="${q.item.id}"`});
+      }
       return `<div class="task-row ${stale?'stale':''}">
         <button class="task-check" data-action="completeItem" data-corner="review" data-key="${q.x.key}" data-id="${q.item.id}">${icon('check')}</button>
         <div class="task-body">
@@ -1290,6 +1318,8 @@
           ${stale?`<div class="task-stale-badge">${q.u.days}일째 그대로 — 서둘러줘</div>`:''}
         </div>
         <div class="task-badge">${q.u.label.split(' · ')[0]}</div>
+        <button class="task-del" title="수정" data-action="editTask" data-kind="teacher" data-key="${q.x.key}" data-corner="review" data-id="${q.item.id}">${icon('pencil')}</button>
+        <button class="task-del" title="삭제" data-action="deleteItem" data-corner="review" data-key="${q.x.key}" data-id="${q.item.id}">${icon('trash')}</button>
       </div>`;
     }).join('');
 
@@ -1297,16 +1327,26 @@
       const it = entry.item;
       const days = itemStaleDays(it);
       const stale = days>=5;
-      let tag, checkAttrs, delAttrs;
+      if(entry.kind==='teacher' && isEditingTask('teacher', it.id, entry.x.key, 'self')){
+        return taskEditRowHtml({text:it.text,
+          saveAttrs:`data-action="saveTaskEdit" data-kind="teacher" data-key="${entry.x.key}" data-corner="self" data-id="${it.id}"`});
+      }
+      if(entry.kind==='personal' && isEditingTask('personal', it.id)){
+        return taskEditRowHtml({text:it.text, showBox:true, boxKey:it.boxKey,
+          saveAttrs:`data-action="saveTaskEdit" data-kind="personal" data-id="${it.id}"`});
+      }
+      let tag, checkAttrs, delAttrs, editAttrs;
       if(entry.kind==='teacher'){
         tag = `${entry.x.subjLabel} · ${entry.x.teacher}`;
         checkAttrs = `data-action="completeItem" data-corner="self" data-key="${entry.x.key}" data-id="${it.id}"`;
         delAttrs = `data-action="deleteItem" data-corner="self" data-key="${entry.x.key}" data-id="${it.id}"`;
+        editAttrs = `data-action="editTask" data-kind="teacher" data-key="${entry.x.key}" data-corner="self" data-id="${it.id}"`;
       } else {
         const box = BOX_KEYS.has(it.boxKey) ? BOXES.find(b=>b.key===it.boxKey) : null;
         tag = box ? box.label : '';
         checkAttrs = `data-action="completePersonal" data-id="${it.id}"`;
         delAttrs = `data-action="deletePersonal" data-id="${it.id}"`;
+        editAttrs = `data-action="editTask" data-kind="personal" data-id="${it.id}"`;
       }
       return `<div class="task-row ${stale?'stale':''}">
         <button class="task-check" ${checkAttrs}>${icon('check')}</button>
@@ -1315,6 +1355,7 @@
           <div class="task-text">${escapeHtml(it.text)}</div>
           ${stale?`<div class="task-stale-badge">${days}일째 그대로 — 서둘러줘</div>`:''}
         </div>
+        <button class="task-del" title="수정" ${editAttrs}>${icon('pencil')}</button>
         <button class="task-del" title="삭제" ${delAttrs}>${icon('trash')}</button>
       </div>`;
     }
@@ -1369,12 +1410,16 @@
     </div>`;
   }
   function recallRowHtml(t){
+    if(isEditingTask('recall', t.id)){
+      return taskEditRowHtml({text:t.text, saveAttrs:`data-action="saveTaskEdit" data-kind="recall" data-id="${t.id}"`});
+    }
     return `<div class="task-row">
       <button class="task-check" data-action="completeRecall" data-id="${t.id}">${icon('check')}</button>
       <div class="task-body">
         <div class="task-tag" style="color:${recallColor(t)};">${escapeHtml(t.subject)} · ${RECALL_TAGS[t.tag]||'회상'} · 약 ${t.minutes}분</div>
         <div class="task-text">${escapeHtml(t.text)}</div>
       </div>
+      <button class="task-del" title="수정" data-action="editTask" data-kind="recall" data-id="${t.id}">${icon('pencil')}</button>
       <button class="task-del" title="필요 없음" data-action="deleteRecall" data-id="${t.id}">${icon('trash')}</button>
     </div>`;
   }
@@ -2692,6 +2737,26 @@
     td[corner].push(item);
     persist(); render();
   }
+  function saveTaskEdit(kind, key, corner, id){
+    const t = document.getElementById('taskEditText');
+    const text = t ? t.value.trim() : '';
+    if(!text) return;                       // 빈 내용으로는 저장 안 함
+    if(kind==='teacher'){
+      const td = getTD(key); if(!td) return;
+      const it = (td[corner]||[]).find(x=>x.id===id); if(!it) return;
+      it.text = text;
+    } else if(kind==='personal'){
+      const it = (state.data.personal?.tasks||[]).find(x=>x.id===id); if(!it) return;
+      it.text = text;
+      const bs = document.getElementById('taskEditBox');
+      if(bs) it.boxKey = BOX_KEYS.has(bs.value) ? bs.value : null;
+    } else if(kind==='recall'){
+      const it = recallList().find(x=>x.id===id); if(!it) return;
+      it.text = text;
+    } else return;
+    state.editingTask = null;
+    persist(); render();
+  }
   function completeItem(key, corner, id){
     const td = getTD(key);
     const idx = td[corner].findIndex(i=>i.id===id); if(idx<0) return;
@@ -3391,6 +3456,13 @@ ${text}`}]
       case 'editAssignment': state.editingAssignment = el.dataset.id; render(); break;
       case 'cancelAssignmentEdit': state.editingAssignment = null; render(); break;
       case 'saveAssignmentEdit': saveAssignmentEdit(el.dataset.id); break;
+      case 'editTask':
+        state.editingTask = {kind:el.dataset.kind, key:el.dataset.key||null,
+                             corner:el.dataset.corner||null, id:el.dataset.id};
+        render(); break;
+      case 'cancelTaskEdit': state.editingTask = null; render(); break;
+      case 'saveTaskEdit':
+        saveTaskEdit(el.dataset.kind, el.dataset.key, el.dataset.corner, el.dataset.id); break;
       case 'setAssignmentPriority': {
         const a = state.data.assignments.find(x=>x.id===el.dataset.id);
         if(a){ a.priority = a.priority===el.dataset.val ? null : el.dataset.val; persist(); render(); }
@@ -3450,6 +3522,11 @@ ${text}`}]
 
   document.body.addEventListener('keydown', function(e){
     if(e.key!=='Enter') return;
+    if(e.target.dataset.role==='taskEditText'){
+      const ed = state.editingTask;
+      if(ed) saveTaskEdit(ed.kind, ed.key, ed.corner, ed.id);
+      return;
+    }
     if(e.target.id==='personalAddInput'){
       const boxSel = document.getElementById('personalAddBox');
       addPersonalTask(e.target.value, boxSel ? boxSel.value : null);
