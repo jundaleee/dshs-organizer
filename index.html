@@ -82,6 +82,7 @@
   .nav-item:hover{background:var(--glass);color:var(--text);}
   .nav-item.active{background:var(--glass-strong);color:var(--text);font-weight:600;}
   .nav-item .label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .beta-pill{font-size:8.5px;font-weight:700;letter-spacing:.03em;color:var(--teal);background:rgba(100,210,255,.16);border:1px solid rgba(100,210,255,.35);border-radius:5px;padding:1.5px 4px;margin-left:auto;flex-shrink:0;}
   .sidebar-foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--border);}
 
   .bottom-nav{display:none;}
@@ -459,6 +460,66 @@
   .completed-modal .item-text{flex:1;font-size:13.5px;}
   .completed-modal .item-date{font-size:11px;color:var(--text-3);margin-top:4px;}
 
+  /* ---- 도시 (City, beta) ---- */
+  .city-graduating{font-size:12.5px;color:var(--teal);background:rgba(100,210,255,.1);border:1px solid rgba(100,210,255,.3);border-radius:var(--r-md);padding:9px 13px;margin-bottom:18px;}
+  .city-canvas{position:relative;border-radius:var(--r-lg);background:var(--glass);border:1px solid var(--border);border-top-color:var(--border-hi);padding:20px;overflow:hidden;min-height:260px;}
+  .city-road{display:flex;flex-wrap:wrap;gap:14px;padding-bottom:16px;margin-bottom:16px;border-bottom:1px dashed var(--border);position:relative;z-index:1;}
+  .city-district{display:flex;flex-wrap:wrap;gap:16px;position:relative;z-index:1;}
+  .city-avatars{position:absolute;inset:0;pointer-events:none;z-index:2;}
+  .city-avatars .city-avatar{pointer-events:auto;}
+
+  .city-figure{width:11px;height:13px;position:relative;flex-shrink:0;}
+  .city-figure::before{content:'';position:absolute;top:0;left:2px;width:7px;height:7px;border-radius:50%;background:var(--fc,var(--blue));}
+  .city-figure::after{content:'';position:absolute;bottom:0;left:0;width:11px;height:7px;border-radius:5px 5px 2px 2px;background:var(--fc,var(--blue));}
+
+  .city-car{position:relative;background:none;border:none;padding:4px;display:flex;flex-direction:column;align-items:center;gap:2px;width:56px;cursor:pointer;transition:transform var(--dur) var(--ease);}
+  .city-car:hover{transform:translateY(-2px);}
+  .city-car .city-figure{position:absolute;top:-8px;left:50%;transform:translateX(-50%);}
+  .city-car-body{color:var(--text-2);animation:cityDrive 2.6s ease-in-out infinite;}
+  .city-car-body svg{width:26px;height:26px;}
+  @keyframes cityDrive{0%,100%{transform:translateX(0);}50%{transform:translateX(3px);}}
+  .city-car.smoke .city-car-body{color:var(--orange);}
+  .city-car.broken .city-car-body{color:var(--text-3);filter:grayscale(1);animation:none;}
+  .city-car.broken .city-figure{opacity:.5;}
+
+  .city-house{position:relative;background:none;border:none;padding:4px;display:flex;flex-direction:column;align-items:center;width:60px;cursor:pointer;transition:transform var(--dur) var(--ease);}
+  .city-house:hover{transform:translateY(-2px);}
+  .city-house-body{color:var(--fc,var(--blue));}
+  .city-house-body svg{width:30px;height:30px;}
+  .city-house.smoke .city-house-body{color:var(--orange);}
+  .city-house.fire .city-house-body{color:var(--red);animation:cityFireShake .5s ease-in-out infinite;}
+  @keyframes cityFireShake{0%,100%{transform:rotate(0);}25%{transform:rotate(-2deg);}75%{transform:rotate(2deg);}}
+  .city-house.collapsed .city-house-body{color:var(--text-3);opacity:.5;filter:grayscale(1);transform:scaleY(.55) translateY(9px);}
+
+  .city-overlay{position:absolute;top:-10px;right:2px;color:var(--orange);animation:cityOverlayPulse 1.6s ease-in-out infinite;}
+  .city-overlay svg{width:14px;height:14px;}
+  .city-house.fire .city-overlay{color:var(--red);}
+  @keyframes cityOverlayPulse{0%,100%{opacity:.5;transform:translateY(0);}50%{opacity:1;transform:translateY(-3px);}}
+
+  .city-avatar{position:absolute;background:none;border:none;padding:0;cursor:pointer;animation:cityWander var(--wdur,20s) ease-in-out infinite;animation-delay:var(--wdelay,0s);}
+  @keyframes cityWander{
+    0%,100%{transform:translate(0,0);}
+    25%{transform:translate(16px,-10px);}
+    50%{transform:translate(-8px,12px);}
+    75%{transform:translate(-16px,-8px);}
+  }
+
+  .city-inspect-text{font-size:14.5px;line-height:1.5;margin-bottom:8px;}
+  .city-inspect-meta{font-size:12.5px;color:var(--text-3);margin-bottom:16px;}
+  .city-fix-flourish{display:flex;flex-direction:column;align-items:center;gap:10px;padding:22px 0;font-size:13px;color:var(--text-2);}
+  .city-fix-icon{color:var(--blue);animation:cityFixDrive 700ms ease-in-out;}
+  .city-fix-flourish.fire .city-fix-icon{color:var(--red);}
+  .city-fix-icon svg{width:40px;height:40px;}
+  @keyframes cityFixDrive{0%{transform:translateX(-40px);opacity:0;}30%{opacity:1;}100%{transform:translateX(40px);opacity:0;}}
+
+  .city-grad-row{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--border);}
+  .city-grad-row:last-child{border-bottom:none;}
+  .city-grad-icon{color:var(--fc,var(--blue));flex-shrink:0;}
+  .city-grad-icon svg{width:20px;height:20px;}
+  .city-grad-body{flex:1;min-width:0;}
+  .city-grad-tag{font-size:12px;color:var(--text-3);}
+  .city-grad-text{font-size:13.5px;}
+
   .fade-in{animation:fadeIn 220ms var(--ease);}
   @keyframes fadeIn{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
 </style>
@@ -708,6 +769,7 @@
     modal:null, completedTeacherKey:null,
     quickAddKey:null, quickAddCorner:'review',
     asgSortMode:'due',
+    cityView:'main', cityInspectTarget:null,
     data:buildSkeleton()
   };
   function getTD(key){ return state.data.teachers[key]; }
@@ -749,7 +811,14 @@
       external:'<path d="M8 5H5a1 1 0 0 0-1 1v9a1 1 0 0 0 1 1h9a1 1 0 0 0 1-1v-3"/><path d="M11 4h5v5"/><path d="M9.5 10.5 16 4"/>',
       sparkle:'<path d="M10 3v3M10 14v3M3 10h3M14 10h3M5.5 5.5l2 2M12.5 12.5l2 2M14.5 5.5l-2 2M7.5 12.5l-2 2"/>',
       eye:'<path d="M2 10s3-5.5 8-5.5S18 10 18 10s-3 5.5-8 5.5S2 10 2 10z"/><circle cx="10" cy="10" r="2.3"/>',
-      eyeOff:'<path d="M2 10s3-5.5 8-5.5c1.5 0 2.8.4 4 1M18 10s-3 5.5-8 5.5c-1.5 0-2.8-.4-4-1"/><path d="M3.5 3.5l13 13"/>'
+      eyeOff:'<path d="M2 10s3-5.5 8-5.5c1.5 0 2.8.4 4 1M18 10s-3 5.5-8 5.5c-1.5 0-2.8-.4-4-1"/><path d="M3.5 3.5l13 13"/>',
+      city:'<path d="M3 17V9h4v8M8 17V5h4v12M13 17v-5h4v5"/><path d="M2 17h16"/>',
+      car:'<path d="M3 13h14M4 13v-2.5L5.5 7h9L16 10.5V13"/><circle cx="6.5" cy="13.3" r="1.3"/><circle cx="13.5" cy="13.3" r="1.3"/>',
+      house:'<path d="M3.5 9.5 10 4l6.5 5.5"/><path d="M5 8.7V16h10V8.7"/><rect x="8.3" y="11.5" width="3.4" height="3.4"/>',
+      truck:'<path d="M2 13.5h8V7.5H5L2 10.5v3z"/><path d="M10 13.5h6v-4h-2.5l-1-2H10v6z"/><circle cx="5.5" cy="15" r="1.4"/><circle cx="14" cy="15" r="1.4"/>',
+      smoke:'<path d="M6 14c-1-2 1-2.5 0-4.5M10 14c-1-2 1-2.5 0-4.5M14 14c-1-2 1-2.5 0-4.5"/>',
+      fire:'<path d="M10 3c0 2-2.5 3-2.5 5.5a2.5 2.5 0 0 0 5 0c0-1.5-1-2-1-3.2 0 1.7 1.5 2.2 1.5 4a3 3 0 1 1-6 0C6.5 6 10 5 10 3z"/>',
+      wrench:'<path d="M13.2 4.2a1.8 1.8 0 1 0 2.3 2.3l1.8 1.8-1.1 1.1-1.8-1.8a1.8 1.8 0 0 0-1.2-3.4z"/><path d="M4.5 15.5 11 9"/>'
     }[name] || '';
     return `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
   }
@@ -760,7 +829,8 @@
     {view:'assignments', label:'과제', icon:'assignments', color:'var(--orange)'},
     {view:'schedule', label:'시간표', icon:'schedule', color:'var(--purple)'},
     {view:'teachers', label:'선생님', icon:'teachers', color:'var(--pink)'},
-    {view:'materials', label:'자료', icon:'materials', color:'var(--indigo)'}
+    {view:'materials', label:'자료', icon:'materials', color:'var(--indigo)'},
+    {view:'city', label:'도시', icon:'city', color:'var(--teal)', beta:true}
   ];
 
   /* ============ 렌더 ============ */
@@ -782,6 +852,7 @@
     else if(state.view==='schedule') html += renderSchedulePage();
     else if(state.view==='teachers') html += renderTeachersPage();
     else if(state.view==='materials') html += renderMaterialsPage();
+    else if(state.view==='city') html += renderCityPage();
     app.innerHTML = html;
     if(!viewChanged){
       // 클릭할 때마다 화면 전체가 깜빡이는 것 방지 — 실제로 다른 화면으로 이동할 때만 페이드인
@@ -794,6 +865,7 @@
     else if(state.modal==='completed') document.body.insertAdjacentHTML('beforeend', renderCompletedModal());
     else if(state.modal==='completedPersonal') document.body.insertAdjacentHTML('beforeend', renderCompletedPersonalModal());
     else if(state.modal==='quickAdd') document.body.insertAdjacentHTML('beforeend', renderQuickAddModal());
+    else if(state.modal==='cityInspect') document.body.insertAdjacentHTML('beforeend', renderCityInspectModal());
 
     const apiKeyInput = document.getElementById('apiKeyInput');
     if(apiKeyInput) apiKeyInput.value = getApiKey();
@@ -808,7 +880,7 @@
   function renderSidebar(){
     const items = NAV_ITEMS.map(n=>`
       <button class="nav-item ${state.view===n.view?'active':''}" data-action="goView" data-view="${n.view}">
-        <span class="nav-icon" style="--nc:${n.color}">${icon(n.icon)}</span><span class="label">${n.label}</span>
+        <span class="nav-icon" style="--nc:${n.color}">${icon(n.icon)}</span><span class="label">${n.label}</span>${n.beta?`<span class="beta-pill">BETA</span>`:''}
       </button>`).join('');
     return `<div class="sidebar glass">
       <div class="sidebar-brand" data-action="goView" data-view="home"><div class="mark"></div><b>Sorganizer</b></div>
@@ -1326,6 +1398,202 @@
         <div class="section-head"><div class="section-title">공지</div></div>
         ${notices.length===0?`<div class="empty">받은 공지가 없어.</div>`:notices.map(n=>materialRowHtml(n)).join('')}
       </div>
+    </div>`;
+  }
+
+  /* ---- 도시 (City, beta) ----
+     새 데이터를 저장하지 않음 — 수업 과제(teachers[key].review)와 자율학습(teachers[key].self + personal.tasks)을
+     그대로 읽어서 시각화만 새로 하는 뷰 레이어. 완료 처리도 기존 completeItem/completePersonalTask를 그대로 씀. */
+  function boxForTeacher(x){
+    return BOXES.find(b=>b.cat===x.cat && (!b.subj || b.subj===x.subj)) || null;
+  }
+  function citySubjectColor(entry){
+    if(entry.kind==='teacher'){
+      const box = boxForTeacher(entry.x);
+      return box ? box.qc : 'var(--text-3)';
+    }
+    const box = entry.item.boxKey && BOX_KEYS.has(entry.item.boxKey) ? BOXES.find(b=>b.key===entry.item.boxKey) : null;
+    return box ? box.qc : 'var(--text-3)';
+  }
+  // 차(수업 과제): 3단계 — 막힘/정체 컨셉은 빼고 정상→연기→고장으로 단순화
+  function carDecayStage(days){
+    if(days>=12) return 2; // 고장
+    if(days>=5) return 1;  // 연기
+    return 0;               // 정상 주행
+  }
+  // 집(자율학습): 4단계 — 평온→연기→화재→붕괴
+  function houseDecayStage(days){
+    if(days>=15) return 3; // 붕괴
+    if(days>=10) return 2; // 화재
+    if(days>=5) return 1;  // 연기
+    return 0;               // 평온
+  }
+  function collectCityCitizens(){
+    const citizens = [];
+    TEACHER_LIST.forEach(x=>{
+      const td = state.data.teachers[x.key];
+      const color = citySubjectColor({kind:'teacher', x});
+      td.review.forEach(item=>{
+        const days = itemStaleDays(item);
+        citizens.push({vehicle:'car', kind:'teacher', corner:'review', x, item, days, stage:carDecayStage(days), color});
+      });
+      td.self.forEach(item=>{
+        const days = itemStaleDays(item);
+        citizens.push({vehicle:'house', kind:'teacher', corner:'self', x, item, days, stage:houseDecayStage(days), color});
+      });
+    });
+    (state.data.personal?.tasks||[]).forEach(item=>{
+      const days = itemStaleDays(item);
+      citizens.push({vehicle:'house', kind:'personal', item, days, stage:houseDecayStage(days), color:citySubjectColor({kind:'personal', item})});
+    });
+    return citizens;
+  }
+  function collectGraduatingThisWeek(){
+    const weekStart = mondayOf(now).getTime();
+    const graduates = [];
+    TEACHER_LIST.forEach(x=>{
+      const color = citySubjectColor({kind:'teacher', x});
+      state.data.teachers[x.key].completed.forEach(it=>{
+        if((it.corner==='review'||it.corner==='self') && it.completedAt>=weekStart){
+          graduates.push({vehicle: it.corner==='review'?'car':'house', kind:'teacher', corner:it.corner, x, item:it, color});
+        }
+      });
+    });
+    (state.data.personal?.completed||[]).forEach(it=>{
+      if(it.completedAt>=weekStart){
+        graduates.push({vehicle:'house', kind:'personal', item:it, color:citySubjectColor({kind:'personal', item:it})});
+      }
+    });
+    return graduates;
+  }
+  function collectGraduationArchive(){
+    const groups = {};
+    function add(weekStartMs, entry){ (groups[weekStartMs] = groups[weekStartMs] || []).push(entry); }
+    TEACHER_LIST.forEach(x=>{
+      const color = citySubjectColor({kind:'teacher', x});
+      state.data.teachers[x.key].completed.forEach(it=>{
+        if(it.corner!=='review' && it.corner!=='self') return;
+        const wk = mondayOf(new Date(it.completedAt)).getTime();
+        add(wk, {vehicle: it.corner==='review'?'car':'house', kind:'teacher', corner:it.corner, x, item:it, color});
+      });
+    });
+    (state.data.personal?.completed||[]).forEach(it=>{
+      const wk = mondayOf(new Date(it.completedAt)).getTime();
+      add(wk, {vehicle:'house', kind:'personal', item:it, color:citySubjectColor({kind:'personal', item:it})});
+    });
+    return Object.keys(groups).map(Number).sort((a,b)=>b-a)
+      .map(wk=>({weekStart:wk, items:groups[wk].sort((a,b)=>b.item.completedAt-a.item.completedAt)}));
+  }
+
+  function cityCarHtml(c){
+    const stageClass = ['normal','smoke','broken'][c.stage] || 'normal';
+    const keyAttr = c.kind==='teacher' ? `data-key="${c.x.key}" data-corner="${c.corner}"` : '';
+    return `<button class="city-car ${stageClass}" style="--fc:${c.color};" data-action="openCityInspect" data-kind="${c.kind}" ${keyAttr} data-id="${c.item.id}" title="${escapeHtml(c.item.text)}">
+      <span class="city-figure"></span>
+      <span class="city-car-body">${icon('car')}</span>
+      ${c.stage===1?`<span class="city-overlay">${icon('smoke')}</span>`:''}
+    </button>`;
+  }
+  function cityHouseHtml(c){
+    const stageClass = ['normal','smoke','fire','collapsed'][c.stage] || 'normal';
+    const keyAttr = c.kind==='teacher' ? `data-key="${c.x.key}" data-corner="${c.corner}"` : '';
+    const overlay = c.stage===1 ? icon('smoke') : (c.stage===2 ? icon('fire') : '');
+    return `<button class="city-house ${stageClass}" style="--fc:${c.color};" data-action="openCityInspect" data-kind="${c.kind}" ${keyAttr} data-id="${c.item.id}" title="${escapeHtml(c.item.text)}">
+      <span class="city-house-body">${icon('house')}</span>
+      ${overlay?`<span class="city-overlay">${overlay}</span>`:''}
+    </button>`;
+  }
+  function cityAvatarHtml(c){
+    const seed = hashStr(c.item.id+'w');
+    const keyAttr = c.kind==='teacher' ? `data-key="${c.x.key}" data-corner="${c.corner}"` : '';
+    const dur = 18 + (seed%20);
+    const delay = -((seed>>4)%dur);
+    const top = 8 + (seed%78);
+    const left = 6 + ((seed>>3)%82);
+    return `<button class="city-avatar" style="--fc:${c.color};--wdur:${dur}s;--wdelay:${delay}s;top:${top}%;left:${left}%;" data-action="openCityInspect" data-kind="${c.kind}" ${keyAttr} data-id="${c.item.id}" title="${escapeHtml(c.item.text)}">
+      <span class="city-figure"></span>
+    </button>`;
+  }
+  function renderCityPage(){
+    if(state.cityView==='archive') return renderGraduationArchive();
+    const citizens = collectCityCitizens();
+    const cars = citizens.filter(c=>c.vehicle==='car');
+    const houses = citizens.filter(c=>c.vehicle==='house');
+    const graduating = collectGraduatingThisWeek();
+
+    const carsHtml = cars.length===0 ? `<div class="empty">도로가 비어있어 — 수업 과제를 추가하면 자동차가 생겨.</div>` : cars.map(cityCarHtml).join('');
+    const housesHtml = houses.length===0 ? `<div class="empty">아직 지어진 집이 없어 — 자율학습 항목을 추가하면 집이 생겨.</div>` : houses.map(cityHouseHtml).join('');
+    const avatarsHtml = citizens.map(cityAvatarHtml).join('');
+
+    return `<div class="fade-in">
+      <div class="page-head"><h1>도시 <span class="beta-pill" style="margin-left:6px;">BETA</span></h1><button class="iconbtn" data-action="goCityArchive">${icon('external')} 졸업 앨범</button></div>
+      <div class="empty" style="padding:0 0 14px;">할 일을 방치하면 시민들의 삶이 무너지고, 끝내면 회복돼 — 수업 과제는 자동차, 자율학습은 집이야.</div>
+      ${graduating.length>0?`<div class="city-graduating">🎓 이번 주 졸업 예정 ${graduating.length}명 — 다음 주 월요일에 졸업 앨범으로 넘어가</div>`:''}
+      <div class="city-canvas">
+        <div class="city-road">${carsHtml}</div>
+        <div class="city-district">${housesHtml}</div>
+        <div class="city-avatars">${avatarsHtml}</div>
+      </div>
+    </div>`;
+  }
+  function findCityItem(target){
+    if(!target) return null;
+    if(target.kind==='teacher'){
+      const td = state.data.teachers[target.key];
+      if(!td) return null;
+      const item = (td[target.corner]||[]).find(i=>i.id===target.id);
+      if(!item) return null;
+      const x = TEACHER_LIST.find(t=>t.key===target.key);
+      return {kind:'teacher', corner:target.corner, x, item};
+    }
+    const item = (state.data.personal?.tasks||[]).find(i=>i.id===target.id);
+    if(!item) return null;
+    return {kind:'personal', item};
+  }
+  function renderCityInspectModal(){
+    const entry = findCityItem(state.cityInspectTarget);
+    if(!entry) return '';
+    const isCar = entry.kind==='teacher' && entry.corner==='review';
+    const days = itemStaleDays(entry.item);
+    const stage = isCar ? carDecayStage(days) : houseDecayStage(days);
+    const stageLabel = isCar
+      ? ['정상 주행 중이야','연기가 나고 있어','완전히 고장났어'][stage]
+      : ['평온해','굴뚝에서 연기가 나','집에 불이 났어','집이 무너졌어'][stage];
+    const tag = entry.kind==='teacher'
+      ? `${entry.x.subjLabel} · ${entry.x.teacher}`
+      : (entry.item.boxKey && BOX_KEYS.has(entry.item.boxKey) ? BOXES.find(b=>b.key===entry.item.boxKey).label : '미분류');
+    return `<div class="modal-overlay" data-action="closeModal">
+      <div class="modal" style="max-width:360px;">
+        <div class="modal-head"><h2>${isCar?icon('car'):icon('house')} ${escapeHtml(tag)}</h2><button class="modal-close" data-action="closeModal">${icon('close')}</button></div>
+        <div class="modal-body">
+          <div class="city-inspect-text">${escapeHtml(entry.item.text)}</div>
+          <div class="city-inspect-meta">등록한 지 ${days}일째 · ${stageLabel}</div>
+          <button class="btn" data-action="cityCompleteFromInspect">지금 완료 처리</button>
+        </div>
+      </div>
+    </div>`;
+  }
+  function renderGraduationArchive(){
+    const weeks = collectGraduationArchive();
+    const weeksHtml = weeks.length===0 ? `<div class="empty">아직 졸업한 시민이 없어.</div>` : weeks.map(w=>{
+      const label = fmtShortDate(toISODate(new Date(w.weekStart)));
+      const rows = w.items.map(entry=>{
+        const tag = entry.kind==='teacher'
+          ? `${entry.x.subjLabel} · ${entry.x.teacher}`
+          : (entry.item.boxKey && BOX_KEYS.has(entry.item.boxKey) ? BOXES.find(b=>b.key===entry.item.boxKey).label : '미분류');
+        return `<div class="city-grad-row">
+          <span class="city-grad-icon" style="--fc:${entry.color};">${icon(entry.vehicle==='car'?'car':'house')}</span>
+          <div class="city-grad-body"><div class="city-grad-tag">${escapeHtml(tag)}</div><div class="city-grad-text">${escapeHtml(entry.item.text)}</div></div>
+        </div>`;
+      }).join('');
+      return `<div class="section">
+        <div class="section-head"><div class="section-title">${label} 주 — 졸업생 ${w.items.length}명</div></div>
+        ${rows}
+      </div>`;
+    }).join('');
+    return `<div class="fade-in">
+      <div class="page-head"><h1>졸업 앨범</h1><button class="iconbtn" data-action="goCityMain">${icon('arrowLeft')} 도시로</button></div>
+      ${weeksHtml}
     </div>`;
   }
 
@@ -1854,6 +2122,31 @@ ${text}`}]
     persist(); render();
   }
 
+  /* ============ 액션: 도시 ============ */
+  function openCityInspect(kind, key, corner, id){
+    state.cityInspectTarget = {kind, key: key||null, corner: corner||null, id};
+    state.modal = 'cityInspect';
+    render();
+  }
+  function cityCompleteFromInspect(){
+    const entry = findCityItem(state.cityInspectTarget);
+    if(!entry) return;
+    const isCar = entry.kind==='teacher' && entry.corner==='review';
+    const modalBody = document.querySelector('.modal-body');
+    if(modalBody){
+      modalBody.innerHTML = `<div class="city-fix-flourish ${isCar?'repair':'fire'}">
+        <span class="city-fix-icon">${icon('truck')}</span>
+        <div>${isCar?'수리차가 와서 고쳐주고 있어...':'소방차가 와서 불을 끄고 있어...'}</div>
+      </div>`;
+    }
+    setTimeout(()=>{
+      state.modal = null;
+      state.cityInspectTarget = null;
+      if(entry.kind==='teacher') completeItem(entry.x.key, entry.corner, entry.item.id);
+      else completePersonalTask(entry.item.id);
+    }, 700);
+  }
+
   /* ============ 액션: 자연어 → 할 일 자동 분류 (Tasks 페이지) ============ */
   async function classifyTasks(){
     const ta = document.getElementById('taskClassifyInput');
@@ -2140,6 +2433,10 @@ ${text}`}]
       case 'toggleRetry': toggleRetry(el.dataset.key, el.dataset.id); break;
       case 'openCompleted': state.completedTeacherKey = el.dataset.key; state.modal='completed'; render(); break;
       case 'openCompletedPersonal': state.modal='completedPersonal'; render(); break;
+      case 'openCityInspect': openCityInspect(el.dataset.kind, el.dataset.key, el.dataset.corner, el.dataset.id); break;
+      case 'cityCompleteFromInspect': cityCompleteFromInspect(); break;
+      case 'goCityArchive': state.cityView='archive'; render(); break;
+      case 'goCityMain': state.cityView='main'; render(); break;
       case 'restorePersonal': restorePersonalTask(el.dataset.id); break;
       case 'deletePersonalPermanent': deletePersonalPermanent(el.dataset.id); break;
       case 'quickAdd': state.quickAddKey = el.dataset.key; state.quickAddCorner = 'review'; state.modal = 'quickAdd'; render(); break;
