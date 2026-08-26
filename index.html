@@ -1644,7 +1644,9 @@
   }
   function citySignature(){
     const cz = collectCityCitizens();
-    return cz.map(c=>c.item.id+':'+c.stage+':'+c.vehicle).sort().join('|');
+    // 망각의 시민도 도시 구성의 일부 — 빼먹으면 복습 과제를 새로 뽑아도 씬이 안 바뀐다
+    return cz.map(c=>c.item.id+':'+c.stage+':'+c.vehicle).sort().join('|')
+      + '#' + pendingRecall().map(t=>t.id).sort().join(',');
   }
   function setCityStatus(msg){
     if(CITY3D.statusEl) CITY3D.statusEl.textContent = msg || '';
@@ -2727,6 +2729,23 @@
   /* ============ 유틸 ============ */
   function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
   function fmtDate(ts){ const d=new Date(ts); return `${d.getMonth()+1}/${d.getDate()}`; }
+  // 모델이 코드펜스를 두르거나 앞뒤에 설명을 붙여도 JSON 배열만 뽑아낸다.
+  // 파싱 실패는 null 로 돌려서, 호출한 쪽이 "왜 실패했는지"를 사용자에게 보여줄 수 있게 함.
+  function modelText(data){
+    return ((data && data.content) || [])
+      .filter(b => !b.type || b.type === 'text')
+      .map(b => b.text || '').join('').trim();
+  }
+  function parseModelJsonArray(raw){
+    if(!raw) return null;
+    const s = raw.trim().replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/, '').trim();
+    try{ const v = JSON.parse(s); if(Array.isArray(v)) return v; }catch(e){}
+    const i = s.indexOf('['), j = s.lastIndexOf(']');
+    if(i >= 0 && j > i){
+      try{ const v = JSON.parse(s.slice(i, j+1)); if(Array.isArray(v)) return v; }catch(e){}
+    }
+    return null;
+  }
 
   /* ============ 액션: 코너 항목 ============ */
   function addItem(key, corner, text){
@@ -2927,9 +2946,19 @@ ${text}`}]
         throw new Error((errBody.error && errBody.error.message) || `HTTP ${res.status}`);
       }
       const data = await res.json();
-      const raw = (data.content||[]).map(b=>b.text||'').join('').trim();
-      const clean = raw.replace(/^```json/i,'').replace(/```$/,'').trim();
-      const parsed = JSON.parse(clean);
+      const raw = modelText(data);
+      const clean = raw.replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/,'').trim();
+      let parsed = null;
+      try{ parsed = JSON.parse(clean); }catch(e){
+        const i = clean.indexOf('{'), j = clean.lastIndexOf('}');
+        if(i>=0 && j>i){ try{ parsed = JSON.parse(clean.slice(i,j+1)); }catch(e2){} }
+      }
+      if(!parsed || typeof parsed !== 'object'){
+        statusEl.textContent = raw
+          ? `응답을 이해하지 못했어 — 모델이 이렇게 답했어: "${raw.slice(0,120)}"`
+          : '모델이 빈 응답을 보냈어 — 잠시 뒤 다시 시도해줘.';
+        return;
+      }
       const td = getTD(key);
       const t = Date.now();
       (parsed.review||[]).forEach(x=> td.review.push({id:genId(), text:x, createdAt:t, reps:0, retry:false}));
@@ -3056,7 +3085,7 @@ ${text}`}]
         },
         body: JSON.stringify({
           model:'claude-sonnet-5',
-          max_tokens:1500,
+          max_tokens:2000,
           messages:[{role:'user', content:
 `너는 영재학교 학생의 복습 과제를 자동 생성하는 학습 최적화 Agent다.
 목표는 과제를 많이 주는 게 아니라, 완료된 과제 이력을 보고 가장 적은 시간으로
@@ -3094,13 +3123,18 @@ ${openText}`}]
         throw new Error((errBody.error && errBody.error.message) || `HTTP ${res.status}`);
       }
       const data = await res.json();
-      const raw = (data.content||[]).map(b=>b.text||'').join('').trim();
-      const clean = raw.replace(/^```json/i,'').replace(/```$/,'').trim();
-      const items = JSON.parse(clean);
+      const raw = modelText(data);
+      const items = parseModelJsonArray(raw);
+      if(items === null){
+        recallStatus = raw
+          ? `응답을 이해하지 못했어 — 모델이 이렇게 답했어: "${raw.slice(0,140)}"`
+          : '모델이 빈 응답을 보냈어 — 잠시 뒤 다시 시도해줘.';
+        render(); return;
+      }
       const now = Date.now();
       let added = 0;
       state.data.recall = state.data.recall || {tasks:[], lastGeneratedAt:null};
-      (Array.isArray(items)?items:[]).forEach(it=>{
+      items.forEach(it=>{
         if(!it || !it.text) return;
         state.data.recall.tasks.push({
           id: genId(),
@@ -3182,9 +3216,14 @@ ${text}`}]
         throw new Error((errBody.error && errBody.error.message) || `HTTP ${res.status}`);
       }
       const data = await res.json();
-      const raw = (data.content||[]).map(b=>b.text||'').join('').trim();
-      const clean = raw.replace(/^```json/i,'').replace(/```$/,'').trim();
-      const items = JSON.parse(clean);
+      const raw = modelText(data);
+      const items = parseModelJsonArray(raw);
+      if(items === null){
+        statusEl.textContent = raw
+          ? `응답을 이해하지 못했어 — 모델이 이렇게 답했어: "${raw.slice(0,120)}"`
+          : '모델이 빈 응답을 보냈어 — 잠시 뒤 다시 시도해줘.';
+        return;
+      }
       let addedReview=0, addedSelf=0, addedPersonal=0;
       const t = Date.now();
       items.forEach(it=>{
