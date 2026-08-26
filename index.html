@@ -88,6 +88,7 @@
   .bottom-nav{display:none;}
   .main{flex:1;min-width:0;}
   .main-inner{max-width:720px;margin:0 auto;padding:40px 32px 110px;}
+  .main-inner.wide{max-width:1560px;}
 
   .topbar-mini{display:flex;justify-content:flex-end;margin-bottom:10px;}
   .iconbtn{background:var(--glass);border:1px solid var(--border);color:var(--text-2);font-size:12.5px;padding:7px 14px;border-radius:var(--r-pill);display:inline-flex;align-items:center;gap:6px;transition:all var(--dur) var(--ease);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));}
@@ -462,9 +463,18 @@
 
   /* ---- 도시 (City, beta) ---- */
   .city-graduating{font-size:12.5px;color:var(--teal);background:rgba(100,210,255,.1);border:1px solid rgba(100,210,255,.3);border-radius:var(--r-md);padding:9px 13px;margin-bottom:18px;}
-  .city3d{position:relative;width:100%;border-radius:var(--r-lg);overflow:hidden;
-    border:1px solid var(--border);border-top-color:var(--border-hi);background:#11161f;}
-  .city3d-canvas{width:100%;height:min(62vh, 520px);min-height:300px;}
+  .city3d{position:relative;width:100%;height:100%;border-radius:var(--r-lg);overflow:hidden;
+    border:1px solid var(--border);border-top-color:var(--border-hi);background:#171320;}
+  .city3d-canvas{width:100%;height:100%;}
+  /* 도시가 들어가는 자리 — 탭에선 화면 가득, 홈 오른쪽에선 뷰포트 높이만큼 */
+  .city-slot-full{height:calc(100vh - 230px);min-height:420px;}
+  .city-slot-home{height:calc(100vh - 132px);min-height:420px;}
+  .home-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:26px;align-items:start;}
+  .home-city{position:sticky;top:24px;}
+  .home-city-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    margin-bottom:10px;font-size:13px;font-weight:600;color:var(--text-2);}
+  .home-city-head .beta-pill{margin-left:4px;}
+  @media(max-width:1179px){ .home-split{display:block;} .home-city{display:none;} }
   .city3d-canvas canvas{display:block;width:100%;height:100%;touch-action:none;}
   .city3d-tip{position:absolute;z-index:4;max-width:250px;pointer-events:none;
     background:rgba(20,22,28,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
@@ -829,9 +839,13 @@
     else if(state.view==='teachers') html += renderTeachersPage();
     else if(state.view==='materials') html += renderMaterialsPage();
     else if(state.view==='city') html += renderCityPage();
+    // 도시가 보이는 화면에선 본문 폭 제한을 풀어서 넓게 쓴다
+    const cityVisible = (state.view==='city' && state.cityView!=='archive')
+                     || (state.view==='home' && isWideScreen());
+    app.classList.toggle('wide', cityVisible);
     app.innerHTML = html;
     // 3D 도시 캔버스는 #app 바깥에 살아있으므로 갈아엎은 뒤 제자리에 다시 끼워 넣는다
-    if(state.view==='city' && state.cityView!=='archive') mountCity3D(); else stopCityLoop();
+    if(cityVisible) mountCity3D(); else stopCityLoop();
     if(!viewChanged){
       // 클릭할 때마다 화면 전체가 깜빡이는 것 방지 — 실제로 다른 화면으로 이동할 때만 페이드인
       const fadeEl = app.querySelector('.fade-in');
@@ -1153,7 +1167,7 @@
       ? `<div class="empty">등록된 과제가 없어.</div>`
       : pending.map(a=>assignmentRowHtml(a,false)).join('');
 
-    return `<div class="fade-in">
+    const left = `
       <div class="home-date">${todayDateStr}</div>
       <h1 class="home-greeting">${greetingWord()}${name?', '+escapeHtml(name):''}</h1>
 
@@ -1168,7 +1182,19 @@
       <div class="section">
         <div class="section-head"><div class="section-title">임박한 과제</div><button class="section-link" data-action="goView" data-view="assignments">전체 보기</button></div>
         ${asgHtml}
-      </div>
+      </div>`;
+
+    // 데스크탑에서만 오른쪽에 살아있는 도시를 띄운다 (좁은 화면에선 3D를 아예 안 받음)
+    if(!isWideScreen()) return `<div class="fade-in">${left}</div>`;
+    return `<div class="fade-in home-split">
+      <div class="home-main">${left}</div>
+      <aside class="home-city">
+        <div class="home-city-head">
+          <span>도시 <span class="beta-pill">BETA</span></span>
+          <button class="section-link" data-action="goView" data-view="city">크게 보기</button>
+        </div>
+        <div id="city3dSlot" class="city-slot-home"></div>
+      </aside>
     </div>`;
   }
 
@@ -1485,7 +1511,7 @@
   const CITY3D = {
     THREE:null, host:null, canvasWrap:null, tip:null, statusEl:null,
     renderer:null, scene:null, camera:null, controls:null, raycaster:null, pointer:null,
-    proto:{}, cityGroup:null, owned:[], cars:[], peds:[], hazards:[], beacons:[],
+    proto:{}, cityGroup:null, owned:[], cars:[], peds:[], walkers:[], hazards:[], beacons:[],
     running:false, raf:0, last:0, sig:'', phase:'idle', err:'', hover:null, downAt:null
   };
 
@@ -1495,6 +1521,13 @@
     return (getComputedStyle(document.documentElement).getPropertyValue(m[1])||'').trim() || '#8a8f9c';
   }
   function cityAssetUrl(p){ return new URL(p, document.baseURI).href; }
+  // 홈 화면 2단 구성(할 일 + 살아있는 도시)은 가로가 충분할 때만
+  function isWideScreen(){ return window.innerWidth >= 1180; }
+  function hexToRgbStr(hex){
+    const h = (hex||'').replace('#','').trim();
+    if(h.length!==6) return '198,204,216';
+    return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16)).join(',');
+  }
   function citySignature(){
     const cz = collectCityCitizens();
     return cz.map(c=>c.item.id+':'+c.stage+':'+c.vehicle).sort().join('|');
@@ -1513,6 +1546,7 @@
       CITY3D.THREE = THREE;
       const gltf = await new THREE.GLTFLoader().loadAsync(cityAssetUrl('assets/city/city-kit.glb'));
       gltf.scene.children.slice().forEach(n=>{ CITY3D.proto[n.name] = n; });
+      applyWarmTownSkin(THREE);
       initCityRenderer();
       CITY3D.phase = 'ready';
       setCityStatus('');
@@ -1525,6 +1559,28 @@
     }
   }
 
+  /* Kenney 시티킷은 같은 UV에 색만 다른 팔레트를 여러 장 준다 —
+     기본(초록 마을) 대신 따뜻한 톤(variation-b)으로 갈아끼운다. 건물/나무 쪽 머티리얼만
+     건드리면 차·캐릭터는 원래 색을 그대로 유지한다. */
+  function applyWarmTownSkin(THREE){
+    const tex = new THREE.TextureLoader().load(cityAssetUrl('assets/city/town-warm.png'));
+    tex.flipY = false;                 // glTF 텍스처 규약
+    tex.colorSpace = THREE.SRGBColorSpace;
+    const done = new Set();
+    ['tree-large','tree-small','planter'].concat(CITY_BUILDINGS).forEach(name=>{
+      const p = CITY3D.proto[name];
+      if(!p) return;
+      p.traverse(n=>{
+        if(!n.isMesh || !n.material) return;
+        (Array.isArray(n.material) ? n.material : [n.material]).forEach(m=>{
+          if(done.has(m.uuid)) return;
+          done.add(m.uuid);
+          m.map = tex; m.needsUpdate = true;
+        });
+      });
+    });
+  }
+
   function initCityRenderer(){
     const T = CITY3D.THREE;
     const wrap = CITY3D.canvasWrap;
@@ -1534,16 +1590,20 @@
     wrap.appendChild(renderer.domElement);
 
     const scene = new T.Scene();
-    scene.background = new T.Color(0x11161f);
-    scene.fog = new T.Fog(0x11161f, 40, 130);
+    scene.background = new T.Color(0x171320);
+    scene.fog = new T.Fog(0x171320, 40, 130);
 
     const camera = new T.PerspectiveCamera(42, 1, 0.5, 400);
     camera.position.set(26, 24, 26);
 
-    scene.add(new T.HemisphereLight(0xbcd4ff, 0x2a3a2a, 2.0));
-    const sun = new T.DirectionalLight(0xfff2d8, 2.1);
-    sun.position.set(18, 30, 12);
+    // 따뜻한 노을빛 조명 — 초록 마을이 아니라 해질녘 타운 느낌으로
+    scene.add(new T.HemisphereLight(0xffd9b3, 0x3a2c24, 2.1));
+    const sun = new T.DirectionalLight(0xffe3bb, 2.3);
+    sun.position.set(20, 30, 14);
     scene.add(sun);
+    const rim = new T.DirectionalLight(0xff9f6a, 0.7);
+    rim.position.set(-22, 12, -18);
+    scene.add(rim);
 
     const controls = new T.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -1600,8 +1660,8 @@
   function makeRoadTexture(alongX){
     const c = document.createElement('canvas'); c.width = 64; c.height = 64;
     const g = c.getContext('2d');
-    g.fillStyle = '#454c5a'; g.fillRect(0,0,64,64);
-    g.fillStyle = 'rgba(255,255,255,.30)';
+    g.fillStyle = '#59504b'; g.fillRect(0,0,64,64);
+    g.fillStyle = 'rgba(255,240,215,.34)';
     if(alongX) g.fillRect(8, 30, 26, 4); else g.fillRect(30, 8, 4, 26);
     const tex = new CITY3D.THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = CITY3D.THREE.RepeatWrapping;
@@ -1615,7 +1675,7 @@
     disposeCityGroup();
     const g = new T.Group();
     CITY3D.cityGroup = g; CITY3D.scene.add(g);
-    CITY3D.cars = []; CITY3D.peds = []; CITY3D.hazards = []; CITY3D.beacons = [];
+    CITY3D.cars = []; CITY3D.peds = []; CITY3D.walkers = []; CITY3D.hazards = []; CITY3D.beacons = [];
 
     const citizens = collectCityCitizens();
     const cars = citizens.filter(c=>c.vehicle==='car');
@@ -1625,20 +1685,40 @@
     const wx = i => (i-half)*CITY_TILE;
     const span = (N+1)*CITY_TILE;
 
+    // 캐릭터는 스킨드 메시라 그냥 clone() 하면 뼈대가 원본에 묶인 채로 복제돼서 뭉개진다
     function spawn(name){
       const p = CITY3D.proto[name];
-      return p ? p.clone(true) : null;
+      if(!p) return null;
+      return name.startsWith('char-') ? T.skeletonClone(p) : p.clone(true);
     }
-    // 모델마다 크기가 제각각이라 발자국 폭 기준으로 맞추고 바닥(y=0)에 앉힘
-    function fit(o, targetW){
+    // 기본 자세가 T포즈라 팔을 내려주고, 걷기 애니메이션용 뼈를 뽑아둔다
+    function poseCharacter(o){
+      const bones = {};
+      o.traverse(n=>{ if(n.isBone) bones[n.name] = n; });
+      if(bones['arm-left'])  bones['arm-left'].rotation.z  =  1.28;
+      if(bones['arm-right']) bones['arm-right'].rotation.z = -1.28;
+      return {armL:bones['arm-left'], armR:bones['arm-right'],
+              legL:bones['leg-left'], legR:bones['leg-right']};
+    }
+    // 모델마다 크기가 제각각이라 기준 치수에 맞춰 스케일하고 바닥(y=0)에 앉힘.
+    // 건물·차는 발자국 폭 기준, 나무·사람·잔해처럼 가늘고 긴 건 높이 기준으로 재야
+    // 폭으로 맞추다 하늘까지 솟아버리는 일이 없다.
+    function fitBy(o, target, axis){
       let box = new T.Box3().setFromObject(o);
       const size = new T.Vector3(); box.getSize(size);
-      o.scale.setScalar(targetW / (Math.max(size.x, size.z) || 1));
+      const base = axis==='h' ? size.y
+                 : axis==='m' ? Math.max(size.x, size.y, size.z)
+                 : Math.max(size.x, size.z);
+      o.scale.setScalar(target / (base || 1));
       box = new T.Box3().setFromObject(o);
       const c = new T.Vector3(); box.getCenter(c);
       o.position.x -= c.x; o.position.z -= c.z; o.position.y -= box.min.y;
       return o;
     }
+    const fit  = (o, w) => fitBy(o, w, 'w');
+    const fitH = (o, h) => fitBy(o, h, 'h');
+    // 소품은 가장 긴 변을 기준으로 — 납작한 잔해를 높이로 맞추면 판때기가 하늘을 덮는다
+    const fitMax = (o, m) => fitBy(o, m, 'm');
     function recolor(o, hex, mode){
       o.traverse(n=>{
         if(!n.isMesh || !n.material) return;
@@ -1657,13 +1737,26 @@
       obj.userData.cz = cz;
     }
 
-    /* 지면 + 도로 */
-    const groundMat = new T.MeshStandardMaterial({color:0x3e6b49, roughness:1, metalness:0});
-    CITY3D.owned.push(groundMat);
-    const ground = new T.Mesh(new T.PlaneGeometry(span, span), groundMat);
-    ground.geometry.userData.own = true;
-    ground.rotation.x = -Math.PI/2;
-    g.add(ground);
+    /* 땅덩어리 — 종이 한 장이 아니라 두께 있는 지반으로 (윗면 잔디, 옆면 흙) */
+    const SLAB = CITY_TILE*0.9;
+    const grassMat = new T.MeshStandardMaterial({color:0x6d7a45, roughness:1, metalness:0});
+    const soilMat  = new T.MeshStandardMaterial({color:0x6b5340, roughness:1, metalness:0});
+    const rockMat  = new T.MeshStandardMaterial({color:0x4a382c, roughness:1, metalness:0});
+    CITY3D.owned.push(grassMat, soilMat, rockMat);
+    const slabGeo = new T.BoxGeometry(span, SLAB, span);
+    slabGeo.userData.own = true;
+    // BoxGeometry 면 순서: +x, -x, +y(윗면), -y(바닥), +z, -z
+    const slab = new T.Mesh(slabGeo, [soilMat, soilMat, grassMat, rockMat, soilMat, soilMat]);
+    slab.position.y = -SLAB/2;
+    g.add(slab);
+    // 흙과 잔디 사이 얇은 띠 — 단면이 잘린 느낌을 줄여줌
+    const rimGeo = new T.BoxGeometry(span*1.004, 0.28, span*1.004);
+    rimGeo.userData.own = true;
+    const rimMat = new T.MeshStandardMaterial({color:0x7d6248, roughness:1});
+    CITY3D.owned.push(rimMat);
+    const rimMesh = new T.Mesh(rimGeo, rimMat);
+    rimMesh.position.y = -0.16;
+    g.add(rimMesh);
 
     const roadMatZ = new T.MeshStandardMaterial({map:makeRoadTexture(false), roughness:1});
     const roadMatX = new T.MeshStandardMaterial({map:makeRoadTexture(true), roughness:1});
@@ -1698,33 +1791,35 @@
         if(b){ fit(b, CITY_TILE*0.74); b.scale.y *= 0.24; recolor(b, null, 'dark'); holder.add(b); }
         ['debris-plate','debris-door','debris-tire'].forEach((d,k)=>{
           const o = spawn(d); if(!o) return;
-          fit(o, CITY_TILE*0.2);
-          o.position.set(Math.cos(k*2.1)*1.2, o.position.y, Math.sin(k*2.1)*1.2);
+          fitMax(o, CITY_TILE*0.13);
+          o.position.set(Math.cos(k*2.1)*0.85, o.position.y, Math.sin(k*2.1)*0.85);
           o.rotation.y = k*1.7; recolor(o, null, 'dark'); holder.add(o);
         });
       } else {
         const b = spawn(CITY_BUILDINGS[hashStr(cz.item.id)%CITY_BUILDINGS.length]);
         if(b){ fit(b, CITY_TILE*0.78); holder.add(b); }
-        if(cz.stage===1) addHazard(holder, 'smoke', 2.6);
-        if(cz.stage===2) addHazard(holder, 'fire', 2.2);
+        if(cz.stage===1) addHazard(holder, 'smoke', 2.6, hex);
+        if(cz.stage===2){ addHazard(holder, 'fire', 2.2, hex); addHazard(holder, 'smoke', 3.4, hex); }
       }
+      addGlow(holder, hex, CITY_TILE*1.5);
       addBeacon(holder, hex, cz.stage===3 ? 1.6 : 3.6);
       pick(cz, holder);
-      CITY3D.pickRoots = CITY3D.pickRoots || [];
 
       // 이 집에 사는 시민이 집 앞을 산책함
       const ch = spawn(CITY_CHARS[hashStr(cz.item.id+'ch')%CITY_CHARS.length]);
       if(ch){
-        fit(ch, CITY_TILE*0.22);
+        const rig = poseCharacter(ch);
+        fitH(ch, CITY_TILE*0.42);
         recolor(ch, hex, 'tint');
-        const home = new T.Vector3(wx(cell.c)+1.4, 0, wx(cell.r)+1.4);
+        const home = new T.Vector3(wx(cell.c)+1.5, 0, wx(cell.r)+1.5);
         const pedHolder = new T.Group();
         pedHolder.position.copy(home);
         pedHolder.add(ch);
+        addGlow(pedHolder, hex, CITY_TILE*0.55);
         g.add(pedHolder);
         pick(cz, pedHolder);
-        CITY3D.peds.push({obj:pedHolder, home:home.clone(), from:home.clone(), to:home.clone(),
-                          t:0, dur:0.001, bob:Math.random()*6.28});
+        CITY3D.peds.push({obj:pedHolder, rig, home:home.clone(), from:home.clone(), to:home.clone(),
+                          t:0, dur:0.001, bob:Math.random()*6.28, range:2.6});
       }
     });
 
@@ -1738,9 +1833,9 @@
       g.add(holder);
       if(hs%9===0){
         const t1 = spawn(hs%2 ? 'tree-large' : 'tree-small');
-        if(t1){ fit(t1, CITY_TILE*0.4); t1.position.x += 0.6; holder.add(t1); }
+        if(t1){ fitMax(t1, CITY_TILE*(hs%2?0.72:0.56)); t1.position.x += 0.6; holder.add(t1); }
         const t2 = spawn('tree-small');
-        if(t2){ fit(t2, CITY_TILE*0.28); t2.position.set(-1, t2.position.y, 0.8); holder.add(t2); }
+        if(t2){ fitMax(t2, CITY_TILE*0.45); t2.position.set(-1, t2.position.y, 0.8); holder.add(t2); }
       } else {
         const b = spawn(CITY_BUILDINGS[hs%CITY_BUILDINGS.length]);
         if(b){ fit(b, CITY_TILE*0.76); holder.add(b); }
@@ -1757,15 +1852,16 @@
       const o = spawn(CITY_CARS[hs % CITY_CARS.length]);
       if(!o) return;
       const hex = cssVarHex(cz.color);
-      fit(o, CITY_TILE*0.5);
+      fit(o, CITY_TILE*0.86);
       recolor(o, hex, 'tint');
       const holder = new T.Group();
       holder.add(o);
+      addGlow(holder, hex, CITY_TILE*0.95);
       g.add(holder);
       pick(cz, holder);
 
       const dir = (hs%2) ? 1 : -1;
-      const lane = wx(road.i) + dir*0.75;      // 우측통행
+      const lane = wx(road.i) + dir*0.8;      // 우측통행
       const a = new T.Vector3(), b = new T.Vector3();
       if(road.axis==='z'){ a.set(lane,0,-span/2); b.set(lane,0,span/2); holder.rotation.y = 0; }
       else { a.set(-span/2,0,lane); b.set(span/2,0,lane); holder.rotation.y = Math.PI/2; }
@@ -1774,37 +1870,80 @@
       if(cz.stage===2){
         // 고장 — 갓길에 비스듬히 서 있고 연기, 옆에 라바콘
         holder.position.lerpVectors(a, b, 0.42);
-        holder.position.x += road.axis==='z' ? 1.1 : 0;
-        holder.position.z += road.axis==='x' ? 1.1 : 0;
+        holder.position.x += road.axis==='z' ? 1.4 : 0;
+        holder.position.z += road.axis==='x' ? 1.4 : 0;
         holder.rotation.y += 0.35;
-        addHazard(holder, 'smoke', 1.1);
+        addHazard(holder, 'smoke', 1.4, hex);
         const cone = spawn('cone');
-        if(cone){ fit(cone, 0.5); cone.position.set(1.2, cone.position.y, 0.6); holder.add(cone); }
+        if(cone){ fitMax(cone, 0.42); cone.position.set(1.5, cone.position.y, 0.8); holder.add(cone); }
       } else {
-        if(cz.stage===1) addHazard(holder, 'smoke', 1.1);
+        if(cz.stage===1) addHazard(holder, 'smoke', 1.4, hex);
         holder.position.copy(a);
-        CITY3D.cars.push({obj:holder, a, b, p:(hs%100)/100, speed:(cz.stage===1?0.035:0.075)+((hs>>4)%20)/1000});
+        // 도로 하나를 건너는 데 60~90초쯤 — 눈으로 따라갈 수 있는 속도
+        CITY3D.cars.push({obj:holder, a, b, p:(hs%100)/100,
+                          speed:(cz.stage===1 ? 0.008 : 0.014) + ((hs>>4)%12)/4000});
       }
-      addBeacon(holder, hex, 1.9);
+      addBeacon(holder, hex, 2.2);
     });
 
-    function addHazard(parent, type, baseY){
+    /* 분위기용 보행자 — 할 일과는 무관하지만 도로에 사람이 오가야 도시가 산 느낌이 남 */
+    const walkRoads = roads.slice();
+    const ambient = Math.min(14, Math.max(6, Math.round(N*1.2)));
+    for(let i=0;i<ambient;i++){
+      const hs = hashStr('amb'+i);
+      const o = spawn(CITY_CHARS[hs % CITY_CHARS.length]);
+      if(!o) continue;
+      const rig = poseCharacter(o);
+      fitH(o, CITY_TILE*0.38);
+      const road = walkRoads[hs % walkRoads.length];
+      const side = (hs%2) ? 1 : -1;
+      const walk = wx(road.i) + side*(CITY_TILE*0.42);   // 인도 쪽으로 붙여서
+      const holder = new T.Group();
+      holder.add(o);
+      g.add(holder);
+      const from = new T.Vector3(), to = new T.Vector3();
+      if(road.axis==='z'){ from.set(walk,0,-span/2); to.set(walk,0,span/2); }
+      else { from.set(-span/2,0,walk); to.set(span/2,0,walk); }
+      if(side<0){ const t2=from.clone(); from.copy(to); to.copy(t2); }
+      holder.position.copy(from);
+      holder.rotation.y = Math.atan2(to.x-from.x, to.z-from.z);
+      CITY3D.walkers.push({obj:holder, rig, a:from, b:to, p:((hs>>3)%100)/100,
+                           speed:0.006 + ((hs>>5)%10)/6000, bob:Math.random()*6.28});
+    }
+
+    // 연기는 그 항목의 과목 테마색으로 — 어느 과목을 방치하고 있는지 멀리서도 보이게
+    function addHazard(parent, type, baseY, hex){
       const isFire = type==='fire';
-      const tex = makePuffTexture(isFire ? '255,120,25' : '198,204,216');
+      const rgb = isFire ? '255,120,25' : hexToRgbStr(hex);
+      const tex = makePuffTexture(rgb);
       const group = new T.Group();
       group.position.y = baseY;
       parent.add(group);
       const puffs = [];
-      for(let i=0;i<8;i++){
+      const count = isFire ? 14 : 22;
+      for(let i=0;i<count;i++){
         const m = new T.SpriteMaterial({map:tex, transparent:true, depthWrite:false,
           blending: isFire ? T.AdditiveBlending : T.NormalBlending, opacity:0});
         CITY3D.owned.push(m);
         const s = new T.Sprite(m);
-        s.position.set((Math.random()-0.5)*0.3, 0, (Math.random()-0.5)*0.3);
+        s.position.set((Math.random()-0.5)*0.5, 0, (Math.random()-0.5)*0.5);
+        s.raycast = ()=>{};   // 흘러다니는 연기가 클릭을 가로채면 조준이 안 됨
         group.add(s); puffs.push(s);
       }
-      CITY3D.hazards.push({puffs, rise:isFire?1.5:2.8, speed:isFire?0.85:0.3,
-                           size:isFire?1.0:1.7, alpha:isFire?0.55:0.42, drift:isFire?0.12:0.55});
+      CITY3D.hazards.push({puffs, rise:isFire?2.0:5.2, speed:isFire?0.8:0.24,
+                           size:isFire?1.3:2.6, alpha:isFire?0.5:0.34, drift:isFire?0.15:1.1});
+    }
+    // 테마색 바닥 글로우 — 진짜 할 일이 어디 있는지 한눈에
+    function addGlow(parent, hex, size){
+      const tex = makePuffTexture(hexToRgbStr(hex));
+      const m = new T.SpriteMaterial({map:tex, transparent:true, depthWrite:false,
+        blending:T.AdditiveBlending, opacity:0.32});
+      CITY3D.owned.push(m);
+      const s = new T.Sprite(m);
+      s.scale.set(size, size, 1);
+      s.position.y = 0.12;
+      s.raycast = ()=>{};
+      parent.add(s);
     }
     function addBeacon(parent, hex, y){
       const mat = new T.MeshBasicMaterial({color:new T.Color(hex), transparent:true, opacity:0.92});
@@ -1822,7 +1961,7 @@
     CITY3D.controls.maxDistance = span*2.2;
     CITY3D.controls.minDistance = span*0.28;
     if(CITY3D.lastSpan !== span){
-      const dist = span*1.18, el = 0.62;              // 약 35도 위에서 내려다보는 각도
+      const dist = span*1.36, el = 0.62;              // 약 35도 위에서 내려다보는 각도
       const horiz = dist*Math.cos(el)/Math.SQRT2;
       CITY3D.camera.position.set(horiz, dist*Math.sin(el), horiz);
       CITY3D.controls.target.set(0, 1.5, 0);
@@ -1834,6 +1973,15 @@
     CITY3D.sig = citySignature();
   }
 
+  // 팔다리를 번갈아 흔들어서 걷는 것처럼 보이게 (뼈 4개짜리 아주 단순한 워크 사이클)
+  function stepRig(rig, phase){
+    if(!rig) return;
+    const s = Math.sin(phase);
+    if(rig.legL) rig.legL.rotation.x =  s*0.45;
+    if(rig.legR) rig.legR.rotation.x = -s*0.45;
+    if(rig.armL) rig.armL.rotation.x = -s*0.35;
+    if(rig.armR) rig.armR.rotation.x =  s*0.35;
+  }
   function cityFrame(){
     CITY3D.raf = requestAnimationFrame(cityFrame);
     const now = performance.now();
@@ -1849,13 +1997,22 @@
     CITY3D.peds.forEach(p=>{
       p.t += dt;
       if(p.t >= p.dur){
-        p.t = 0; p.dur = 2.5 + Math.random()*3.5;
+        p.t = 0; p.dur = 4 + Math.random()*4;
         p.from.copy(p.obj.position);
-        p.to.set(p.home.x + (Math.random()-0.5)*3.2, 0, p.home.z + (Math.random()-0.5)*3.2);
+        const r = p.range || 2.6;
+        p.to.set(p.home.x + (Math.random()-0.5)*r*2, 0, p.home.z + (Math.random()-0.5)*r*2);
         p.obj.rotation.y = Math.atan2(p.to.x-p.from.x, p.to.z-p.from.z);
       }
       p.obj.position.lerpVectors(p.from, p.to, p.t/p.dur);
-      p.obj.position.y = Math.abs(Math.sin(t*6 + p.bob))*0.06;   // 걷는 느낌의 작은 위아래
+      p.obj.position.y = Math.abs(Math.sin(t*4 + p.bob))*0.07;   // 걷는 느낌의 작은 위아래
+      stepRig(p.rig, t*4 + p.bob);
+    });
+    CITY3D.walkers.forEach(w=>{
+      w.p += w.speed*dt;
+      if(w.p > 1) w.p -= 1;
+      w.obj.position.lerpVectors(w.a, w.b, w.p);
+      w.obj.position.y = Math.abs(Math.sin(t*4 + w.bob))*0.07;
+      stepRig(w.rig, t*4 + w.bob);
     });
     CITY3D.hazards.forEach(h=>{
       h.puffs.forEach((s,i)=>{
@@ -1980,7 +2137,7 @@
       <div class="page-head"><h1>도시 <span class="beta-pill" style="margin-left:6px;">BETA</span></h1><button class="iconbtn" data-action="goCityArchive">${icon('external')} 졸업 앨범</button></div>
       <div class="empty" style="padding:0 0 14px;">수업 과제는 도로를 달리는 자동차, 자율학습은 집에 사는 시민이야. 방치하면 연기가 나고 결국 불이 붙어.</div>
       ${graduating.length>0?`<div class="city-graduating">🎓 이번 주 졸업 예정 ${graduating.length}명 — 다음 주 월요일에 졸업 앨범으로 넘어가</div>`:''}
-      <div id="city3dSlot"></div>
+      <div id="city3dSlot" class="city-slot-full"></div>
       ${citizens.length===0?`<div class="empty">아직 시민이 없어 — 할 일 탭에서 수업 과제나 자율학습을 추가하면 도시에 나타나.</div>`:''}
     </div>`;
   }
@@ -3003,6 +3160,16 @@ ${text}`}]
         if(t){ t[field] = val; setTemplates(list); }
       }, 400);
     }
+  });
+
+  // 홈 2단 ↔ 1단 경계를 넘어갈 때만 다시 그림 (매 resize마다 그리면 낭비)
+  let lastWide = isWideScreen(), resizeTimer = null;
+  window.addEventListener('resize', function(){
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(()=>{
+      const w = isWideScreen();
+      if(w !== lastWide){ lastWide = w; if(state.view==='home') render(); }
+    }, 180);
   });
 
   document.getElementById('importFile').addEventListener('change', function(e){
