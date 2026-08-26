@@ -462,6 +462,7 @@
   .completed-modal .item-date{font-size:11px;color:var(--text-3);margin-top:4px;}
 
   /* ---- 도시 (City, beta) ---- */
+  .recall-note{font-size:12px;color:var(--text-3);margin-bottom:10px;line-height:1.55;}
   .city-graduating{font-size:12.5px;color:var(--teal);background:rgba(100,210,255,.1);border:1px solid rgba(100,210,255,.3);border-radius:var(--r-md);padding:9px 13px;margin-bottom:18px;}
   /* 검은 유리 상자 안에 도시가 들어있는 느낌 */
   .city3d{position:relative;width:100%;height:100%;border-radius:var(--r-lg);overflow:hidden;
@@ -679,7 +680,8 @@
       teachers, assignments:[], notices:[], dailyCapacity:5,
       importedClassroomIds:[], importedNoticeIds:[],
       personal:{ tasks:[], completed:[] },
-      ddays:[]
+      ddays:[],
+      recall:{ tasks:[], lastGeneratedAt:null }
     };
   }
 
@@ -1292,6 +1294,10 @@
     }
     const freeHtml = free.length===0 ? `<div class="empty">자율학습 항목이 없어.</div>` : free.map(freeRowHtml).join('');
     const boxOptionsHtml = BOXES.map(b=>`<option value="${b.key}">${b.label}</option>`).join('');
+    const openRecall = pendingRecall();
+    const recallHtml = openRecall.length===0
+      ? `<div class="empty">아직 망각의 시민이 없어.</div>`
+      : openRecall.map(recallRowHtml).join('');
 
     return `<div class="fade-in">
       <div class="page-head"><h1>할 일</h1></div>
@@ -1323,6 +1329,27 @@
         ${freeHtml}
         <button class="completed-link" data-action="openCompletedPersonal">완료 목록 (${(state.data.personal?.completed||[]).length}) →</button>
       </div>
+
+      <div class="section">
+        <div class="section-head"><div class="section-title">망각의 시민</div></div>
+        <div class="recall-note">끝낸 과제들을 보고, 기억이 흐려질 때쯤 가장 짧게 확인할 수 있는 복습만 골라줘.
+          만들 게 없으면 안 만드는 것도 정상이야. 도시 탭에서는 이 항목들이 사람으로 걸어다녀.</div>
+        <div class="ai-row" style="margin-bottom:12px;">
+          <button class="btn-ai" data-action="generateRecall">${icon('sparkle')} 복습 과제 뽑기</button>
+          <span class="ai-status">${recallStatus}</span>
+        </div>
+        ${recallHtml}
+      </div>
+    </div>`;
+  }
+  function recallRowHtml(t){
+    return `<div class="task-row">
+      <button class="task-check" data-action="completeRecall" data-id="${t.id}">${icon('check')}</button>
+      <div class="task-body">
+        <div class="task-tag" style="color:${recallColor(t)};">${escapeHtml(t.subject)} · ${RECALL_TAGS[t.tag]||'회상'} · 약 ${t.minutes}분</div>
+        <div class="task-text">${escapeHtml(t.text)}</div>
+      </div>
+      <button class="task-del" title="필요 없음" data-action="deleteRecall" data-id="${t.id}">${icon('trash')}</button>
     </div>`;
   }
 
@@ -1728,16 +1755,30 @@
     }
     const fit  = (o, w) => fitBy(o, w, 'w');
     const fitH = (o, h) => fitBy(o, h, 'h');
+    // 건물은 발자국 폭과 높이 둘 다 한도를 두고 더 빡빡한 쪽을 따른다.
+    // 폭만 맞추면 경사 지붕처럼 위로 긴 모델이 혼자 거대해진다.
+    function fitBuilding(o, targetW, maxH){
+      let box = new T.Box3().setFromObject(o);
+      const size = new T.Vector3(); box.getSize(size);
+      const byW = targetW / (Math.max(size.x, size.z) || 1);
+      const byH = maxH / (size.y || 1);
+      o.scale.setScalar(Math.min(byW, byH));
+      box = new T.Box3().setFromObject(o);
+      const c = new T.Vector3(); box.getCenter(c);
+      o.position.x -= c.x; o.position.z -= c.z; o.position.y -= box.min.y;
+      return o;
+    }
     // 소품은 가장 긴 변을 기준으로 — 납작한 잔해를 높이로 맞추면 판때기가 하늘을 덮는다
     const fitMax = (o, m) => fitBy(o, m, 'm');
-    function recolor(o, hex, mode){
+    // strength: 건물은 약하게(마을 색감 유지), 차·사람은 강하게(작아서 티가 나야 함)
+    function recolor(o, hex, mode, strength){
       o.traverse(n=>{
         if(!n.isMesh || !n.material) return;
         const arr = Array.isArray(n.material) ? n.material : [n.material];
         const out = arr.map(m=>{
           const cm = m.clone(); CITY3D.owned.push(cm);
           if(mode==='dark') cm.color.multiplyScalar(0.3);
-          else cm.color.lerp(new T.Color(hex), 0.55);
+          else cm.color.lerp(new T.Color(hex), strength==null ? 0.6 : strength);
           return cm;
         });
         n.material = Array.isArray(n.material) ? out : out[0];
@@ -1799,7 +1840,7 @@
       if(cz.stage===3){
         // 붕괴 — 건물을 납작하게 누르고 어둡게, 주변에 잔해
         const b = spawn(CITY_BUILDINGS[hashStr(cz.item.id)%CITY_BUILDINGS.length]);
-        if(b){ fit(b, CITY_TILE*0.74); b.scale.y *= 0.24; recolor(b, null, 'dark'); holder.add(b); }
+        if(b){ fitBuilding(b, CITY_TILE*0.74, CITY_TILE*0.7); b.scale.y *= 0.24; recolor(b, null, 'dark'); holder.add(b); }
         ['debris-plate','debris-door','debris-tire'].forEach((d,k)=>{
           const o = spawn(d); if(!o) return;
           fitMax(o, CITY_TILE*0.13);
@@ -1808,30 +1849,14 @@
         });
       } else {
         const b = spawn(CITY_BUILDINGS[hashStr(cz.item.id)%CITY_BUILDINGS.length]);
-        if(b){ fit(b, CITY_TILE*0.78); holder.add(b); }
+        if(b){ fitBuilding(b, CITY_TILE*0.78, CITY_TILE*0.72); recolor(b, hex, 'tint', 0.34); holder.add(b); }
         if(cz.stage===1) addHazard(holder, 'smoke', 2.6, hex);
         if(cz.stage===2){ addHazard(holder, 'fire', 2.2, hex); addHazard(holder, 'smoke', 3.4, hex); }
       }
       addGlow(holder, hex, CITY_TILE*1.5);
+      addRing(holder, hex, CITY_TILE*0.52);
       addBeacon(holder, hex, cz.stage===3 ? 1.6 : 3.6);
       pick(cz, holder);
-
-      // 이 집에 사는 시민이 집 앞을 산책함
-      const ch = spawn(CITY_CHARS[hashStr(cz.item.id+'ch')%CITY_CHARS.length]);
-      if(ch){
-        const rig = poseCharacter(ch);
-        fitH(ch, CITY_TILE*0.42);
-        recolor(ch, hex, 'tint');
-        const home = new T.Vector3(wx(cell.c)+1.5, 0, wx(cell.r)+1.5);
-        const pedHolder = new T.Group();
-        pedHolder.position.copy(home);
-        pedHolder.add(ch);
-        addGlow(pedHolder, hex, CITY_TILE*0.55);
-        g.add(pedHolder);
-        pick(cz, pedHolder);
-        CITY3D.peds.push({obj:pedHolder, rig, home:home.clone(), from:home.clone(), to:home.clone(),
-                          t:0, dur:0.001, bob:Math.random()*6.28, range:2.6});
-      }
     });
 
     // 빈 구획엔 건물을 세우지 않는다 — 집은 할 일 하나당 하나. 대신 가끔 나무만 심어서
@@ -1863,10 +1888,11 @@
       if(!o) return;
       const hex = cssVarHex(cz.color);
       fit(o, CITY_TILE*0.86);
-      recolor(o, hex, 'tint');
+      recolor(o, hex, 'tint', 0.62);
       const holder = new T.Group();
       holder.add(o);
       addGlow(holder, hex, CITY_TILE*0.95);
+      addRing(holder, hex, CITY_TILE*0.42);
       g.add(holder);
       pick(cz, holder);
 
@@ -1896,20 +1922,24 @@
       addBeacon(holder, hex, 2.2);
     });
 
-    /* 분위기용 보행자 — 할 일과는 무관하지만 도로에 사람이 오가야 도시가 산 느낌이 남 */
+    /* 망각의 시민 — 끝낸 과제에서 뽑아낸 복습 과제 하나가 사람 하나로 도시를 걸어다닌다 */
     const walkRoads = roads.slice();
-    const ambient = Math.min(14, Math.max(6, Math.round(N*1.2)));
-    for(let i=0;i<ambient;i++){
-      const hs = hashStr('amb'+i);
+    pendingRecall().forEach((rt, i)=>{
+      const hs = hashStr(rt.id+'rc');
       const o = spawn(CITY_CHARS[hs % CITY_CHARS.length]);
-      if(!o) continue;
+      if(!o) return;
+      const hex = cssVarHex(recallColor(rt));
       const rig = poseCharacter(o);
-      fitH(o, CITY_TILE*0.38);
-      const road = walkRoads[hs % walkRoads.length];
+      fitH(o, CITY_TILE*0.42);
+      recolor(o, hex, 'tint', 0.6);
+      const road = walkRoads[i % walkRoads.length];
       const side = (hs%2) ? 1 : -1;
       const walk = wx(road.i) + side*(CITY_TILE*0.42);   // 인도 쪽으로 붙여서
       const holder = new T.Group();
       holder.add(o);
+      addGlow(holder, hex, CITY_TILE*0.6);
+      addRing(holder, hex, CITY_TILE*0.24);
+      addBeacon(holder, hex, 1.9);
       g.add(holder);
       const from = new T.Vector3(), to = new T.Vector3();
       if(road.axis==='z'){ from.set(walk,0,-span/2); to.set(walk,0,span/2); }
@@ -1917,9 +1947,10 @@
       if(side<0){ const t2=from.clone(); from.copy(to); to.copy(t2); }
       holder.position.copy(from);
       holder.rotation.y = Math.atan2(to.x-from.x, to.z-from.z);
+      pick({recall:rt}, holder);
       CITY3D.walkers.push({obj:holder, rig, a:from, b:to, p:((hs>>3)%100)/100,
                            speed:0.006 + ((hs>>5)%10)/6000, bob:Math.random()*6.28});
-    }
+    });
 
     // 연기는 그 항목의 과목 테마색으로 — 어느 과목을 방치하고 있는지 멀리서도 보이게
     function addHazard(parent, type, baseY, hex){
@@ -1942,6 +1973,19 @@
       }
       CITY3D.hazards.push({puffs, rise:isFire?2.0:5.2, speed:isFire?0.8:0.24,
                            size:isFire?1.3:2.6, alpha:isFire?0.5:0.34, drift:isFire?0.15:1.1});
+    }
+    // 테마색 바닥 링 — 글로우만으론 밝은 모델 위에서 묻혀서, 선명한 테두리를 하나 더 깐다
+    function addRing(parent, hex, radius){
+      const geo = new T.RingGeometry(radius*0.82, radius, 40);
+      geo.userData.own = true;
+      const mat = new T.MeshBasicMaterial({color:new T.Color(hex), transparent:true,
+        opacity:0.85, side:T.DoubleSide, depthWrite:false});
+      CITY3D.owned.push(mat);
+      const m = new T.Mesh(geo, mat);
+      m.rotation.x = -Math.PI/2;
+      m.position.y = 0.06;
+      m.raycast = ()=>{};
+      parent.add(m);
     }
     // 테마색 바닥 글로우 — 진짜 할 일이 어디 있는지 한눈에
     function addGlow(parent, hex, size){
@@ -1982,6 +2026,8 @@
     }
     CITY3D.scene.fog.near = span*0.9;
     CITY3D.scene.fog.far = span*3.2;
+    CITY3D.atHome = true;
+    CITY3D.lastInteract = 0;
     CITY3D.sig = citySignature();
   }
 
@@ -2043,6 +2089,12 @@
       b.obj.rotation.y = t*1.3;
     });
 
+    // 10초 동안 안 건드리면 알아서 기본 시점으로 돌아감
+    if(!CITY3D.tween && !CITY3D.atHome && CITY3D.lastInteract
+       && now - CITY3D.lastInteract > CITY_IDLE_RETURN_MS){
+      resetCityView(1.1);
+    }
+
     const tw = CITY3D.tween;
     if(tw){
       tw.t = Math.min(1, tw.t + dt/tw.dur);
@@ -2083,6 +2135,14 @@
   }
   function showCityTip(cz, ev){
     if(!CITY3D.tip) return;
+    if(cz.recall){
+      const rt = cz.recall;
+      CITY3D.tip.innerHTML = `<div class="ct-tag">${escapeHtml(rt.subject)} · 망각의 시민</div>`
+        + `<div class="ct-text">${escapeHtml(rt.text)}</div>`
+        + `<div class="ct-meta">${RECALL_TAGS[rt.tag]||'회상'} · 약 ${rt.minutes}분</div>`;
+      placeCityTip(ev);
+      return;
+    }
     const isCar = cz.vehicle==='car';
     const tag = cz.kind==='teacher' ? `${cz.x.subjLabel} · ${cz.x.teacher}`
       : (cz.item.boxKey && BOX_KEYS.has(cz.item.boxKey) ? BOXES.find(b=>b.key===cz.item.boxKey).label : '미분류');
@@ -2092,6 +2152,9 @@
     CITY3D.tip.innerHTML = `<div class="ct-tag">${escapeHtml(tag)} · ${isCar?'수업 과제':'자율학습'}</div>`
       + `<div class="ct-text">${escapeHtml(cz.item.text)}</div>`
       + `<div class="ct-meta">${cz.days}일째 · ${stageLabel}</div>`;
+    placeCityTip(ev);
+  }
+  function placeCityTip(ev){
     CITY3D.tip.style.display = 'block';
     const host = CITY3D.host.getBoundingClientRect();
     let x = ev.clientX - host.left + 14, y = ev.clientY - host.top + 14;
@@ -2114,27 +2177,37 @@
     el.addEventListener('pointerleave', ()=>{ hideCityTip(); CITY3D.hover = null; });
     el.addEventListener('pointerdown', ev=>{
       CITY3D.downAt = {x:ev.clientX, y:ev.clientY};
-      CITY3D.tween = null;          // 사용자가 카메라를 잡으면 복귀 애니메이션은 중단
+      markCityInteraction();
       hideCityTip();
     });
-    el.addEventListener('wheel', ()=>{ CITY3D.tween = null; }, {passive:true});
+    el.addEventListener('wheel', markCityInteraction, {passive:true});
     el.addEventListener('pointerup', ev=>{
       const d = CITY3D.downAt; CITY3D.downAt = null;
+      CITY3D.lastInteract = performance.now();
       if(!d) return;
       if(Math.abs(ev.clientX-d.x) > 4 || Math.abs(ev.clientY-d.y) > 4) return; // 드래그는 클릭 아님
       const cz = czUnderPointer(ev);
-      if(cz) openCityInspect(cz.kind, cz.kind==='teacher'?cz.x.key:null, cz.corner||null, cz.item.id);
+      if(!cz) return;
+      if(cz.recall){ state.cityInspectTarget = {kind:'recall', id:cz.recall.id}; state.modal='cityInspect'; render(); return; }
+      openCityInspect(cz.kind, cz.kind==='teacher'?cz.x.key:null, cz.corner||null, cz.item.id);
     });
   }
 
   // 카메라를 처음 잡아둔 시점으로 부드럽게 되돌림 (돌리다 길을 잃었을 때)
-  function resetCityView(){
+  const CITY_IDLE_RETURN_MS = 10000;
+  function resetCityView(dur){
     if(!CITY3D.camera || !CITY3D.homePos) return;
     CITY3D.tween = {
       fromPos: CITY3D.camera.position.clone(), toPos: CITY3D.homePos.clone(),
       fromTgt: CITY3D.controls.target.clone(), toTgt: CITY3D.homeTarget.clone(),
-      t: 0, dur: 0.55
+      t: 0, dur: dur || 0.55
     };
+    CITY3D.atHome = true;
+  }
+  function markCityInteraction(){
+    CITY3D.lastInteract = performance.now();
+    CITY3D.atHome = false;
+    CITY3D.tween = null;   // 사용자가 카메라를 잡으면 복귀 애니메이션은 중단
   }
 
   function makeCityHost(){
@@ -2145,7 +2218,7 @@
       <div class="city3d-status"></div>
       <button class="city3d-reset" type="button">기본 시점</button>
       <div class="city3d-hint">드래그로 회전 · 휠로 확대 · 마우스를 올리면 무슨 할 일인지 나와</div>`;
-    host.querySelector('.city3d-reset').addEventListener('click', resetCityView);
+    host.querySelector('.city3d-reset').addEventListener('click', ()=>resetCityView());
     CITY3D.host = host;
     CITY3D.canvasWrap = host.querySelector('.city3d-canvas');
     CITY3D.tip = host.querySelector('.city3d-tip');
@@ -2194,6 +2267,25 @@
     return {kind:'personal', item};
   }
   function renderCityInspectModal(){
+    const tgt = state.cityInspectTarget;
+    if(tgt && tgt.kind==='recall'){
+      const rt = recallList().find(x=>x.id===tgt.id);
+      if(!rt) return '';
+      return `<div class="modal-overlay" data-action="closeModal">
+        <div class="modal" style="max-width:380px;">
+          <div class="modal-head"><h2>망각의 시민</h2><button class="modal-close" data-action="closeModal">${icon('close')}</button></div>
+          <div class="modal-body">
+            <div class="city-inspect-meta" style="margin-bottom:6px;">${escapeHtml(rt.subject)} · ${RECALL_TAGS[rt.tag]||'회상'} · 약 ${rt.minutes}분</div>
+            <div class="city-inspect-text">${escapeHtml(rt.text)}</div>
+            <div class="city-inspect-meta">끝낸 과제들을 보고 지금 확인해두면 좋을 내용으로 고른 거야.</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button class="btn" data-action="completeRecall" data-id="${rt.id}">복습 완료</button>
+              <button class="btn-outline" data-action="deleteRecall" data-id="${rt.id}">필요 없음</button>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }
     const entry = findCityItem(state.cityInspectTarget);
     if(!entry) return '';
     const isCar = entry.kind==='teacher' && entry.corner==='review';
@@ -2617,7 +2709,7 @@
   }
 
   /* ============ 액션: 설정 ============ */
-  let settingsStatus = '', githubTokenStatus = '', otStatus = '', syncStatus = '', taskClassifyStatus = '';
+  let settingsStatus = '', githubTokenStatus = '', otStatus = '', syncStatus = '', taskClassifyStatus = '', recallStatus = '';
   let templateCopyStatus = ''; // 방금 복사한 템플릿 id (버튼에 "복사됨!" 잠깐 표시용)
   // Classroom 동기화 상태 — 자동 동기화가 조용히 실패하는 걸 막기 위해 수동/자동 구분 없이 항상 기록
   let lastSyncCheckedAt = null; // Apps Script가 마지막으로 Gmail을 확인해서 파일을 쓴 시각 (upstream, payload.lastCheckedAt)
@@ -2790,6 +2882,144 @@ ${text}`}]
     }, 700);
   }
 
+  /* ============ 망각의 시민 — 완료 이력 기반 자동 복습 과제 ============
+     끝낸 과제를 그냥 흘려보내지 않고, 기억이 흐려질 때쯤 가장 짧게 확인할 수 있는
+     복습 행동 하나를 만들어 도시에 시민으로 세운다. 많이 만드는 게 목적이 아니라
+     "지금 이걸 안 하면 잊는다" 싶은 것만 골라내는 게 목적. */
+  const RECALL_TAGS = {RECALL:'회상', APPLICATION:'적용', TRANSFER:'전이',
+                       ERROR_CORRECTION:'오답 교정', CONNECTION:'개념 연결'};
+  function recallList(){ return (state.data.recall && state.data.recall.tasks) || []; }
+  function pendingRecall(){ return recallList().filter(t=>!t.done); }
+  function recallColor(t){
+    const box = (t.boxKey && BOX_KEYS.has(t.boxKey)) ? BOXES.find(b=>b.key===t.boxKey) : null;
+    return box ? box.qc : 'var(--text-3)';
+  }
+  // 최근 완료 이력 — 언제 끝냈는지(경과일)가 기억 상태 추정의 핵심 입력
+  function completedHistory(limit){
+    const rows = [];
+    TEACHER_LIST.forEach(x=>{
+      const box = boxForTeacher(x);
+      state.data.teachers[x.key].completed.forEach(it=>{
+        if(it.corner!=='review' && it.corner!=='self') return;
+        rows.push({subject:x.subjLabel, boxKey:box?box.key:null,
+                   kind: it.corner==='review' ? '수업 과제' : '자율학습',
+                   text:it.text, at:it.completedAt});
+      });
+    });
+    (state.data.personal?.completed||[]).forEach(it=>{
+      const box = BOX_KEYS.has(it.boxKey) ? BOXES.find(b=>b.key===it.boxKey) : null;
+      rows.push({subject: box?box.label:'미분류', boxKey: box?box.key:null,
+                 kind:'자율학습', text:it.text, at:it.completedAt});
+    });
+    rows.sort((a,b)=>b.at-a.at);
+    return rows.slice(0, limit||40);
+  }
+  function daysAgo(ms){ return Math.max(0, Math.floor((Date.now()-ms)/86400000)); }
+
+  async function generateRecall(){
+    const apiKey = getApiKey();
+    if(!apiKey){ recallStatus = 'API 키가 필요해 — 설정에서 먼저 등록해줘.'; render(); return; }
+    const history = completedHistory(40);
+    if(history.length===0){
+      recallStatus = '아직 완료한 과제가 없어 — 할 일을 몇 개 끝내면 복습 과제를 만들어줄게.';
+      render(); return;
+    }
+    recallStatus = '완료 이력을 보고 복습 과제를 고르는 중...';
+    render();
+
+    const histText = history.map(h=>`- [${h.subject}/${h.kind}] ${h.text} (완료 ${daysAgo(h.at)}일 전)`).join('\n');
+    const openText = pendingRecall().map(t=>`- [${t.subject}] ${t.text}`).join('\n') || '(없음)';
+    const boxList = BOXES.map(b=>`${b.key} = ${b.label}`).join(', ');
+
+    try{
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model:'claude-sonnet-5',
+          max_tokens:1500,
+          messages:[{role:'user', content:
+`너는 영재학교 학생의 복습 과제를 자동 생성하는 학습 최적화 Agent다.
+목표는 과제를 많이 주는 게 아니라, 완료된 과제 이력을 보고 가장 적은 시간으로
+장기기억과 문제 해결 능력을 유지할 수 있는 다음 복습 행동만 골라내는 것이다.
+
+규칙:
+- 과제명은 "[내용] + [구체적인 행동]" 형태로 쓰고 자연스러우면 "~하기"로 끝낸다.
+  좋은 예: "급수의 수렴판정법 3개를 보지 않고 설명하기"
+  나쁜 예: "수학 복습하기", "물리 공부하기"
+- 무엇을 · 어떻게 · 어느 정도까지 할지가 반드시 드러나야 한다.
+- 최소 충분량으로 만든다. "대표 문제 10개" 대신 "대표 문제 2개를 풀이 전략부터 세워 해결하기".
+- 완료 자체보다 "시간이 지난 뒤에도 인출되는가"를 중요하게 본다.
+  마지막 수행 이후 경과일이 길수록, 혼동·실패 가능성이 클수록 우선한다.
+- 같은 내용을 다시 다룰 땐 형태를 바꾼다: 회상 → 적용 → 전이 방향으로 발전시킨다.
+- 이미 열려 있는 복습 과제와 겹치는 건 만들지 않는다.
+- 복습이 필요 없다고 판단되면 만들지 않는 것도 정답이다. 억지로 개수를 채우지 마라.
+- 학생은 시간이 매우 부족하다. 최대 5개까지, 각각 3~10분 분량으로.
+
+각 과제에 태그를 하나 붙인다: RECALL, APPLICATION, TRANSFER, ERROR_CORRECTION, CONNECTION
+
+아래 JSON 배열로만 답한다 (설명·코드블록 금지, 만들 게 없으면 []):
+[{"subject":"과목명","boxKey":"박스키","text":"...하기","minutes":4,"tag":"RECALL"}]
+
+boxKey 는 다음 중 하나를 정확히 쓴다: ${boxList}
+
+최근 완료한 과제 (최신순):
+${histText}
+
+이미 만들어져 아직 안 끝낸 복습 과제 (중복 금지):
+${openText}`}]
+        })
+      });
+      if(!res.ok){
+        const errBody = await res.json().catch(()=>({}));
+        throw new Error((errBody.error && errBody.error.message) || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const raw = (data.content||[]).map(b=>b.text||'').join('').trim();
+      const clean = raw.replace(/^```json/i,'').replace(/```$/,'').trim();
+      const items = JSON.parse(clean);
+      const now = Date.now();
+      let added = 0;
+      state.data.recall = state.data.recall || {tasks:[], lastGeneratedAt:null};
+      (Array.isArray(items)?items:[]).forEach(it=>{
+        if(!it || !it.text) return;
+        state.data.recall.tasks.push({
+          id: genId(),
+          subject: (it.subject||'').trim() || '복습',
+          boxKey: BOX_KEYS.has(it.boxKey) ? it.boxKey : null,
+          text: String(it.text).trim(),
+          minutes: (typeof it.minutes==='number' && it.minutes>0) ? Math.round(it.minutes) : 5,
+          tag: RECALL_TAGS[it.tag] ? it.tag : 'RECALL',
+          createdAt: now, done:false
+        });
+        added++;
+      });
+      state.data.recall.lastGeneratedAt = now;
+      recallStatus = added>0
+        ? `망각의 시민 ${added}명이 도시에 도착했어.`
+        : '지금은 복습이 급한 내용이 없대 — 그것도 정상이야.';
+      persist(); render();
+    }catch(err){
+      recallStatus = `실패 — ${err.message || '알 수 없는 오류'}. API 키가 맞는지 확인해줘.`;
+      render();
+    }
+  }
+  function completeRecall(id){
+    const t = recallList().find(x=>x.id===id); if(!t) return;
+    t.done = true; t.completedAt = Date.now();
+    persist(); render();
+  }
+  function deleteRecall(id){
+    if(!state.data.recall) return;
+    state.data.recall.tasks = state.data.recall.tasks.filter(x=>x.id!==id);
+    persist(); render();
+  }
+
   /* ============ 액션: 자연어 → 할 일 자동 분류 (Tasks 페이지) ============ */
   async function classifyTasks(){
     const ta = document.getElementById('taskClassifyInput');
@@ -2944,10 +3174,11 @@ ${text}`}]
             importedClassroomIds: parsed.importedClassroomIds || [],
             importedNoticeIds: parsed.importedNoticeIds || [],
             personal: parsed.personal || { tasks:[], completed:[] },
-            ddays: parsed.ddays || []
+            ddays: parsed.ddays || [],
+            recall: parsed.recall || { tasks:[], lastGeneratedAt:null }
           };
         } else {
-          state.data = { teachers: Object.assign(skeleton.teachers, parsed), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[] };
+          state.data = { teachers: Object.assign(skeleton.teachers, parsed), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[], recall:{tasks:[],lastGeneratedAt:null} };
         }
         persist(); render();
       }catch(err){ alert('파일을 읽지 못했어. JSON 형식이 맞는지 확인해줘.'); }
@@ -3077,6 +3308,9 @@ ${text}`}]
       case 'openCompleted': state.completedTeacherKey = el.dataset.key; state.modal='completed'; render(); break;
       case 'openCompletedPersonal': state.modal='completedPersonal'; render(); break;
       case 'openCityInspect': openCityInspect(el.dataset.kind, el.dataset.key, el.dataset.corner, el.dataset.id); break;
+      case 'generateRecall': generateRecall(); break;
+      case 'completeRecall': state.modal=null; state.cityInspectTarget=null; completeRecall(el.dataset.id); break;
+      case 'deleteRecall': state.modal=null; state.cityInspectTarget=null; deleteRecall(el.dataset.id); break;
       case 'cityCompleteFromInspect': cityCompleteFromInspect(); break;
       case 'goCityArchive': state.cityView='archive'; render(); break;
       case 'goCityMain': state.cityView='main'; render(); break;
@@ -3229,10 +3463,11 @@ ${text}`}]
           importedClassroomIds: saved.importedClassroomIds || [],
           importedNoticeIds: saved.importedNoticeIds || [],
           personal: saved.personal || { tasks:[], completed:[] },
-          ddays: saved.ddays || []
+          ddays: saved.ddays || [],
+          recall: saved.recall || { tasks:[], lastGeneratedAt:null }
         };
       } else {
-        state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[] };
+        state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[], recall:{tasks:[],lastGeneratedAt:null} };
       }
     }
     render();
