@@ -463,8 +463,12 @@
 
   /* ---- 도시 (City, beta) ---- */
   .city-graduating{font-size:12.5px;color:var(--teal);background:rgba(100,210,255,.1);border:1px solid rgba(100,210,255,.3);border-radius:var(--r-md);padding:9px 13px;margin-bottom:18px;}
+  /* 검은 유리 상자 안에 도시가 들어있는 느낌 */
   .city3d{position:relative;width:100%;height:100%;border-radius:var(--r-lg);overflow:hidden;
-    border:1px solid var(--border);border-top-color:var(--border-hi);background:#171320;}
+    border:1px solid var(--border);border-top-color:var(--border-hi);
+    background:rgba(4,4,7,.78);
+    -webkit-backdrop-filter:blur(var(--blur)) saturate(1.4);backdrop-filter:blur(var(--blur)) saturate(1.4);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 18px 44px rgba(0,0,0,.45);}
   .city3d-canvas{width:100%;height:100%;}
   /* 도시가 들어가는 자리 — 탭에선 화면 가득, 홈 오른쪽에선 뷰포트 높이만큼 */
   .city-slot-full{height:calc(100vh - 230px);min-height:420px;}
@@ -485,6 +489,11 @@
   .city3d-tip .ct-meta{font-size:11.5px;color:var(--orange);margin-top:4px;font-weight:600;}
   .city3d-status{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;
     text-align:center;padding:24px;font-size:13px;color:var(--text-2);background:rgba(17,22,31,.86);}
+  .city3d-reset{position:absolute;top:12px;right:12px;z-index:3;font-size:12px;color:var(--text-2);
+    background:rgba(255,255,255,.09);border:1px solid var(--border-strong);border-radius:var(--r-pill);
+    padding:6px 13px;-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);
+    transition:all var(--dur) var(--ease);}
+  .city3d-reset:hover{color:var(--text);background:rgba(255,255,255,.16);}
   .city3d-hint{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:7px 12px;font-size:11px;
     color:var(--text-3);text-align:center;background:linear-gradient(to top, rgba(10,13,19,.82), transparent);
     pointer-events:none;}
@@ -1498,8 +1507,9 @@
   // 3칸마다 한 줄이 도로 → 나머지 칸이 2x2 블록의 구획이 된다
   function isoRoadAxis(N){ const a=[]; for(let i=0;i<N;i++) if(i%3===2) a.push(i); return a; }
   function isoPlotAxis(N){ const a=[]; for(let i=0;i<N;i++) if(i%3!==2) a.push(i); return a; }
+  // 빈 건물을 안 채우니 집 수에 딱 맞게 시작해서 늘려간다 (넓은 빈 땅이 안 생기게)
   function isoGridDim(houseCount){
-    let N = 9;
+    let N = 6;
     while(isoPlotAxis(N).length*isoPlotAxis(N).length < houseCount && N < 27) N += 3;
     return N;
   }
@@ -1584,14 +1594,15 @@
   function initCityRenderer(){
     const T = CITY3D.THREE;
     const wrap = CITY3D.canvasWrap;
-    const renderer = new T.WebGLRenderer({antialias:true, alpha:false, powerPreference:'low-power'});
+    const renderer = new T.WebGLRenderer({antialias:true, alpha:true, powerPreference:'low-power'});
     renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
     renderer.outputColorSpace = T.SRGBColorSpace;
+    renderer.setClearColor(0x000000, 0);   // 캔버스는 투명 — 유리 상자 배경이 그대로 비침
     wrap.appendChild(renderer.domElement);
 
     const scene = new T.Scene();
-    scene.background = new T.Color(0x171320);
-    scene.fog = new T.Fog(0x171320, 40, 130);
+    scene.background = null;
+    scene.fog = new T.Fog(0x000000, 40, 130);
 
     const camera = new T.PerspectiveCamera(42, 1, 0.5, 400);
     camera.position.set(26, 24, 26);
@@ -1823,22 +1834,21 @@
       }
     });
 
-    // 남은 구획은 배경 건물/나무로 채워서 도시처럼 보이게
+    // 빈 구획엔 건물을 세우지 않는다 — 집은 할 일 하나당 하나. 대신 가끔 나무만 심어서
+    // 허전하지 않게 하고, 어느 집이 진짜 할 일인지 헷갈리지 않게 한다.
     plots.forEach(p=>{
       if(used.has(p.c+'x'+p.r)) return;
       const hs = hashStr('f'+p.c+'_'+p.r);
+      if(hs%2!==0) return;
       const holder = new T.Group();
       holder.position.set(wx(p.c), 0, wx(p.r));
       holder.rotation.y = (hs%4)*Math.PI/2;
       g.add(holder);
-      if(hs%9===0){
-        const t1 = spawn(hs%2 ? 'tree-large' : 'tree-small');
-        if(t1){ fitMax(t1, CITY_TILE*(hs%2?0.72:0.56)); t1.position.x += 0.6; holder.add(t1); }
+      const t1 = spawn(hs%2 ? 'tree-large' : 'tree-small');
+      if(t1){ fitMax(t1, CITY_TILE*(hs%2?0.6:0.46)); t1.position.x += 0.6; holder.add(t1); }
+      if(hs%5===0){
         const t2 = spawn('tree-small');
-        if(t2){ fitMax(t2, CITY_TILE*0.45); t2.position.set(-1, t2.position.y, 0.8); holder.add(t2); }
-      } else {
-        const b = spawn(CITY_BUILDINGS[hs%CITY_BUILDINGS.length]);
-        if(b){ fit(b, CITY_TILE*0.76); holder.add(b); }
+        if(t2){ fitMax(t2, CITY_TILE*0.38); t2.position.set(-1, t2.position.y, 0.8); holder.add(t2); }
       }
     });
 
@@ -1960,11 +1970,13 @@
     // 도시가 화면에 다 들어오도록 카메라 거리 계산 (도시가 커지면 다시 맞춤)
     CITY3D.controls.maxDistance = span*2.2;
     CITY3D.controls.minDistance = span*0.28;
+    const dist = span*1.72, el = 0.62;                // 약 35도 위에서 내려다보는 각도
+    const horiz = dist*Math.cos(el)/Math.SQRT2;
+    CITY3D.homePos = new T.Vector3(horiz, dist*Math.sin(el), horiz);
+    CITY3D.homeTarget = new T.Vector3(0, 1.5, 0);
     if(CITY3D.lastSpan !== span){
-      const dist = span*1.36, el = 0.62;              // 약 35도 위에서 내려다보는 각도
-      const horiz = dist*Math.cos(el)/Math.SQRT2;
-      CITY3D.camera.position.set(horiz, dist*Math.sin(el), horiz);
-      CITY3D.controls.target.set(0, 1.5, 0);
+      CITY3D.camera.position.copy(CITY3D.homePos);
+      CITY3D.controls.target.copy(CITY3D.homeTarget);
       CITY3D.controls.update();
       CITY3D.lastSpan = span;
     }
@@ -2031,6 +2043,15 @@
       b.obj.rotation.y = t*1.3;
     });
 
+    const tw = CITY3D.tween;
+    if(tw){
+      tw.t = Math.min(1, tw.t + dt/tw.dur);
+      const e = tw.t<0.5 ? 2*tw.t*tw.t : 1-Math.pow(-2*tw.t+2,2)/2;   // ease-in-out
+      CITY3D.camera.position.lerpVectors(tw.fromPos, tw.toPos, e);
+      CITY3D.controls.target.lerpVectors(tw.fromTgt, tw.toTgt, e);
+      if(tw.t>=1) CITY3D.tween = null;
+    }
+
     CITY3D.controls.update();
     CITY3D.renderer.render(CITY3D.scene, CITY3D.camera);
   }
@@ -2091,7 +2112,12 @@
       if(cz) showCityTip(cz, ev); else hideCityTip();
     });
     el.addEventListener('pointerleave', ()=>{ hideCityTip(); CITY3D.hover = null; });
-    el.addEventListener('pointerdown', ev=>{ CITY3D.downAt = {x:ev.clientX, y:ev.clientY}; hideCityTip(); });
+    el.addEventListener('pointerdown', ev=>{
+      CITY3D.downAt = {x:ev.clientX, y:ev.clientY};
+      CITY3D.tween = null;          // 사용자가 카메라를 잡으면 복귀 애니메이션은 중단
+      hideCityTip();
+    });
+    el.addEventListener('wheel', ()=>{ CITY3D.tween = null; }, {passive:true});
     el.addEventListener('pointerup', ev=>{
       const d = CITY3D.downAt; CITY3D.downAt = null;
       if(!d) return;
@@ -2101,13 +2127,25 @@
     });
   }
 
+  // 카메라를 처음 잡아둔 시점으로 부드럽게 되돌림 (돌리다 길을 잃었을 때)
+  function resetCityView(){
+    if(!CITY3D.camera || !CITY3D.homePos) return;
+    CITY3D.tween = {
+      fromPos: CITY3D.camera.position.clone(), toPos: CITY3D.homePos.clone(),
+      fromTgt: CITY3D.controls.target.clone(), toTgt: CITY3D.homeTarget.clone(),
+      t: 0, dur: 0.55
+    };
+  }
+
   function makeCityHost(){
     const host = document.createElement('div');
     host.className = 'city3d';
     host.innerHTML = `<div class="city3d-canvas"></div>
       <div class="city3d-tip"></div>
       <div class="city3d-status"></div>
+      <button class="city3d-reset" type="button">기본 시점</button>
       <div class="city3d-hint">드래그로 회전 · 휠로 확대 · 마우스를 올리면 무슨 할 일인지 나와</div>`;
+    host.querySelector('.city3d-reset').addEventListener('click', resetCityView);
     CITY3D.host = host;
     CITY3D.canvasWrap = host.querySelector('.city3d-canvas');
     CITY3D.tip = host.querySelector('.city3d-tip');
