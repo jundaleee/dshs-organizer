@@ -462,46 +462,44 @@
 
   /* ---- 도시 (City, beta) ---- */
   .city-graduating{font-size:12.5px;color:var(--teal);background:rgba(100,210,255,.1);border:1px solid rgba(100,210,255,.3);border-radius:var(--r-md);padding:9px 13px;margin-bottom:18px;}
-  .city-canvas{position:relative;border-radius:var(--r-lg);background:var(--glass);border:1px solid var(--border);border-top-color:var(--border-hi);padding:20px;overflow:hidden;min-height:260px;}
-  .city-road{display:flex;flex-wrap:wrap;gap:14px;padding-bottom:16px;margin-bottom:16px;border-bottom:1px dashed var(--border);position:relative;z-index:1;}
-  .city-district{display:flex;flex-wrap:wrap;gap:16px;position:relative;z-index:1;}
-  .city-avatars{position:absolute;inset:0;pointer-events:none;z-index:2;}
-  .city-avatars .city-avatar{pointer-events:auto;}
+  .city-stage{position:relative;width:100%;border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--border);border-top-color:var(--border-hi);background:radial-gradient(ellipse 95% 75% at 50% 42%, #1c2334, #0d1119 72%);}
+  .city-stage > svg{display:block;width:100%;height:100%;}
+  .city-actors{position:absolute;inset:0;pointer-events:none;}
+  .city-actors > *{pointer-events:auto;}
 
-  .city-figure{width:11px;height:13px;position:relative;flex-shrink:0;}
-  .city-figure::before{content:'';position:absolute;top:0;left:2px;width:7px;height:7px;border-radius:50%;background:var(--fc,var(--blue));}
-  .city-figure::after{content:'';position:absolute;bottom:0;left:0;width:11px;height:7px;border-radius:5px 5px 2px 2px;background:var(--fc,var(--blue));}
+  .iso-citizen{cursor:pointer;}
+  .iso-citizen:hover{filter:brightness(1.18);}
+  .iso-citizen.stage-2{animation:isoFireFlicker 1.4s ease-in-out infinite;}
+  @keyframes isoFireFlicker{0%,100%{filter:brightness(1);}50%{filter:brightness(1.22);}}
+  .iso-citizen.collapsed{opacity:.62;}
 
-  .city-car{position:relative;background:none;border:none;padding:4px;display:flex;flex-direction:column;align-items:center;gap:2px;width:56px;cursor:pointer;transition:transform var(--dur) var(--ease);}
-  .city-car:hover{transform:translateY(-2px);}
-  .city-car .city-figure{position:absolute;top:-8px;left:50%;transform:translateX(-50%);}
-  .city-car-body{color:var(--text-2);animation:cityDrive 2.6s ease-in-out infinite;}
-  .city-car-body svg{width:26px;height:26px;}
-  @keyframes cityDrive{0%,100%{transform:translateX(0);}50%{transform:translateX(3px);}}
-  .city-car.smoke .city-car-body{color:var(--orange);}
-  .city-car.broken .city-car-body{color:var(--text-3);filter:grayscale(1);animation:none;}
-  .city-car.broken .city-figure{opacity:.5;}
+  .iso-car{position:absolute;background:none;border:none;padding:0;line-height:0;cursor:pointer;transform:translate(-50%,-50%);
+    left:var(--x0);top:var(--y0);animation:isoDrive var(--dur,20s) linear infinite;animation-delay:var(--delay,0s);}
+  @keyframes isoDrive{from{left:var(--x0);top:var(--y0);}to{left:var(--x1);top:var(--y1);}}
+  .iso-car:hover{filter:brightness(1.2);}
+  .iso-car.broken{animation:none;}
+  .iso-car.broken svg{filter:grayscale(.85) brightness(.62);transform:rotate(-7deg);}
+  .iso-car-hazard{position:absolute;top:-13px;left:50%;transform:translateX(-50%);line-height:0;pointer-events:none;animation:isoHazard 1.8s ease-in-out infinite;}
 
-  .city-house{position:relative;background:none;border:none;padding:4px;display:flex;flex-direction:column;align-items:center;width:60px;cursor:pointer;transition:transform var(--dur) var(--ease);}
-  .city-house:hover{transform:translateY(-2px);}
-  .city-house-body{color:var(--fc,var(--blue));}
-  .city-house-body svg{width:30px;height:30px;}
-  .city-house.smoke .city-house-body{color:var(--orange);}
-  .city-house.fire .city-house-body{color:var(--red);animation:cityFireShake .5s ease-in-out infinite;}
-  @keyframes cityFireShake{0%,100%{transform:rotate(0);}25%{transform:rotate(-2deg);}75%{transform:rotate(2deg);}}
-  .city-house.collapsed .city-house-body{color:var(--text-3);opacity:.5;filter:grayscale(1);transform:scaleY(.55) translateY(9px);}
+  .iso-ped{position:absolute;background:none;border:none;padding:0;line-height:0;cursor:pointer;
+    animation:isoWalk var(--wdur,22s) ease-in-out infinite;animation-delay:var(--wdelay,0s);}
+  .iso-ped:hover{filter:brightness(1.25);}
+  @keyframes isoWalk{
+    0%,100%{transform:translate(-50%,-50%);}
+    25%{transform:translate(calc(-50% + 26px), calc(-50% + 10px));}
+    50%{transform:translate(calc(-50% + 4px), calc(-50% + 24px));}
+    75%{transform:translate(calc(-50% - 22px), calc(-50% + 12px));}
+  }
 
-  .city-overlay{position:absolute;top:-10px;right:2px;color:var(--orange);animation:cityOverlayPulse 1.6s ease-in-out infinite;}
-  .city-overlay svg{width:14px;height:14px;}
-  .city-house.fire .city-overlay{color:var(--red);}
-  @keyframes cityOverlayPulse{0%,100%{opacity:.5;transform:translateY(0);}50%{opacity:1;transform:translateY(-3px);}}
-
-  .city-avatar{position:absolute;background:none;border:none;padding:0;cursor:pointer;animation:cityWander var(--wdur,20s) ease-in-out infinite;animation-delay:var(--wdelay,0s);}
-  @keyframes cityWander{
-    0%,100%{transform:translate(0,0);}
-    25%{transform:translate(16px,-10px);}
-    50%{transform:translate(-8px,12px);}
-    75%{transform:translate(-16px,-8px);}
+  .iso-hazard{position:absolute;transform:translate(-50%,-100%);line-height:0;pointer-events:none;animation:isoHazard 1.8s ease-in-out infinite;}
+  @keyframes isoHazard{
+    0%,100%{opacity:.62;transform:translate(-50%,-100%) scale(.92);}
+    50%{opacity:1;transform:translate(-50%,-112%) scale(1.06);}
+  }
+  .iso-car-hazard{animation-name:isoCarHazard;}
+  @keyframes isoCarHazard{
+    0%,100%{opacity:.6;transform:translateX(-50%) scale(.92);}
+    50%{opacity:1;transform:translateX(-50%) translateY(-4px) scale(1.06);}
   }
 
   .city-inspect-text{font-size:14.5px;line-height:1.5;margin-bottom:8px;}
@@ -1485,35 +1483,93 @@
       .map(wk=>({weekStart:wk, items:groups[wk].sort((a,b)=>b.item.completedAt-a.item.completedAt)}));
   }
 
-  function cityCarHtml(c){
-    const stageClass = ['normal','smoke','broken'][c.stage] || 'normal';
-    const keyAttr = c.kind==='teacher' ? `data-key="${c.x.key}" data-corner="${c.corner}"` : '';
-    return `<button class="city-car ${stageClass}" style="--fc:${c.color};" data-action="openCityInspect" data-kind="${c.kind}" ${keyAttr} data-id="${c.item.id}" title="${escapeHtml(c.item.text)}">
-      <span class="city-figure"></span>
-      <span class="city-car-body">${icon('car')}</span>
-      ${c.stage===1?`<span class="city-overlay">${icon('smoke')}</span>`:''}
-    </button>`;
+  /* --- 아이소메트릭 도시 그리기 ---
+     2:1 아이소메트릭 투영: 격자 (c,r) → 화면 좌표. 3칸마다 한 줄씩 도로가 지나가서
+     블록(2x2 구획)이 도로로 둘러싸인 격자 도시가 된다. 구획엔 건물이 서고, 도로엔 차가 다닌다.
+     지면·건물은 SVG 한 장으로 그리고(정렬·겹침을 painter's algorithm으로 처리),
+     움직이는 것들(차·시민·연기/불)만 그 위에 HTML 레이어로 얹어서 CSS 애니메이션을 태운다. */
+  const ISO_TW = 64, ISO_TH = 32, ISO_MAXH = 104;
+  function isoPt(c, r){ return [(c-r)*ISO_TW/2, (c+r)*ISO_TH/2]; }
+  function isoRoadAxis(N){ const a=[]; for(let i=0;i<N;i++) if(i%3===2) a.push(i); return a; }
+  function isoPlotAxis(N){ const a=[]; for(let i=0;i<N;i++) if(i%3!==2) a.push(i); return a; }
+  function isoGridDim(houseCount){
+    let N = 9;
+    while(isoPlotAxis(N).length*isoPlotAxis(N).length < houseCount && N < 27) N += 3;
+    return N;
   }
-  function cityHouseHtml(c){
-    const stageClass = ['normal','smoke','fire','collapsed'][c.stage] || 'normal';
-    const keyAttr = c.kind==='teacher' ? `data-key="${c.x.key}" data-corner="${c.corner}"` : '';
-    const overlay = c.stage===1 ? icon('smoke') : (c.stage===2 ? icon('fire') : '');
-    return `<button class="city-house ${stageClass}" style="--fc:${c.color};" data-action="openCityInspect" data-kind="${c.kind}" ${keyAttr} data-id="${c.item.id}" title="${escapeHtml(c.item.text)}">
-      <span class="city-house-body">${icon('house')}</span>
-      ${overlay?`<span class="city-overlay">${overlay}</span>`:''}
-    </button>`;
+  function isoPts(list){ return list.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' '); }
+
+  function isoTileSvg(c, r){
+    const [x,y] = isoPt(c,r);
+    const hw = ISO_TW/2, hh = ISO_TH/2;
+    const vRoad = c%3===2, hRoad = r%3===2;
+    const pts = isoPts([[x,y-hh],[x+hw,y],[x,y+hh],[x-hw,y]]);
+    let s = `<polygon points="${pts}" fill="${(vRoad||hRoad)?'#4b515f':'#3c6a47'}" stroke="rgba(0,0,0,.22)" stroke-width="1"/>`;
+    // 교차로가 아닌 도로 칸에만 중앙선 — 차가 다니는 길이라는 게 한눈에 보이게
+    if(vRoad !== hRoad){
+      const d = vRoad ? [-hw/2, hh/2] : [hw/2, hh/2];
+      s += `<line x1="${(x-d[0]).toFixed(1)}" y1="${(y-d[1]).toFixed(1)}" x2="${(x+d[0]).toFixed(1)}" y2="${(y+d[1]).toFixed(1)}" stroke="rgba(255,255,255,.22)" stroke-width="1.4" stroke-dasharray="5 5"/>`;
+    }
+    return s;
   }
-  function cityAvatarHtml(c){
-    const seed = hashStr(c.item.id+'w');
-    const keyAttr = c.kind==='teacher' ? `data-key="${c.x.key}" data-corner="${c.corner}"` : '';
-    const dur = 18 + (seed%20);
-    const delay = -((seed>>4)%dur);
-    const top = 8 + (seed%78);
-    const left = 6 + ((seed>>3)%82);
-    return `<button class="city-avatar" style="--fc:${c.color};--wdur:${dur}s;--wdelay:${delay}s;top:${top}%;left:${left}%;" data-action="openCityInspect" data-kind="${c.kind}" ${keyAttr} data-id="${c.item.id}" title="${escapeHtml(c.item.text)}">
-      <span class="city-figure"></span>
-    </button>`;
+
+  // 건물 옆면에 창문을 (u,v) 파라미터 공간으로 찍음 — 옆면이 평행사변형이라 직접 좌표를 쓰면 안 맞음
+  function isoWindowsSvg(origin, du, h, fill){
+    const floors = Math.max(1, Math.min(5, Math.round(h/20)));
+    let s = '';
+    for(let f=0; f<floors; f++){
+      for(let k=0; k<2; k++){
+        const u0 = 0.2 + k*0.4, u1 = u0 + 0.22;
+        const v0 = (f+0.32)/floors, v1 = (f+0.74)/floors;
+        const P = (u,v)=>[origin[0]+du[0]*u, origin[1]+du[1]*u - h*v];
+        s += `<polygon points="${isoPts([P(u0,v0),P(u1,v0),P(u1,v1),P(u0,v1)])}" fill="${fill}"/>`;
+      }
+    }
+    return s;
   }
+  function isoBoxSvg(x, y, h, fw, fh, pal, windows){
+    const hw = fw/2, hh = fh/2;
+    const bE=[x+hw,y], bS=[x,y+hh], bW=[x-hw,y];
+    const tN=[x,y-hh-h], tE=[x+hw,y-h], tS=[x,y+hh-h], tW=[x-hw,y-h];
+    let s = '';
+    s += `<polygon points="${isoPts([bW,bS,tS,tW])}" ${pal.l}/>`;
+    s += `<polygon points="${isoPts([bS,bE,tE,tS])}" ${pal.r}/>`;
+    s += `<polygon points="${isoPts([tN,tE,tS,tW])}" ${pal.t}/>`;
+    if(windows){
+      s += isoWindowsSvg(bW, [hw,hh], h, 'rgba(255,226,150,.5)');
+      s += isoWindowsSvg(bS, [hw,-hh], h, 'rgba(255,226,150,.26)');
+    }
+    return s;
+  }
+  // 사각뿔 지붕 — 뒤쪽 두 면을 먼저 그리고 앞쪽 두 면을 덮어서 깊이 정렬
+  function isoRoofSvg(x, y, h, fw, fh, rh, fillAttr){
+    const hw = fw/2, hh = fh/2;
+    const tN=[x,y-hh-h], tE=[x+hw,y-h], tS=[x,y+hh-h], tW=[x-hw,y-h];
+    const ap = [x, y-h-rh];
+    return `<polygon points="${isoPts([ap,tW,tN])}" ${fillAttr}/>`
+      + `<polygon points="${isoPts([ap,tN,tE])}" ${fillAttr}/>`
+      + `<polygon points="${isoPts([ap,tW,tS])}" ${fillAttr}/><polygon points="${isoPts([ap,tW,tS])}" fill="rgba(0,0,0,.3)"/>`
+      + `<polygon points="${isoPts([ap,tS,tE])}" ${fillAttr}/><polygon points="${isoPts([ap,tS,tE])}" fill="rgba(255,255,255,.08)"/>`;
+  }
+  const ISO_FILLER_PAL = [
+    {t:'fill="#7f8a99"', l:'fill="#464e5b"', r:'fill="#5d6673"'},
+    {t:'fill="#8d99a8"', l:'fill="#4f5866"', r:'fill="#68717f"'},
+    {t:'fill="#9d6f60"', l:'fill="#5c3e37"', r:'fill="#7a5347"'},
+    {t:'fill="#6f9078"', l:'fill="#3c5442"', r:'fill="#527056"'},
+    {t:'fill="#87909e"', l:'fill="#4b515f"', r:'fill="#636b79"'}
+  ];
+
+  function isoPedSprite(){
+    return `<svg viewBox="0 0 14 19" width="15" height="20"><ellipse cx="7" cy="17.4" rx="4.6" ry="1.4" fill="rgba(0,0,0,.4)"/><path d="M7 2.2c3 0 4.7 2.6 4.7 6.4S9.9 15.6 7 15.6 2.3 12.4 2.3 8.6 4 2.2 7 2.2z" style="fill:var(--fc)"/><circle cx="5.3" cy="8" r=".95" fill="#15171c"/><circle cx="8.7" cy="8" r=".95" fill="#15171c"/></svg>`;
+  }
+  function isoCarSprite(){
+    return `<svg viewBox="0 0 38 24" width="36" height="23"><ellipse cx="19" cy="21" rx="13" ry="2.6" fill="rgba(0,0,0,.45)"/><path d="M19 1c2.3 0 3.6 1.8 3.6 4.4S21.2 9.4 19 9.4s-3.6-1.4-3.6-4S16.7 1 19 1z" style="fill:var(--fc)"/><circle cx="17.7" cy="4.8" r=".75" fill="#15171c"/><circle cx="20.3" cy="4.8" r=".75" fill="#15171c"/><rect x="9" y="7.4" width="20" height="7.4" rx="3.2" fill="#59616e"/><rect x="3.5" y="11" width="31" height="8.4" rx="4.2" fill="#7d8795"/><rect x="11" y="9.2" width="6.4" height="4" rx="1.4" fill="rgba(165,215,255,.72)"/><rect x="20.6" y="9.2" width="6.4" height="4" rx="1.4" fill="rgba(165,215,255,.72)"/><circle cx="11" cy="19.4" r="2.5" fill="#23262d"/><circle cx="27" cy="19.4" r="2.5" fill="#23262d"/></svg>`;
+  }
+  function isoHazardSprite(type){
+    if(type==='fire') return `<svg viewBox="0 0 16 20" width="16" height="20"><path d="M8 2C11.5 5.5 12.5 8 12.5 10.5A4.5 4.5 0 0 1 3.5 10.5C3.5 8 4.5 5.5 8 2z" fill="#FF9F0A"/><path d="M8 7.4c1.6 1.8 2 2.9 2 4A2 2 0 0 1 6 11.4c0-1.1.4-2.2 2-4z" fill="#FFD60A"/></svg>`;
+    return `<svg viewBox="0 0 16 20" width="16" height="20"><circle cx="6" cy="15" r="2.7" fill="rgba(196,201,211,.5)"/><circle cx="9.6" cy="10.2" r="3" fill="rgba(196,201,211,.38)"/><circle cx="6.4" cy="5.4" r="2.5" fill="rgba(196,201,211,.24)"/></svg>`;
+  }
+
   function renderCityPage(){
     if(state.cityView==='archive') return renderGraduationArchive();
     const citizens = collectCityCitizens();
@@ -1521,19 +1577,98 @@
     const houses = citizens.filter(c=>c.vehicle==='house');
     const graduating = collectGraduatingThisWeek();
 
-    const carsHtml = cars.length===0 ? `<div class="empty">도로가 비어있어 — 수업 과제를 추가하면 자동차가 생겨.</div>` : cars.map(cityCarHtml).join('');
-    const housesHtml = houses.length===0 ? `<div class="empty">아직 지어진 집이 없어 — 자율학습 항목을 추가하면 집이 생겨.</div>` : houses.map(cityHouseHtml).join('');
-    const avatarsHtml = citizens.map(cityAvatarHtml).join('');
+    const N = isoGridDim(houses.length);
+    const axis = isoPlotAxis(N);
+    const plots = [];
+    axis.forEach(c=>axis.forEach(r=>plots.push({c,r})));
+    // 주민 집이 왼쪽 위에 몰리지 않게 id 해시로 안정적으로 섞음 (렌더마다 자리가 안 바뀜)
+    plots.sort((a,b)=> hashStr('plot'+a.c+'x'+a.r) - hashStr('plot'+b.c+'x'+b.r));
+
+    let ground = '';
+    for(let r=0;r<N;r++) for(let c=0;c<N;c++) ground += isoTileSvg(c,r);
+
+    const buildings = [];
+    houses.forEach((h,i)=> buildings.push({cell: plots[i%plots.length], citizen:h}));
+    const used = new Set(buildings.map(b=>b.cell.c+'x'+b.cell.r));
+    plots.forEach(p=>{ if(!used.has(p.c+'x'+p.r)) buildings.push({cell:p, citizen:null}); });
+    // 화면 아래쪽(=c+r이 큰 칸)이 앞이라, 뒤에서 앞 순서로 그려야 겹침이 자연스러움
+    buildings.sort((a,b)=>(a.cell.c+a.cell.r)-(b.cell.c+b.cell.r));
+
+    const vb = {};
+    vb.x = -((N-1)*ISO_TW/2) - ISO_TW/2 - 20;
+    vb.y = -ISO_MAXH - 8;
+    vb.w = -2*vb.x;
+    vb.h = ((N-1)*ISO_TH) + ISO_TH/2 + 26 - vb.y;
+    const pct = (x,y)=>({l:((x-vb.x)/vb.w*100).toFixed(2)+'%', t:((y-vb.y)/vb.h*100).toFixed(2)+'%'});
+    const czAttrs = cz => `data-action="openCityInspect" data-kind="${cz.kind}" ${cz.kind==='teacher'?`data-key="${cz.x.key}" data-corner="${cz.corner}"`:''} data-id="${cz.item.id}"`;
+
+    let bSvg = '', actors = '';
+    buildings.forEach(b=>{
+      const [x,y] = isoPt(b.cell.c, b.cell.r);
+      if(!b.citizen){
+        const hs = hashStr('f'+b.cell.c+'_'+b.cell.r);
+        if(hs%7===0) return; // 가끔 빈 공터를 둬서 격자가 답답해 보이지 않게
+        const pal = ISO_FILLER_PAL[hs%ISO_FILLER_PAL.length];
+        bSvg += `<g opacity=".76">${isoBoxSvg(x,y, 30 + ((hs>>3)%5)*17, 46,23, pal, true)}</g>`;
+        return;
+      }
+      const cz = b.citizen, st = cz.stage;
+      const attrs = czAttrs(cz), tip = escapeHtml(cz.item.text);
+      if(st===3){
+        bSvg += `<g class="iso-citizen collapsed" ${attrs}><title>${tip}</title>`
+          + isoBoxSvg(x,y,9,46,23,{t:'fill="#4a3a34"',l:'fill="#291f1c"',r:'fill="#372a25"'},false)
+          + `<polygon points="${isoPts([[x-9,y-4],[x-2,y-8],[x+2,y-2],[x-6,y+1]])}" fill="#2a211e"/>`
+          + `<polygon points="${isoPts([[x+4,y-9],[x+11,y-5],[x+7,y-1],[x+2,y-4]])}" fill="#332723"/></g>`;
+      } else {
+        const wallH = 26;
+        const roofFill = st===2 ? 'style="fill:var(--red)"' : 'style="fill:var(--fc)"';
+        bSvg += `<g class="iso-citizen stage-${st}" style="--fc:${cz.color}" ${attrs}><title>${tip}</title>`
+          + isoBoxSvg(x,y,wallH,46,23,{t:'fill="#e6e1d7"',l:'fill="#a9a296"',r:'fill="#cdc6b9"'},false)
+          + isoRoofSvg(x,y,wallH,46,23,20,roofFill) + `</g>`;
+        if(st===1 || st===2){
+          const p = pct(x, y - wallH - 22);
+          actors += `<span class="iso-hazard" style="left:${p.l};top:${p.t};">${isoHazardSprite(st===2?'fire':'smoke')}</span>`;
+        }
+      }
+      // 집에 사는 시민은 집 근처를 산책함
+      const ph = hashStr(cz.item.id+'ped');
+      const pp = pct(x + ((ph%40)-20), y + 14 + ((ph>>4)%10));
+      actors += `<button class="iso-ped" style="--fc:${cz.color};--wdur:${18+(ph%14)}s;--wdelay:-${(ph>>2)%20}s;left:${pp.l};top:${pp.t};" ${attrs} title="${tip}">${isoPedSprite()}</button>`;
+    });
+
+    // 차는 도로 한 줄을 끝에서 끝까지 왕복 없이 통과 (세로 도로 / 가로 도로 번갈아 배정)
+    const roads = [];
+    isoRoadAxis(N).forEach(i=>roads.push({t:'v', i}));
+    isoRoadAxis(N).forEach(i=>roads.push({t:'h', i}));
+    cars.forEach((cz, idx)=>{
+      const road = roads[idx % roads.length];
+      const hs = hashStr(cz.item.id+'car');
+      let a = road.t==='v' ? isoPt(road.i, -1.2) : isoPt(-1.2, road.i);
+      let z = road.t==='v' ? isoPt(road.i, N+0.2) : isoPt(N+0.2, road.i);
+      if(hs%2===1){ const tmp=a; a=z; z=tmp; }
+      const attrs = czAttrs(cz), tip = escapeHtml(cz.item.text);
+      if(cz.stage===2){
+        const p = pct(a[0]+(z[0]-a[0])*0.42, a[1]+(z[1]-a[1])*0.42);
+        actors += `<button class="iso-car broken" style="--fc:${cz.color};left:${p.l};top:${p.t};" ${attrs} title="${tip}">${isoCarSprite()}<span class="iso-car-hazard">${isoHazardSprite('smoke')}</span></button>`;
+      } else {
+        const p0 = pct(a[0],a[1]), p1 = pct(z[0],z[1]);
+        const dur = (cz.stage===1?34:20) + (hs%9);
+        actors += `<button class="iso-car ${cz.stage===1?'smoking':''}" style="--fc:${cz.color};--x0:${p0.l};--y0:${p0.t};--x1:${p1.l};--y1:${p1.t};--dur:${dur}s;--delay:-${(hs>>3)%dur}s;left:${p0.l};top:${p0.t};" ${attrs} title="${tip}">${isoCarSprite()}${cz.stage===1?`<span class="iso-car-hazard">${isoHazardSprite('smoke')}</span>`:''}</button>`;
+      }
+    });
 
     return `<div class="fade-in">
       <div class="page-head"><h1>도시 <span class="beta-pill" style="margin-left:6px;">BETA</span></h1><button class="iconbtn" data-action="goCityArchive">${icon('external')} 졸업 앨범</button></div>
-      <div class="empty" style="padding:0 0 14px;">할 일을 방치하면 시민들의 삶이 무너지고, 끝내면 회복돼 — 수업 과제는 자동차, 자율학습은 집이야.</div>
+      <div class="empty" style="padding:0 0 14px;">수업 과제는 도로를 달리는 자동차, 자율학습은 구획에 지어진 집이야. 방치하면 연기가 나고 결국 불이 붙어 — 아무거나 눌러보면 무슨 할 일인지 나와.</div>
       ${graduating.length>0?`<div class="city-graduating">🎓 이번 주 졸업 예정 ${graduating.length}명 — 다음 주 월요일에 졸업 앨범으로 넘어가</div>`:''}
-      <div class="city-canvas">
-        <div class="city-road">${carsHtml}</div>
-        <div class="city-district">${housesHtml}</div>
-        <div class="city-avatars">${avatarsHtml}</div>
+      <div class="city-stage" style="aspect-ratio:${vb.w} / ${vb.h};">
+        <svg viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" preserveAspectRatio="xMidYMid meet">
+          <g>${ground}</g>
+          <g>${bSvg}</g>
+        </svg>
+        <div class="city-actors">${actors}</div>
       </div>
+      ${citizens.length===0?`<div class="empty">아직 시민이 없어 — 할 일 탭에서 수업 과제나 자율학습을 추가하면 도시에 나타나.</div>`:''}
     </div>`;
   }
   function findCityItem(target){
