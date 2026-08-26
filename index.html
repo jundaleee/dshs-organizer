@@ -1399,12 +1399,9 @@
 
       <div class="section">
         <div class="section-head"><div class="section-title">망각의 시민</div></div>
-        <div class="recall-note">끝낸 과제들을 보고, 기억이 흐려질 때쯤 가장 짧게 확인할 수 있는 복습만 골라줘.
+        <div class="recall-note">끝낸 과제들을 보고, 기억이 흐려질 때쯤 가장 짧게 확인할 수 있는 복습을 하루에 한 번 자동으로 골라줘.
           만들 게 없으면 안 만드는 것도 정상이야. 도시 탭에서는 이 항목들이 사람으로 걸어다녀.</div>
-        <div class="ai-row" style="margin-bottom:12px;">
-          <button class="btn-ai" data-action="generateRecall">${icon('sparkle')} 복습 과제 뽑기</button>
-          <span class="ai-status">${recallStatus}</span>
-        </div>
+        ${recallStatus ? `<div class="ai-status" style="margin-bottom:12px;">${recallStatus}</div>` : ''}
         ${recallHtml}
       </div>
     </div>`;
@@ -3059,6 +3056,15 @@ ${text}`}]
   }
   function daysAgo(ms){ return Math.max(0, Math.floor((Date.now()-ms)/86400000)); }
 
+  // 유저가 직접 누르지 않아도, 앱을 열 때마다 하루에 한 번 정도만 조용히 확인해서 자동으로 만들어줌
+  function maybeAutoGenerateRecall(){
+    if(!getApiKey()) return;
+    const last = state.data.recall && state.data.recall.lastGeneratedAt;
+    if(last && (Date.now() - last) < 86400000) return;
+    if(completedHistory(1).length === 0) return;
+    generateRecall();
+  }
+
   async function generateRecall(){
     const apiKey = getApiKey();
     if(!apiKey){ recallStatus = 'API 키가 필요해 — 설정에서 먼저 등록해줘.'; render(); return; }
@@ -3461,7 +3467,6 @@ ${text}`}]
       case 'openCompleted': state.completedTeacherKey = el.dataset.key; state.modal='completed'; render(); break;
       case 'openCompletedPersonal': state.modal='completedPersonal'; render(); break;
       case 'openCityInspect': openCityInspect(el.dataset.kind, el.dataset.key, el.dataset.corner, el.dataset.id); break;
-      case 'generateRecall': generateRecall(); break;
       case 'completeRecall': state.modal=null; state.cityInspectTarget=null; completeRecall(el.dataset.id); break;
       case 'deleteRecall': state.modal=null; state.cityInspectTarget=null; deleteRecall(el.dataset.id); break;
       case 'cityCompleteFromInspect': cityCompleteFromInspect(); break;
@@ -3640,6 +3645,7 @@ ${text}`}]
     }
     render();
     syncClassroom(false);
+    maybeAutoGenerateRecall();
   })();
 
 })();
