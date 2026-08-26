@@ -462,45 +462,23 @@
 
   /* ---- 도시 (City, beta) ---- */
   .city-graduating{font-size:12.5px;color:var(--teal);background:rgba(100,210,255,.1);border:1px solid rgba(100,210,255,.3);border-radius:var(--r-md);padding:9px 13px;margin-bottom:18px;}
-  .city-stage{position:relative;width:100%;border-radius:var(--r-lg);overflow:hidden;border:1px solid var(--border);border-top-color:var(--border-hi);background:radial-gradient(ellipse 95% 75% at 50% 42%, #1c2334, #0d1119 72%);}
-  .city-stage > svg{display:block;width:100%;height:100%;}
-  .city-actors{position:absolute;inset:0;pointer-events:none;}
-  .city-actors > *{pointer-events:auto;}
-
-  .iso-citizen{cursor:pointer;}
-  .iso-citizen:hover{filter:brightness(1.18);}
-  .iso-citizen.stage-2{animation:isoFireFlicker 1.4s ease-in-out infinite;}
-  @keyframes isoFireFlicker{0%,100%{filter:brightness(1);}50%{filter:brightness(1.22);}}
-  .iso-citizen.collapsed{opacity:.62;}
-
-  .iso-car{position:absolute;background:none;border:none;padding:0;line-height:0;cursor:pointer;transform:translate(-50%,-50%);
-    left:var(--x0);top:var(--y0);animation:isoDrive var(--dur,20s) linear infinite;animation-delay:var(--delay,0s);}
-  @keyframes isoDrive{from{left:var(--x0);top:var(--y0);}to{left:var(--x1);top:var(--y1);}}
-  .iso-car:hover{filter:brightness(1.2);}
-  .iso-car.broken{animation:none;}
-  .iso-car.broken svg{filter:grayscale(.85) brightness(.62);transform:rotate(-7deg);}
-  .iso-car-hazard{position:absolute;top:-13px;left:50%;transform:translateX(-50%);line-height:0;pointer-events:none;animation:isoHazard 1.8s ease-in-out infinite;}
-
-  .iso-ped{position:absolute;background:none;border:none;padding:0;line-height:0;cursor:pointer;
-    animation:isoWalk var(--wdur,22s) ease-in-out infinite;animation-delay:var(--wdelay,0s);}
-  .iso-ped:hover{filter:brightness(1.25);}
-  @keyframes isoWalk{
-    0%,100%{transform:translate(-50%,-50%);}
-    25%{transform:translate(calc(-50% + 26px), calc(-50% + 10px));}
-    50%{transform:translate(calc(-50% + 4px), calc(-50% + 24px));}
-    75%{transform:translate(calc(-50% - 22px), calc(-50% + 12px));}
-  }
-
-  .iso-hazard{position:absolute;transform:translate(-50%,-100%);line-height:0;pointer-events:none;animation:isoHazard 1.8s ease-in-out infinite;}
-  @keyframes isoHazard{
-    0%,100%{opacity:.62;transform:translate(-50%,-100%) scale(.92);}
-    50%{opacity:1;transform:translate(-50%,-112%) scale(1.06);}
-  }
-  .iso-car-hazard{animation-name:isoCarHazard;}
-  @keyframes isoCarHazard{
-    0%,100%{opacity:.6;transform:translateX(-50%) scale(.92);}
-    50%{opacity:1;transform:translateX(-50%) translateY(-4px) scale(1.06);}
-  }
+  .city3d{position:relative;width:100%;border-radius:var(--r-lg);overflow:hidden;
+    border:1px solid var(--border);border-top-color:var(--border-hi);background:#11161f;}
+  .city3d-canvas{width:100%;height:min(62vh, 520px);min-height:300px;}
+  .city3d-canvas canvas{display:block;width:100%;height:100%;touch-action:none;}
+  .city3d-tip{position:absolute;z-index:4;max-width:250px;pointer-events:none;
+    background:rgba(20,22,28,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border:1px solid var(--border-strong);border-radius:var(--r-sm);padding:9px 12px;
+    box-shadow:0 10px 28px rgba(0,0,0,.5);}
+  .city3d-tip .ct-tag{font-size:11px;color:var(--text-3);margin-bottom:3px;}
+  .city3d-tip .ct-text{font-size:13.5px;line-height:1.45;word-break:break-word;}
+  .city3d-tip .ct-meta{font-size:11.5px;color:var(--orange);margin-top:4px;font-weight:600;}
+  .city3d-status{position:absolute;inset:0;z-index:3;display:flex;align-items:center;justify-content:center;
+    text-align:center;padding:24px;font-size:13px;color:var(--text-2);background:rgba(17,22,31,.86);}
+  .city3d-hint{position:absolute;left:0;right:0;bottom:0;z-index:2;padding:7px 12px;font-size:11px;
+    color:var(--text-3);text-align:center;background:linear-gradient(to top, rgba(10,13,19,.82), transparent);
+    pointer-events:none;}
+  @media(max-width:639px){ .city3d-canvas{height:min(52vh, 380px);} .city3d-hint{font-size:10px;} }
 
   .city-inspect-text{font-size:14.5px;line-height:1.5;margin-bottom:8px;}
   .city-inspect-meta{font-size:12.5px;color:var(--text-3);margin-bottom:16px;}
@@ -852,6 +830,8 @@
     else if(state.view==='materials') html += renderMaterialsPage();
     else if(state.view==='city') html += renderCityPage();
     app.innerHTML = html;
+    // 3D 도시 캔버스는 #app 바깥에 살아있으므로 갈아엎은 뒤 제자리에 다시 끼워 넣는다
+    if(state.view==='city' && state.cityView!=='archive') mountCity3D(); else stopCityLoop();
     if(!viewChanged){
       // 클릭할 때마다 화면 전체가 깜빡이는 것 방지 — 실제로 다른 화면으로 이동할 때만 페이드인
       const fadeEl = app.querySelector('.fade-in');
@@ -1483,13 +1463,13 @@
       .map(wk=>({weekStart:wk, items:groups[wk].sort((a,b)=>b.item.completedAt-a.item.completedAt)}));
   }
 
-  /* --- 아이소메트릭 도시 그리기 ---
-     2:1 아이소메트릭 투영: 격자 (c,r) → 화면 좌표. 3칸마다 한 줄씩 도로가 지나가서
-     블록(2x2 구획)이 도로로 둘러싸인 격자 도시가 된다. 구획엔 건물이 서고, 도로엔 차가 다닌다.
-     지면·건물은 SVG 한 장으로 그리고(정렬·겹침을 painter's algorithm으로 처리),
-     움직이는 것들(차·시민·연기/불)만 그 위에 HTML 레이어로 얹어서 CSS 애니메이션을 태운다. */
-  const ISO_TW = 64, ISO_TH = 32, ISO_MAXH = 104;
-  function isoPt(c, r){ return [(c-r)*ISO_TW/2, (c+r)*ISO_TH/2]; }
+  /* ============ 도시 3D (Kenney CC0 킷 + three.js) ============
+     #app은 상태가 바뀔 때마다 innerHTML로 통째로 갈리기 때문에, WebGL 캔버스를 그 안에
+     직접 넣으면 클릭 한 번에 도시가 날아간다. 그래서 3D 컨테이너는 #app 바깥에서 딱 한 번
+     만들어 두고, 렌더가 끝난 뒤 자리(#city3dSlot)에 끼워 넣는다.
+     three.js 번들(160KB gzip)과 모델(363KB gzip)은 도시 탭에 처음 들어올 때만 받는다. */
+  const CITY_TILE = 4;
+  // 3칸마다 한 줄이 도로 → 나머지 칸이 2x2 블록의 구획이 된다
   function isoRoadAxis(N){ const a=[]; for(let i=0;i<N;i++) if(i%3===2) a.push(i); return a; }
   function isoPlotAxis(N){ const a=[]; for(let i=0;i<N;i++) if(i%3!==2) a.push(i); return a; }
   function isoGridDim(houseCount){
@@ -1497,177 +1477,510 @@
     while(isoPlotAxis(N).length*isoPlotAxis(N).length < houseCount && N < 27) N += 3;
     return N;
   }
-  function isoPts(list){ return list.map(p=>p[0].toFixed(1)+','+p[1].toFixed(1)).join(' '); }
+  const CITY_BUILDINGS = ['building-a','building-b','building-c','building-d','building-e','building-f',
+                          'building-g','building-h','building-i','building-j','building-k','building-l'];
+  const CITY_CARS = ['car-sedan','car-suv','car-taxi','car-van','car-hatchback-sports','car-delivery','car-truck'];
+  const CITY_CHARS = ['char-male-a','char-male-b','char-male-c','char-male-d',
+                      'char-female-a','char-female-b','char-female-c','char-female-d'];
+  const CITY3D = {
+    THREE:null, host:null, canvasWrap:null, tip:null, statusEl:null,
+    renderer:null, scene:null, camera:null, controls:null, raycaster:null, pointer:null,
+    proto:{}, cityGroup:null, owned:[], cars:[], peds:[], hazards:[], beacons:[],
+    running:false, raf:0, last:0, sig:'', phase:'idle', err:'', hover:null, downAt:null
+  };
 
-  function isoTileSvg(c, r){
-    const [x,y] = isoPt(c,r);
-    const hw = ISO_TW/2, hh = ISO_TH/2;
-    const vRoad = c%3===2, hRoad = r%3===2;
-    const pts = isoPts([[x,y-hh],[x+hw,y],[x,y+hh],[x-hw,y]]);
-    let s = `<polygon points="${pts}" fill="${(vRoad||hRoad)?'#4b515f':'#3c6a47'}" stroke="rgba(0,0,0,.22)" stroke-width="1"/>`;
-    // 교차로가 아닌 도로 칸에만 중앙선 — 차가 다니는 길이라는 게 한눈에 보이게
-    if(vRoad !== hRoad){
-      const d = vRoad ? [-hw/2, hh/2] : [hw/2, hh/2];
-      s += `<line x1="${(x-d[0]).toFixed(1)}" y1="${(y-d[1]).toFixed(1)}" x2="${(x+d[0]).toFixed(1)}" y2="${(y+d[1]).toFixed(1)}" stroke="rgba(255,255,255,.22)" stroke-width="1.4" stroke-dasharray="5 5"/>`;
-    }
-    return s;
+  function cssVarHex(v){
+    const m = /var\((--[\w-]+)\)/.exec(v||'');
+    if(!m) return v || '#8a8f9c';
+    return (getComputedStyle(document.documentElement).getPropertyValue(m[1])||'').trim() || '#8a8f9c';
+  }
+  function cityAssetUrl(p){ return new URL(p, document.baseURI).href; }
+  function citySignature(){
+    const cz = collectCityCitizens();
+    return cz.map(c=>c.item.id+':'+c.stage+':'+c.vehicle).sort().join('|');
+  }
+  function setCityStatus(msg){
+    if(CITY3D.statusEl) CITY3D.statusEl.textContent = msg || '';
+    if(CITY3D.statusEl) CITY3D.statusEl.style.display = msg ? '' : 'none';
   }
 
-  // 건물 옆면에 창문을 (u,v) 파라미터 공간으로 찍음 — 옆면이 평행사변형이라 직접 좌표를 쓰면 안 맞음
-  function isoWindowsSvg(origin, du, h, fill){
-    const floors = Math.max(1, Math.min(5, Math.round(h/20)));
-    let s = '';
-    for(let f=0; f<floors; f++){
-      for(let k=0; k<2; k++){
-        const u0 = 0.2 + k*0.4, u1 = u0 + 0.22;
-        const v0 = (f+0.32)/floors, v1 = (f+0.74)/floors;
-        const P = (u,v)=>[origin[0]+du[0]*u, origin[1]+du[1]*u - h*v];
-        s += `<polygon points="${isoPts([P(u0,v0),P(u1,v0),P(u1,v1),P(u0,v1)])}" fill="${fill}"/>`;
+  async function ensureCity3D(){
+    if(CITY3D.phase==='loading' || CITY3D.phase==='ready') return;
+    CITY3D.phase = 'loading';
+    setCityStatus('3D 도시를 불러오는 중...');
+    try{
+      const THREE = await import(cityAssetUrl('assets/vendor/three-city.min.js'));
+      CITY3D.THREE = THREE;
+      const gltf = await new THREE.GLTFLoader().loadAsync(cityAssetUrl('assets/city/city-kit.glb'));
+      gltf.scene.children.slice().forEach(n=>{ CITY3D.proto[n.name] = n; });
+      initCityRenderer();
+      CITY3D.phase = 'ready';
+      setCityStatus('');
+      buildCityScene();
+      startCityLoop();
+    }catch(e){
+      CITY3D.phase = 'error';
+      CITY3D.err = (e && e.message) ? e.message : String(e);
+      setCityStatus('3D 도시를 불러오지 못했어 — ' + CITY3D.err);
+    }
+  }
+
+  function initCityRenderer(){
+    const T = CITY3D.THREE;
+    const wrap = CITY3D.canvasWrap;
+    const renderer = new T.WebGLRenderer({antialias:true, alpha:false, powerPreference:'low-power'});
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
+    renderer.outputColorSpace = T.SRGBColorSpace;
+    wrap.appendChild(renderer.domElement);
+
+    const scene = new T.Scene();
+    scene.background = new T.Color(0x11161f);
+    scene.fog = new T.Fog(0x11161f, 40, 130);
+
+    const camera = new T.PerspectiveCamera(42, 1, 0.5, 400);
+    camera.position.set(26, 24, 26);
+
+    scene.add(new T.HemisphereLight(0xbcd4ff, 0x2a3a2a, 2.0));
+    const sun = new T.DirectionalLight(0xfff2d8, 2.1);
+    sun.position.set(18, 30, 12);
+    scene.add(sun);
+
+    const controls = new T.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.08;
+    controls.enablePan = false;
+    controls.minDistance = 12;
+    controls.maxDistance = 90;
+    controls.minPolarAngle = 0.18;
+    controls.maxPolarAngle = 1.36; // 지면 아래로는 못 내려가게
+    controls.target.set(0, 1.5, 0);
+
+    Object.assign(CITY3D, {renderer, scene, camera, controls, raycaster:new T.Raycaster(), pointer:new T.Vector2()});
+    bindCityPointer(renderer.domElement);
+
+    const ro = new ResizeObserver(()=>resizeCity3D());
+    ro.observe(wrap);
+    resizeCity3D();
+  }
+
+  function resizeCity3D(){
+    const wrap = CITY3D.canvasWrap;
+    if(!wrap || !CITY3D.renderer) return;
+    const w = wrap.clientWidth || 1, h = wrap.clientHeight || 1;
+    CITY3D.renderer.setSize(w, h, false);
+    CITY3D.camera.aspect = w/h;
+    CITY3D.camera.updateProjectionMatrix();
+  }
+
+  function disposeCityGroup(){
+    const T = CITY3D.THREE;
+    if(CITY3D.cityGroup){
+      CITY3D.scene.remove(CITY3D.cityGroup);
+      CITY3D.cityGroup.traverse(o=>{ if(o.isMesh && o.geometry && o.geometry.userData.own) o.geometry.dispose(); });
+    }
+    // 원본(proto)과 공유하는 지오메트리·머티리얼은 두고, 이 도시에서 새로 만든 것만 정리
+    CITY3D.owned.forEach(x=>{ try{ x.dispose(); }catch(e){} });
+    CITY3D.owned = [];
+    CITY3D.cityGroup = null;
+  }
+
+  function makePuffTexture(rgb){
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d');
+    const grd = g.createRadialGradient(32,32,0,32,32,32);
+    grd.addColorStop(0, `rgba(${rgb},0.85)`);
+    grd.addColorStop(0.35, `rgba(${rgb},0.34)`);
+    grd.addColorStop(0.7, `rgba(${rgb},0.09)`);
+    grd.addColorStop(1, `rgba(${rgb},0)`);
+    g.fillStyle = grd; g.fillRect(0,0,64,64);
+    const tex = new CITY3D.THREE.CanvasTexture(c);
+    CITY3D.owned.push(tex);
+    return tex;
+  }
+  function makeRoadTexture(alongX){
+    const c = document.createElement('canvas'); c.width = 64; c.height = 64;
+    const g = c.getContext('2d');
+    g.fillStyle = '#454c5a'; g.fillRect(0,0,64,64);
+    g.fillStyle = 'rgba(255,255,255,.30)';
+    if(alongX) g.fillRect(8, 30, 26, 4); else g.fillRect(30, 8, 4, 26);
+    const tex = new CITY3D.THREE.CanvasTexture(c);
+    tex.wrapS = tex.wrapT = CITY3D.THREE.RepeatWrapping;
+    CITY3D.owned.push(tex);
+    return tex;
+  }
+
+  function buildCityScene(){
+    const T = CITY3D.THREE;
+    if(!T || !CITY3D.scene) return;
+    disposeCityGroup();
+    const g = new T.Group();
+    CITY3D.cityGroup = g; CITY3D.scene.add(g);
+    CITY3D.cars = []; CITY3D.peds = []; CITY3D.hazards = []; CITY3D.beacons = [];
+
+    const citizens = collectCityCitizens();
+    const cars = citizens.filter(c=>c.vehicle==='car');
+    const houses = citizens.filter(c=>c.vehicle==='house');
+    const N = isoGridDim(houses.length);
+    const half = (N-1)/2;
+    const wx = i => (i-half)*CITY_TILE;
+    const span = (N+1)*CITY_TILE;
+
+    function spawn(name){
+      const p = CITY3D.proto[name];
+      return p ? p.clone(true) : null;
+    }
+    // 모델마다 크기가 제각각이라 발자국 폭 기준으로 맞추고 바닥(y=0)에 앉힘
+    function fit(o, targetW){
+      let box = new T.Box3().setFromObject(o);
+      const size = new T.Vector3(); box.getSize(size);
+      o.scale.setScalar(targetW / (Math.max(size.x, size.z) || 1));
+      box = new T.Box3().setFromObject(o);
+      const c = new T.Vector3(); box.getCenter(c);
+      o.position.x -= c.x; o.position.z -= c.z; o.position.y -= box.min.y;
+      return o;
+    }
+    function recolor(o, hex, mode){
+      o.traverse(n=>{
+        if(!n.isMesh || !n.material) return;
+        const arr = Array.isArray(n.material) ? n.material : [n.material];
+        const out = arr.map(m=>{
+          const cm = m.clone(); CITY3D.owned.push(cm);
+          if(mode==='dark') cm.color.multiplyScalar(0.3);
+          else cm.color.lerp(new T.Color(hex), 0.55);
+          return cm;
+        });
+        n.material = Array.isArray(n.material) ? out : out[0];
+      });
+    }
+    function pick(cz, obj){
+      obj.traverse(n=>{ n.userData.cz = cz; });
+      obj.userData.cz = cz;
+    }
+
+    /* 지면 + 도로 */
+    const groundMat = new T.MeshStandardMaterial({color:0x3e6b49, roughness:1, metalness:0});
+    CITY3D.owned.push(groundMat);
+    const ground = new T.Mesh(new T.PlaneGeometry(span, span), groundMat);
+    ground.geometry.userData.own = true;
+    ground.rotation.x = -Math.PI/2;
+    g.add(ground);
+
+    const roadMatZ = new T.MeshStandardMaterial({map:makeRoadTexture(false), roughness:1});
+    const roadMatX = new T.MeshStandardMaterial({map:makeRoadTexture(true), roughness:1});
+    CITY3D.owned.push(roadMatZ, roadMatX);
+    roadMatZ.map.repeat.set(1, N+1); roadMatX.map.repeat.set(N+1, 1);
+    isoRoadAxis(N).forEach(i=>{
+      const a = new T.Mesh(new T.PlaneGeometry(CITY_TILE, span), roadMatZ);
+      a.geometry.userData.own = true; a.rotation.x = -Math.PI/2; a.position.set(wx(i), 0.02, 0); g.add(a);
+      const b = new T.Mesh(new T.PlaneGeometry(span, CITY_TILE), roadMatX);
+      b.geometry.userData.own = true; b.rotation.x = -Math.PI/2; b.position.set(0, 0.03, wx(i)); g.add(b);
+    });
+
+    /* 구획 배치 — 주민 집이 한쪽에 몰리지 않게 해시로 섞어서 고르게 흩뿌림 */
+    const ax = isoPlotAxis(N);
+    const plots = [];
+    ax.forEach(c=>ax.forEach(r=>plots.push({c,r})));
+    plots.sort((a,b)=>hashStr('plot'+a.c+'x'+a.r)-hashStr('plot'+b.c+'x'+b.r));
+
+    const used = new Set();
+    houses.forEach((cz,i)=>{
+      const cell = plots[i % plots.length];
+      used.add(cell.c+'x'+cell.r);
+      const holder = new T.Group();
+      holder.position.set(wx(cell.c), 0, wx(cell.r));
+      holder.rotation.y = (hashStr(cz.item.id+'rot')%4) * Math.PI/2;
+      g.add(holder);
+
+      const hex = cssVarHex(cz.color);
+      if(cz.stage===3){
+        // 붕괴 — 건물을 납작하게 누르고 어둡게, 주변에 잔해
+        const b = spawn(CITY_BUILDINGS[hashStr(cz.item.id)%CITY_BUILDINGS.length]);
+        if(b){ fit(b, CITY_TILE*0.74); b.scale.y *= 0.24; recolor(b, null, 'dark'); holder.add(b); }
+        ['debris-plate','debris-door','debris-tire'].forEach((d,k)=>{
+          const o = spawn(d); if(!o) return;
+          fit(o, CITY_TILE*0.2);
+          o.position.set(Math.cos(k*2.1)*1.2, o.position.y, Math.sin(k*2.1)*1.2);
+          o.rotation.y = k*1.7; recolor(o, null, 'dark'); holder.add(o);
+        });
+      } else {
+        const b = spawn(CITY_BUILDINGS[hashStr(cz.item.id)%CITY_BUILDINGS.length]);
+        if(b){ fit(b, CITY_TILE*0.78); holder.add(b); }
+        if(cz.stage===1) addHazard(holder, 'smoke', 2.6);
+        if(cz.stage===2) addHazard(holder, 'fire', 2.2);
       }
-    }
-    return s;
-  }
-  function isoBoxSvg(x, y, h, fw, fh, pal, windows){
-    const hw = fw/2, hh = fh/2;
-    const bE=[x+hw,y], bS=[x,y+hh], bW=[x-hw,y];
-    const tN=[x,y-hh-h], tE=[x+hw,y-h], tS=[x,y+hh-h], tW=[x-hw,y-h];
-    let s = '';
-    s += `<polygon points="${isoPts([bW,bS,tS,tW])}" ${pal.l}/>`;
-    s += `<polygon points="${isoPts([bS,bE,tE,tS])}" ${pal.r}/>`;
-    s += `<polygon points="${isoPts([tN,tE,tS,tW])}" ${pal.t}/>`;
-    if(windows){
-      s += isoWindowsSvg(bW, [hw,hh], h, 'rgba(255,226,150,.5)');
-      s += isoWindowsSvg(bS, [hw,-hh], h, 'rgba(255,226,150,.26)');
-    }
-    return s;
-  }
-  // 사각뿔 지붕 — 뒤쪽 두 면을 먼저 그리고 앞쪽 두 면을 덮어서 깊이 정렬
-  function isoRoofSvg(x, y, h, fw, fh, rh, fillAttr){
-    const hw = fw/2, hh = fh/2;
-    const tN=[x,y-hh-h], tE=[x+hw,y-h], tS=[x,y+hh-h], tW=[x-hw,y-h];
-    const ap = [x, y-h-rh];
-    return `<polygon points="${isoPts([ap,tW,tN])}" ${fillAttr}/>`
-      + `<polygon points="${isoPts([ap,tN,tE])}" ${fillAttr}/>`
-      + `<polygon points="${isoPts([ap,tW,tS])}" ${fillAttr}/><polygon points="${isoPts([ap,tW,tS])}" fill="rgba(0,0,0,.3)"/>`
-      + `<polygon points="${isoPts([ap,tS,tE])}" ${fillAttr}/><polygon points="${isoPts([ap,tS,tE])}" fill="rgba(255,255,255,.08)"/>`;
-  }
-  const ISO_FILLER_PAL = [
-    {t:'fill="#7f8a99"', l:'fill="#464e5b"', r:'fill="#5d6673"'},
-    {t:'fill="#8d99a8"', l:'fill="#4f5866"', r:'fill="#68717f"'},
-    {t:'fill="#9d6f60"', l:'fill="#5c3e37"', r:'fill="#7a5347"'},
-    {t:'fill="#6f9078"', l:'fill="#3c5442"', r:'fill="#527056"'},
-    {t:'fill="#87909e"', l:'fill="#4b515f"', r:'fill="#636b79"'}
-  ];
+      addBeacon(holder, hex, cz.stage===3 ? 1.6 : 3.6);
+      pick(cz, holder);
+      CITY3D.pickRoots = CITY3D.pickRoots || [];
 
-  function isoPedSprite(){
-    return `<svg viewBox="0 0 14 19" width="15" height="20"><ellipse cx="7" cy="17.4" rx="4.6" ry="1.4" fill="rgba(0,0,0,.4)"/><path d="M7 2.2c3 0 4.7 2.6 4.7 6.4S9.9 15.6 7 15.6 2.3 12.4 2.3 8.6 4 2.2 7 2.2z" style="fill:var(--fc)"/><circle cx="5.3" cy="8" r=".95" fill="#15171c"/><circle cx="8.7" cy="8" r=".95" fill="#15171c"/></svg>`;
+      // 이 집에 사는 시민이 집 앞을 산책함
+      const ch = spawn(CITY_CHARS[hashStr(cz.item.id+'ch')%CITY_CHARS.length]);
+      if(ch){
+        fit(ch, CITY_TILE*0.22);
+        recolor(ch, hex, 'tint');
+        const home = new T.Vector3(wx(cell.c)+1.4, 0, wx(cell.r)+1.4);
+        const pedHolder = new T.Group();
+        pedHolder.position.copy(home);
+        pedHolder.add(ch);
+        g.add(pedHolder);
+        pick(cz, pedHolder);
+        CITY3D.peds.push({obj:pedHolder, home:home.clone(), from:home.clone(), to:home.clone(),
+                          t:0, dur:0.001, bob:Math.random()*6.28});
+      }
+    });
+
+    // 남은 구획은 배경 건물/나무로 채워서 도시처럼 보이게
+    plots.forEach(p=>{
+      if(used.has(p.c+'x'+p.r)) return;
+      const hs = hashStr('f'+p.c+'_'+p.r);
+      const holder = new T.Group();
+      holder.position.set(wx(p.c), 0, wx(p.r));
+      holder.rotation.y = (hs%4)*Math.PI/2;
+      g.add(holder);
+      if(hs%9===0){
+        const t1 = spawn(hs%2 ? 'tree-large' : 'tree-small');
+        if(t1){ fit(t1, CITY_TILE*0.4); t1.position.x += 0.6; holder.add(t1); }
+        const t2 = spawn('tree-small');
+        if(t2){ fit(t2, CITY_TILE*0.28); t2.position.set(-1, t2.position.y, 0.8); holder.add(t2); }
+      } else {
+        const b = spawn(CITY_BUILDINGS[hs%CITY_BUILDINGS.length]);
+        if(b){ fit(b, CITY_TILE*0.76); holder.add(b); }
+      }
+    });
+
+    /* 자동차 — 도로 한 줄을 처음부터 끝까지 통과 */
+    const roads = [];
+    isoRoadAxis(N).forEach(i=>roads.push({axis:'z', i}));
+    isoRoadAxis(N).forEach(i=>roads.push({axis:'x', i}));
+    cars.forEach((cz, idx)=>{
+      const road = roads[idx % roads.length];
+      const hs = hashStr(cz.item.id+'car');
+      const o = spawn(CITY_CARS[hs % CITY_CARS.length]);
+      if(!o) return;
+      const hex = cssVarHex(cz.color);
+      fit(o, CITY_TILE*0.5);
+      recolor(o, hex, 'tint');
+      const holder = new T.Group();
+      holder.add(o);
+      g.add(holder);
+      pick(cz, holder);
+
+      const dir = (hs%2) ? 1 : -1;
+      const lane = wx(road.i) + dir*0.75;      // 우측통행
+      const a = new T.Vector3(), b = new T.Vector3();
+      if(road.axis==='z'){ a.set(lane,0,-span/2); b.set(lane,0,span/2); holder.rotation.y = 0; }
+      else { a.set(-span/2,0,lane); b.set(span/2,0,lane); holder.rotation.y = Math.PI/2; }
+      if(dir<0){ const t2=a.clone(); a.copy(b); b.copy(t2); holder.rotation.y += Math.PI; }
+
+      if(cz.stage===2){
+        // 고장 — 갓길에 비스듬히 서 있고 연기, 옆에 라바콘
+        holder.position.lerpVectors(a, b, 0.42);
+        holder.position.x += road.axis==='z' ? 1.1 : 0;
+        holder.position.z += road.axis==='x' ? 1.1 : 0;
+        holder.rotation.y += 0.35;
+        addHazard(holder, 'smoke', 1.1);
+        const cone = spawn('cone');
+        if(cone){ fit(cone, 0.5); cone.position.set(1.2, cone.position.y, 0.6); holder.add(cone); }
+      } else {
+        if(cz.stage===1) addHazard(holder, 'smoke', 1.1);
+        holder.position.copy(a);
+        CITY3D.cars.push({obj:holder, a, b, p:(hs%100)/100, speed:(cz.stage===1?0.035:0.075)+((hs>>4)%20)/1000});
+      }
+      addBeacon(holder, hex, 1.9);
+    });
+
+    function addHazard(parent, type, baseY){
+      const isFire = type==='fire';
+      const tex = makePuffTexture(isFire ? '255,120,25' : '198,204,216');
+      const group = new T.Group();
+      group.position.y = baseY;
+      parent.add(group);
+      const puffs = [];
+      for(let i=0;i<8;i++){
+        const m = new T.SpriteMaterial({map:tex, transparent:true, depthWrite:false,
+          blending: isFire ? T.AdditiveBlending : T.NormalBlending, opacity:0});
+        CITY3D.owned.push(m);
+        const s = new T.Sprite(m);
+        s.position.set((Math.random()-0.5)*0.3, 0, (Math.random()-0.5)*0.3);
+        group.add(s); puffs.push(s);
+      }
+      CITY3D.hazards.push({puffs, rise:isFire?1.5:2.8, speed:isFire?0.85:0.3,
+                           size:isFire?1.0:1.7, alpha:isFire?0.55:0.42, drift:isFire?0.12:0.55});
+    }
+    function addBeacon(parent, hex, y){
+      const mat = new T.MeshBasicMaterial({color:new T.Color(hex), transparent:true, opacity:0.92});
+      CITY3D.owned.push(mat);
+      const geo = new T.ConeGeometry(0.22, 0.5, 5);
+      geo.userData.own = true;
+      const m = new T.Mesh(geo, mat);
+      m.rotation.x = Math.PI;      // 아래를 가리키는 핀
+      m.position.y = y;
+      parent.add(m);
+      CITY3D.beacons.push({obj:m, baseY:y, phase:Math.random()*6.28});
+    }
+
+    // 도시가 화면에 다 들어오도록 카메라 거리 계산 (도시가 커지면 다시 맞춤)
+    CITY3D.controls.maxDistance = span*2.2;
+    CITY3D.controls.minDistance = span*0.28;
+    if(CITY3D.lastSpan !== span){
+      const dist = span*1.18, el = 0.62;              // 약 35도 위에서 내려다보는 각도
+      const horiz = dist*Math.cos(el)/Math.SQRT2;
+      CITY3D.camera.position.set(horiz, dist*Math.sin(el), horiz);
+      CITY3D.controls.target.set(0, 1.5, 0);
+      CITY3D.controls.update();
+      CITY3D.lastSpan = span;
+    }
+    CITY3D.scene.fog.near = span*0.9;
+    CITY3D.scene.fog.far = span*3.2;
+    CITY3D.sig = citySignature();
   }
-  function isoCarSprite(){
-    return `<svg viewBox="0 0 38 24" width="36" height="23"><ellipse cx="19" cy="21" rx="13" ry="2.6" fill="rgba(0,0,0,.45)"/><path d="M19 1c2.3 0 3.6 1.8 3.6 4.4S21.2 9.4 19 9.4s-3.6-1.4-3.6-4S16.7 1 19 1z" style="fill:var(--fc)"/><circle cx="17.7" cy="4.8" r=".75" fill="#15171c"/><circle cx="20.3" cy="4.8" r=".75" fill="#15171c"/><rect x="9" y="7.4" width="20" height="7.4" rx="3.2" fill="#59616e"/><rect x="3.5" y="11" width="31" height="8.4" rx="4.2" fill="#7d8795"/><rect x="11" y="9.2" width="6.4" height="4" rx="1.4" fill="rgba(165,215,255,.72)"/><rect x="20.6" y="9.2" width="6.4" height="4" rx="1.4" fill="rgba(165,215,255,.72)"/><circle cx="11" cy="19.4" r="2.5" fill="#23262d"/><circle cx="27" cy="19.4" r="2.5" fill="#23262d"/></svg>`;
+
+  function cityFrame(){
+    CITY3D.raf = requestAnimationFrame(cityFrame);
+    const now = performance.now();
+    const dt = Math.min(0.05, (now - CITY3D.last)/1000 || 0.016);
+    CITY3D.last = now;
+    const t = now/1000;
+
+    CITY3D.cars.forEach(c=>{
+      c.p += c.speed*dt;
+      if(c.p > 1) c.p -= 1;
+      c.obj.position.lerpVectors(c.a, c.b, c.p);
+    });
+    CITY3D.peds.forEach(p=>{
+      p.t += dt;
+      if(p.t >= p.dur){
+        p.t = 0; p.dur = 2.5 + Math.random()*3.5;
+        p.from.copy(p.obj.position);
+        p.to.set(p.home.x + (Math.random()-0.5)*3.2, 0, p.home.z + (Math.random()-0.5)*3.2);
+        p.obj.rotation.y = Math.atan2(p.to.x-p.from.x, p.to.z-p.from.z);
+      }
+      p.obj.position.lerpVectors(p.from, p.to, p.t/p.dur);
+      p.obj.position.y = Math.abs(Math.sin(t*6 + p.bob))*0.06;   // 걷는 느낌의 작은 위아래
+    });
+    CITY3D.hazards.forEach(h=>{
+      h.puffs.forEach((s,i)=>{
+        const ph = ((t*h.speed) + i/h.puffs.length) % 1;
+        s.position.y = ph*h.rise;
+        // 올라가면서 옆으로 퍼지게 — 안 그러면 빛기둥처럼 뭉쳐 보임
+        s.position.x = Math.sin(i*2.1 + ph*2.4)*h.drift*ph;
+        s.position.z = Math.cos(i*1.7 + ph*2.0)*h.drift*ph;
+        s.material.opacity = Math.sin(ph*Math.PI)*h.alpha;
+        const sc = h.size*(0.4 + ph*1.1);
+        s.scale.set(sc, sc, 1);
+      });
+    });
+    CITY3D.beacons.forEach(b=>{
+      b.obj.position.y = b.baseY + Math.sin(t*2 + b.phase)*0.16;
+      b.obj.rotation.y = t*1.3;
+    });
+
+    CITY3D.controls.update();
+    CITY3D.renderer.render(CITY3D.scene, CITY3D.camera);
   }
-  function isoHazardSprite(type){
-    if(type==='fire') return `<svg viewBox="0 0 16 20" width="16" height="20"><path d="M8 2C11.5 5.5 12.5 8 12.5 10.5A4.5 4.5 0 0 1 3.5 10.5C3.5 8 4.5 5.5 8 2z" fill="#FF9F0A"/><path d="M8 7.4c1.6 1.8 2 2.9 2 4A2 2 0 0 1 6 11.4c0-1.1.4-2.2 2-4z" fill="#FFD60A"/></svg>`;
-    return `<svg viewBox="0 0 16 20" width="16" height="20"><circle cx="6" cy="15" r="2.7" fill="rgba(196,201,211,.5)"/><circle cx="9.6" cy="10.2" r="3" fill="rgba(196,201,211,.38)"/><circle cx="6.4" cy="5.4" r="2.5" fill="rgba(196,201,211,.24)"/></svg>`;
+  function startCityLoop(){
+    if(CITY3D.running || CITY3D.phase!=='ready') return;
+    CITY3D.running = true; CITY3D.last = performance.now();
+    CITY3D.raf = requestAnimationFrame(cityFrame);
+  }
+  function stopCityLoop(){
+    CITY3D.running = false;
+    if(CITY3D.raf) cancelAnimationFrame(CITY3D.raf);
+    CITY3D.raf = 0;
+    hideCityTip();
+  }
+
+  /* 마우스를 올리면 무슨 할 일인지 바로 보여줌 (클릭은 상세 모달) */
+  function czUnderPointer(ev){
+    if(!CITY3D.renderer) return null;
+    const r = CITY3D.renderer.domElement.getBoundingClientRect();
+    CITY3D.pointer.x = ((ev.clientX - r.left)/r.width)*2 - 1;
+    CITY3D.pointer.y = -((ev.clientY - r.top)/r.height)*2 + 1;
+    CITY3D.raycaster.setFromCamera(CITY3D.pointer, CITY3D.camera);
+    const hits = CITY3D.raycaster.intersectObjects(CITY3D.cityGroup ? CITY3D.cityGroup.children : [], true);
+    for(const h of hits){
+      let o = h.object;
+      while(o){ if(o.userData && o.userData.cz) return o.userData.cz; o = o.parent; }
+    }
+    return null;
+  }
+  function showCityTip(cz, ev){
+    if(!CITY3D.tip) return;
+    const isCar = cz.vehicle==='car';
+    const tag = cz.kind==='teacher' ? `${cz.x.subjLabel} · ${cz.x.teacher}`
+      : (cz.item.boxKey && BOX_KEYS.has(cz.item.boxKey) ? BOXES.find(b=>b.key===cz.item.boxKey).label : '미분류');
+    const stageLabel = isCar
+      ? ['정상 주행 중','연기가 나는 중','완전히 고장남'][cz.stage]
+      : ['평온함','굴뚝에서 연기','집에 불이 남','집이 무너짐'][cz.stage];
+    CITY3D.tip.innerHTML = `<div class="ct-tag">${escapeHtml(tag)} · ${isCar?'수업 과제':'자율학습'}</div>`
+      + `<div class="ct-text">${escapeHtml(cz.item.text)}</div>`
+      + `<div class="ct-meta">${cz.days}일째 · ${stageLabel}</div>`;
+    CITY3D.tip.style.display = 'block';
+    const host = CITY3D.host.getBoundingClientRect();
+    let x = ev.clientX - host.left + 14, y = ev.clientY - host.top + 14;
+    const tw = CITY3D.tip.offsetWidth, th = CITY3D.tip.offsetHeight;
+    if(x + tw > host.width - 6) x = ev.clientX - host.left - tw - 14;
+    if(y + th > host.height - 6) y = ev.clientY - host.top - th - 14;
+    CITY3D.tip.style.left = Math.max(6, x)+'px';
+    CITY3D.tip.style.top = Math.max(6, y)+'px';
+  }
+  function hideCityTip(){ if(CITY3D.tip) CITY3D.tip.style.display = 'none'; }
+
+  function bindCityPointer(el){
+    el.addEventListener('pointermove', ev=>{
+      if(CITY3D.downAt) return; // 카메라 돌리는 중엔 툴팁 안 띄움
+      const cz = czUnderPointer(ev);
+      CITY3D.hover = cz;
+      el.style.cursor = cz ? 'pointer' : 'grab';
+      if(cz) showCityTip(cz, ev); else hideCityTip();
+    });
+    el.addEventListener('pointerleave', ()=>{ hideCityTip(); CITY3D.hover = null; });
+    el.addEventListener('pointerdown', ev=>{ CITY3D.downAt = {x:ev.clientX, y:ev.clientY}; hideCityTip(); });
+    el.addEventListener('pointerup', ev=>{
+      const d = CITY3D.downAt; CITY3D.downAt = null;
+      if(!d) return;
+      if(Math.abs(ev.clientX-d.x) > 4 || Math.abs(ev.clientY-d.y) > 4) return; // 드래그는 클릭 아님
+      const cz = czUnderPointer(ev);
+      if(cz) openCityInspect(cz.kind, cz.kind==='teacher'?cz.x.key:null, cz.corner||null, cz.item.id);
+    });
+  }
+
+  function makeCityHost(){
+    const host = document.createElement('div');
+    host.className = 'city3d';
+    host.innerHTML = `<div class="city3d-canvas"></div>
+      <div class="city3d-tip"></div>
+      <div class="city3d-status"></div>
+      <div class="city3d-hint">드래그로 회전 · 휠로 확대 · 마우스를 올리면 무슨 할 일인지 나와</div>`;
+    CITY3D.host = host;
+    CITY3D.canvasWrap = host.querySelector('.city3d-canvas');
+    CITY3D.tip = host.querySelector('.city3d-tip');
+    CITY3D.statusEl = host.querySelector('.city3d-status');
+    hideCityTip();
+    return host;
+  }
+
+  // render()가 #app을 갈아엎은 뒤 3D 컨테이너를 제자리에 다시 끼워 넣는다
+  function mountCity3D(){
+    const slot = document.getElementById('city3dSlot');
+    if(!slot) { stopCityLoop(); return; }
+    if(!CITY3D.host) makeCityHost();
+    if(CITY3D.host.parentElement !== slot) slot.appendChild(CITY3D.host);
+    if(CITY3D.phase==='idle' || CITY3D.phase==='error'){ ensureCity3D(); return; }
+    if(CITY3D.phase!=='ready') return;
+    if(citySignature() !== CITY3D.sig) buildCityScene();
+    resizeCity3D();
+    startCityLoop();
   }
 
   function renderCityPage(){
     if(state.cityView==='archive') return renderGraduationArchive();
     const citizens = collectCityCitizens();
-    const cars = citizens.filter(c=>c.vehicle==='car');
-    const houses = citizens.filter(c=>c.vehicle==='house');
     const graduating = collectGraduatingThisWeek();
-
-    const N = isoGridDim(houses.length);
-    const axis = isoPlotAxis(N);
-    const plots = [];
-    axis.forEach(c=>axis.forEach(r=>plots.push({c,r})));
-    // 주민 집이 왼쪽 위에 몰리지 않게 id 해시로 안정적으로 섞음 (렌더마다 자리가 안 바뀜)
-    plots.sort((a,b)=> hashStr('plot'+a.c+'x'+a.r) - hashStr('plot'+b.c+'x'+b.r));
-
-    let ground = '';
-    for(let r=0;r<N;r++) for(let c=0;c<N;c++) ground += isoTileSvg(c,r);
-
-    const buildings = [];
-    houses.forEach((h,i)=> buildings.push({cell: plots[i%plots.length], citizen:h}));
-    const used = new Set(buildings.map(b=>b.cell.c+'x'+b.cell.r));
-    plots.forEach(p=>{ if(!used.has(p.c+'x'+p.r)) buildings.push({cell:p, citizen:null}); });
-    // 화면 아래쪽(=c+r이 큰 칸)이 앞이라, 뒤에서 앞 순서로 그려야 겹침이 자연스러움
-    buildings.sort((a,b)=>(a.cell.c+a.cell.r)-(b.cell.c+b.cell.r));
-
-    const vb = {};
-    vb.x = -((N-1)*ISO_TW/2) - ISO_TW/2 - 20;
-    vb.y = -ISO_MAXH - 8;
-    vb.w = -2*vb.x;
-    vb.h = ((N-1)*ISO_TH) + ISO_TH/2 + 26 - vb.y;
-    const pct = (x,y)=>({l:((x-vb.x)/vb.w*100).toFixed(2)+'%', t:((y-vb.y)/vb.h*100).toFixed(2)+'%'});
-    const czAttrs = cz => `data-action="openCityInspect" data-kind="${cz.kind}" ${cz.kind==='teacher'?`data-key="${cz.x.key}" data-corner="${cz.corner}"`:''} data-id="${cz.item.id}"`;
-
-    let bSvg = '', actors = '';
-    buildings.forEach(b=>{
-      const [x,y] = isoPt(b.cell.c, b.cell.r);
-      if(!b.citizen){
-        const hs = hashStr('f'+b.cell.c+'_'+b.cell.r);
-        if(hs%7===0) return; // 가끔 빈 공터를 둬서 격자가 답답해 보이지 않게
-        const pal = ISO_FILLER_PAL[hs%ISO_FILLER_PAL.length];
-        bSvg += `<g opacity=".76">${isoBoxSvg(x,y, 30 + ((hs>>3)%5)*17, 46,23, pal, true)}</g>`;
-        return;
-      }
-      const cz = b.citizen, st = cz.stage;
-      const attrs = czAttrs(cz), tip = escapeHtml(cz.item.text);
-      if(st===3){
-        bSvg += `<g class="iso-citizen collapsed" ${attrs}><title>${tip}</title>`
-          + isoBoxSvg(x,y,9,46,23,{t:'fill="#4a3a34"',l:'fill="#291f1c"',r:'fill="#372a25"'},false)
-          + `<polygon points="${isoPts([[x-9,y-4],[x-2,y-8],[x+2,y-2],[x-6,y+1]])}" fill="#2a211e"/>`
-          + `<polygon points="${isoPts([[x+4,y-9],[x+11,y-5],[x+7,y-1],[x+2,y-4]])}" fill="#332723"/></g>`;
-      } else {
-        const wallH = 26;
-        const roofFill = st===2 ? 'style="fill:var(--red)"' : 'style="fill:var(--fc)"';
-        bSvg += `<g class="iso-citizen stage-${st}" style="--fc:${cz.color}" ${attrs}><title>${tip}</title>`
-          + isoBoxSvg(x,y,wallH,46,23,{t:'fill="#e6e1d7"',l:'fill="#a9a296"',r:'fill="#cdc6b9"'},false)
-          + isoRoofSvg(x,y,wallH,46,23,20,roofFill) + `</g>`;
-        if(st===1 || st===2){
-          const p = pct(x, y - wallH - 22);
-          actors += `<span class="iso-hazard" style="left:${p.l};top:${p.t};">${isoHazardSprite(st===2?'fire':'smoke')}</span>`;
-        }
-      }
-      // 집에 사는 시민은 집 근처를 산책함
-      const ph = hashStr(cz.item.id+'ped');
-      const pp = pct(x + ((ph%40)-20), y + 14 + ((ph>>4)%10));
-      actors += `<button class="iso-ped" style="--fc:${cz.color};--wdur:${18+(ph%14)}s;--wdelay:-${(ph>>2)%20}s;left:${pp.l};top:${pp.t};" ${attrs} title="${tip}">${isoPedSprite()}</button>`;
-    });
-
-    // 차는 도로 한 줄을 끝에서 끝까지 왕복 없이 통과 (세로 도로 / 가로 도로 번갈아 배정)
-    const roads = [];
-    isoRoadAxis(N).forEach(i=>roads.push({t:'v', i}));
-    isoRoadAxis(N).forEach(i=>roads.push({t:'h', i}));
-    cars.forEach((cz, idx)=>{
-      const road = roads[idx % roads.length];
-      const hs = hashStr(cz.item.id+'car');
-      let a = road.t==='v' ? isoPt(road.i, -1.2) : isoPt(-1.2, road.i);
-      let z = road.t==='v' ? isoPt(road.i, N+0.2) : isoPt(N+0.2, road.i);
-      if(hs%2===1){ const tmp=a; a=z; z=tmp; }
-      const attrs = czAttrs(cz), tip = escapeHtml(cz.item.text);
-      if(cz.stage===2){
-        const p = pct(a[0]+(z[0]-a[0])*0.42, a[1]+(z[1]-a[1])*0.42);
-        actors += `<button class="iso-car broken" style="--fc:${cz.color};left:${p.l};top:${p.t};" ${attrs} title="${tip}">${isoCarSprite()}<span class="iso-car-hazard">${isoHazardSprite('smoke')}</span></button>`;
-      } else {
-        const p0 = pct(a[0],a[1]), p1 = pct(z[0],z[1]);
-        const dur = (cz.stage===1?34:20) + (hs%9);
-        actors += `<button class="iso-car ${cz.stage===1?'smoking':''}" style="--fc:${cz.color};--x0:${p0.l};--y0:${p0.t};--x1:${p1.l};--y1:${p1.t};--dur:${dur}s;--delay:-${(hs>>3)%dur}s;left:${p0.l};top:${p0.t};" ${attrs} title="${tip}">${isoCarSprite()}${cz.stage===1?`<span class="iso-car-hazard">${isoHazardSprite('smoke')}</span>`:''}</button>`;
-      }
-    });
-
     return `<div class="fade-in">
       <div class="page-head"><h1>도시 <span class="beta-pill" style="margin-left:6px;">BETA</span></h1><button class="iconbtn" data-action="goCityArchive">${icon('external')} 졸업 앨범</button></div>
-      <div class="empty" style="padding:0 0 14px;">수업 과제는 도로를 달리는 자동차, 자율학습은 구획에 지어진 집이야. 방치하면 연기가 나고 결국 불이 붙어 — 아무거나 눌러보면 무슨 할 일인지 나와.</div>
+      <div class="empty" style="padding:0 0 14px;">수업 과제는 도로를 달리는 자동차, 자율학습은 집에 사는 시민이야. 방치하면 연기가 나고 결국 불이 붙어.</div>
       ${graduating.length>0?`<div class="city-graduating">🎓 이번 주 졸업 예정 ${graduating.length}명 — 다음 주 월요일에 졸업 앨범으로 넘어가</div>`:''}
-      <div class="city-stage" style="aspect-ratio:${vb.w} / ${vb.h};">
-        <svg viewBox="${vb.x} ${vb.y} ${vb.w} ${vb.h}" preserveAspectRatio="xMidYMid meet">
-          <g>${ground}</g>
-          <g>${bSvg}</g>
-        </svg>
-        <div class="city-actors">${actors}</div>
-      </div>
+      <div id="city3dSlot"></div>
       ${citizens.length===0?`<div class="empty">아직 시민이 없어 — 할 일 탭에서 수업 과제나 자율학습을 추가하면 도시에 나타나.</div>`:''}
     </div>`;
   }

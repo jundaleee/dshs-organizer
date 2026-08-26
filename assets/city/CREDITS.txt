@@ -1,0 +1,15 @@
+도시(City) 탭 3D 에셋
+
+city-kit.glb 은 아래 Kenney 에셋 팩에서 필요한 모델만 골라
+하나로 병합하고 양자화 압축한 파일입니다.
+
+  - City Kit Suburban (2.0)  — 건물, 나무, 화단
+  - Car Kit                  — 승용차, 소방차, 트랙터, 파손 부품
+  - Mini Characters          — 시민 캐릭터
+
+Created/distributed by Kenney (www.kenney.nl)
+License: Creative Commons Zero (CC0)
+http://creativecommons.org/publicdomain/zero/1.0/
+
+개인 · 교육 · 상업적 용도로 자유롭게 사용할 수 있으며 출처 표기는
+의무가 아니지만, 만든 사람을 존중하는 의미로 남겨둡니다.
