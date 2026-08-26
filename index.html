@@ -515,6 +515,14 @@
   .city-grad-body{flex:1;min-width:0;}
   .city-grad-tag{font-size:12px;color:var(--text-3);}
   .city-grad-text{font-size:13.5px;}
+  .city-grad-del{width:24px;height:24px;border-radius:50%;border:none;background:none;color:var(--text-3);
+    flex-shrink:0;display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity var(--dur) var(--ease);padding:0;}
+  .city-grad-row:hover .city-grad-del{opacity:1;}
+  .city-grad-del:hover{color:var(--red);}
+  .asg-editing{display:block;padding:12px 4px;}
+  .asg-edit-form{display:flex;flex-direction:column;gap:8px;}
+  .asg-edit-line{display:flex;gap:8px;flex-wrap:wrap;}
+  .asg-edit-line .add-input{flex:1;min-width:130px;}
 
   .fade-in{animation:fadeIn 220ms var(--ease);}
   @keyframes fadeIn{from{opacity:0;transform:translateY(3px);}to{opacity:1;transform:none;}}
@@ -766,7 +774,7 @@
     modal:null, completedTeacherKey:null,
     quickAddKey:null, quickAddCorner:'review',
     asgSortMode:'due',
-    cityView:'main', cityInspectTarget:null,
+    cityView:'main', cityInspectTarget:null, editingAssignment:null,
     data:buildSkeleton()
   };
   function getTD(key){ return state.data.teachers[key]; }
@@ -810,6 +818,7 @@
       eye:'<path d="M2 10s3-5.5 8-5.5S18 10 18 10s-3 5.5-8 5.5S2 10 2 10z"/><circle cx="10" cy="10" r="2.3"/>',
       eyeOff:'<path d="M2 10s3-5.5 8-5.5c1.5 0 2.8.4 4 1M18 10s-3 5.5-8 5.5c-1.5 0-2.8-.4-4-1"/><path d="M3.5 3.5l13 13"/>',
       city:'<path d="M3 17V9h4v8M8 17V5h4v12M13 17v-5h4v5"/><path d="M2 17h16"/>',
+      pencil:'<path d="M4 16v-2.5L13.5 4l2.5 2.5L6.5 16H4z"/><path d="M12 5.5 14.5 8"/>',
       car:'<path d="M3 13h14M4 13v-2.5L5.5 7h9L16 10.5V13"/><circle cx="6.5" cy="13.3" r="1.3"/><circle cx="13.5" cy="13.3" r="1.3"/>',
       house:'<path d="M3.5 9.5 10 4l6.5 5.5"/><path d="M5 8.7V16h10V8.7"/><rect x="8.3" y="11.5" width="3.4" height="3.4"/>',
       truck:'<path d="M2 13.5h8V7.5H5L2 10.5v3z"/><path d="M10 13.5h6v-4h-2.5l-1-2H10v6z"/><circle cx="5.5" cy="15" r="1.4"/><circle cx="14" cy="15" r="1.4"/>',
@@ -1212,6 +1221,22 @@
   const PRIORITY_LABELS = {high:'상', mid:'중', low:'하'};
   const PRIORITY_RANK = {high:0, mid:1, low:2};
   function assignmentRowHtml(a, showCheckbox){
+    // Classroom에서 긁어온 제목이 잘리거나 기한이 틀릴 때가 있어서 직접 고칠 수 있어야 함
+    if(state.editingAssignment === a.id){
+      return `<div class="asg-row asg-editing">
+        <div class="asg-edit-form">
+          <input type="text" class="add-input" id="asgEditTitle" value="${escapeHtml(a.title)}" placeholder="과제명">
+          <div class="asg-edit-line">
+            <input type="date" class="add-input" id="asgEditDate" value="${escapeHtml(a.dueDate||'')}">
+            <input type="text" class="add-input" id="asgEditTag" value="${escapeHtml(a.tag||'')}" placeholder="관련 과목">
+          </div>
+          <div class="asg-edit-line">
+            <button class="btn" data-action="saveAssignmentEdit" data-id="${a.id}">저장</button>
+            <button class="btn-outline" data-action="cancelAssignmentEdit">취소</button>
+          </div>
+        </div>
+      </div>`;
+    }
     const dueMid = new Date(a.dueDate+'T00:00:00').getTime();
     const dLeft = Math.round((dueMid-todayMid)/86400000);
     const ddLabel = dLeft>0?`D-${dLeft}`:(dLeft===0?'D-DAY':`D+${Math.abs(dLeft)} 지남`);
@@ -1228,6 +1253,7 @@
         ${priorityRow}
       </div>
       <div class="asg-due ${ddClass}">${ddLabel}</div>
+      <button class="asg-del" title="수정" data-action="editAssignment" data-id="${a.id}">${icon('pencil')}</button>
       <button class="asg-del" title="삭제" data-action="deleteAssignment" data-id="${a.id}">${icon('trash')}</button>
     </div>`;
   }
@@ -1557,7 +1583,13 @@
     if(!m) return v || '#8a8f9c';
     return (getComputedStyle(document.documentElement).getPropertyValue(m[1])||'').trim() || '#8a8f9c';
   }
-  function cityAssetUrl(p){ return new URL(p, document.baseURI).href; }
+  // GitHub Pages가 에셋을 오래 캐시해서, 번들·모델을 갱신하면 이 숫자를 올려야 새로 받는다
+  const CITY_ASSET_V = '2';
+  function cityAssetUrl(p){
+    const u = new URL(p, document.baseURI);
+    u.searchParams.set('v', CITY_ASSET_V);
+    return u.href;
+  }
   // 홈 화면 2단 구성(할 일 + 살아있는 도시)은 가로가 충분할 때만
   function isWideScreen(){ return window.innerWidth >= 1180; }
   function hexToRgbStr(hex){
@@ -2316,9 +2348,14 @@
         const tag = entry.kind==='teacher'
           ? `${entry.x.subjLabel} · ${entry.x.teacher}`
           : (entry.item.boxKey && BOX_KEYS.has(entry.item.boxKey) ? BOXES.find(b=>b.key===entry.item.boxKey).label : '미분류');
+        // 잘못 졸업 처리된 항목을 지울 수 있게 — 기존 영구삭제 액션을 그대로 재사용
+        const del = entry.kind==='teacher'
+          ? `data-action="deletePermanent" data-key="${entry.x.key}" data-id="${entry.item.id}"`
+          : `data-action="deletePersonalPermanent" data-id="${entry.item.id}"`;
         return `<div class="city-grad-row">
           <span class="city-grad-icon" style="--fc:${entry.color};">${icon(entry.vehicle==='car'?'car':'house')}</span>
           <div class="city-grad-body"><div class="city-grad-tag">${escapeHtml(tag)}</div><div class="city-grad-text">${escapeHtml(entry.item.text)}</div></div>
+          <button class="city-grad-del" title="졸업 취소하고 기록 지우기" ${del}>${icon('trash')}</button>
         </div>`;
       }).join('');
       return `<div class="section">
@@ -2697,6 +2734,18 @@
     const tag = document.getElementById('asgTag').value.trim();
     if(!title || !date){ return; }
     state.data.assignments.push({id:genId(), title, dueDate:date, tag, done:false, createdAt:Date.now(), source:'manual'});
+    persist(); render();
+  }
+  function saveAssignmentEdit(id){
+    const a = state.data.assignments.find(x=>x.id===id); if(!a) return;
+    const t = document.getElementById('asgEditTitle');
+    const d = document.getElementById('asgEditDate');
+    const g = document.getElementById('asgEditTag');
+    const title = t ? t.value.trim() : '';
+    const date = d ? d.value : '';
+    if(!title || !date) return;          // 제목·기한은 비울 수 없음
+    a.title = title; a.dueDate = date; a.tag = g ? g.value.trim() : a.tag;
+    state.editingAssignment = null;
     persist(); render();
   }
   function toggleAssignment(id){
@@ -3339,6 +3388,9 @@ ${text}`}]
         break;
       }
       case 'deleteAssignment': deleteAssignment(el.dataset.id); break;
+      case 'editAssignment': state.editingAssignment = el.dataset.id; render(); break;
+      case 'cancelAssignmentEdit': state.editingAssignment = null; render(); break;
+      case 'saveAssignmentEdit': saveAssignmentEdit(el.dataset.id); break;
       case 'setAssignmentPriority': {
         const a = state.data.assignments.find(x=>x.id===el.dataset.id);
         if(a){ a.priority = a.priority===el.dataset.val ? null : el.dataset.val; persist(); render(); }
