@@ -171,13 +171,26 @@
     .box-grid{grid-template-columns:1fr;}
   }
 
+  /* ---- 디데이 + 스톱워치를 가로로 절반씩 ---- */
+  .dday-sw-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:stretch;margin-bottom:20px;}
+  .dday-sw-row > *{min-width:0;}
+  .dday-sw-row .dday-card{margin-bottom:0;}
+  .dday-sw-row .pomo-card{margin-bottom:0;height:100%;}
+  @media (max-width:720px){ .dday-sw-row{grid-template-columns:1fr;} }
+
   /* ---- 디데이 ---- */
   .dday-card{
     background:var(--glass);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.7);backdrop-filter:blur(var(--blur)) saturate(1.7);
     border:1px solid var(--border);border-top-color:var(--border-hi);border-radius:var(--r-lg);
     padding:16px 20px;margin-bottom:20px;
   }
-  .dday-card-head{font-size:11px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;}
+  .dday-card-head-row{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px;}
+  .dday-card-head{font-size:11px;color:var(--text-3);font-weight:700;text-transform:uppercase;letter-spacing:.06em;}
+  .dday-add-toggle{display:flex;align-items:center;gap:3px;background:none;border:none;color:var(--text-3);font-size:11.5px;font-weight:600;cursor:pointer;padding:2px 2px;transition:color var(--dur) var(--ease);}
+  .dday-add-toggle:hover{color:var(--text);}
+  .dday-add-chevron{display:inline-flex;transition:transform var(--dur) var(--ease);}
+  .dday-add-toggle.open .dday-add-chevron{transform:rotate(90deg);}
+  .dday-empty{padding:6px 0;}
   .dday-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);}
   .dday-item:last-of-type{border-bottom:none;}
   .dday-item-name{flex:1;font-size:14px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
@@ -186,6 +199,8 @@
   .dday-eye,.dday-del{width:24px;height:24px;border-radius:50%;border:none;background:none;color:var(--text-3);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:color var(--dur) var(--ease);padding:0;}
   .dday-eye:hover{color:var(--text);}
   .dday-del:hover{color:var(--red);}
+  .dday-add-panel{overflow:hidden;max-height:0;transition:max-height 260ms var(--ease);}
+  .dday-add-panel.open{max-height:170px;}
   .dday-add-row{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;}
   .dday-add-input{flex:1;min-width:100px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:7px 13px;font-size:12.5px;}
   .dday-add-date{background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:7px 13px;font-size:12.5px;}
@@ -778,6 +793,7 @@
     quickAddKey:null, quickAddCorner:'review',
     asgSortMode:'due',
     cityView:'main', cityInspectTarget:null, editingAssignment:null, editingTask:null,
+    ddayAddOpen:false,
     data:buildSkeleton()
   };
   function getTD(key){ return state.data.teachers[key]; }
@@ -960,7 +976,7 @@
   }
 
   function boxTaskRowHtml(q){
-    const stale = q.days>=5;
+    const stale = q.days>=4;
     if(q.kind==='personal'){
       return `<div class="box-task-row ${stale?'stale':''}" draggable="true" data-drag-type="personal" data-drag-id="${q.item.id}">
         <button class="box-task-check" data-action="completePersonal" data-id="${q.item.id}">${icon('check')}</button>
@@ -1123,6 +1139,7 @@
     if(!name || !date) return;
     state.data.ddays = state.data.ddays || [];
     state.data.ddays.push({id:genId(), name, date, hidden:false, createdAt:Date.now()});
+    state.ddayAddOpen = false;
     persist(); render();
   }
   function deleteDday(id){
@@ -1134,26 +1151,40 @@
     d.hidden = !d.hidden;
     persist(); render();
   }
+  function toggleDdayAdd(){
+    state.ddayAddOpen = !state.ddayAddOpen;
+    render();
+  }
   function renderDdayCard(){
     const list = (state.data.ddays||[]).slice().sort((a,b)=>a.date.localeCompare(b.date));
-    const rowsHtml = list.map(d=>{
-      const dueMid = new Date(d.date+'T00:00:00').getTime();
-      const dLeft = Math.round((dueMid-todayMid)/86400000);
-      const label = dLeft>0?`D-${dLeft}`:(dLeft===0?'D-DAY':`D+${Math.abs(dLeft)}`);
-      return `<div class="dday-item">
-        <div class="dday-item-name">${escapeHtml(d.name)}</div>
-        <div class="dday-item-val ${d.hidden?'masked':''}">${d.hidden?'가려짐':label}</div>
-        <button class="dday-eye" title="${d.hidden?'다시 보기':'가리기'}" data-action="toggleDdayHidden" data-id="${d.id}">${icon(d.hidden?'eyeOff':'eye')}</button>
-        <button class="dday-del" title="삭제" data-action="deleteDday" data-id="${d.id}">${icon('trash')}</button>
-      </div>`;
-    }).join('');
+    const rowsHtml = list.length===0
+      ? `<div class="empty dday-empty">등록된 디데이가 없어.</div>`
+      : list.map(d=>{
+        const dueMid = new Date(d.date+'T00:00:00').getTime();
+        const dLeft = Math.round((dueMid-todayMid)/86400000);
+        const label = dLeft>0?`D-${dLeft}`:(dLeft===0?'D-DAY':`D+${Math.abs(dLeft)}`);
+        return `<div class="dday-item">
+          <div class="dday-item-name">${escapeHtml(d.name)}</div>
+          <div class="dday-item-val ${d.hidden?'masked':''}">${d.hidden?'가려짐':label}</div>
+          <button class="dday-eye" title="${d.hidden?'다시 보기':'가리기'}" data-action="toggleDdayHidden" data-id="${d.id}">${icon(d.hidden?'eyeOff':'eye')}</button>
+          <button class="dday-del" title="삭제" data-action="deleteDday" data-id="${d.id}">${icon('trash')}</button>
+        </div>`;
+      }).join('');
+    const open = state.ddayAddOpen;
     return `<div class="dday-card">
-      <div class="dday-card-head">디데이</div>
+      <div class="dday-card-head-row">
+        <div class="dday-card-head">디데이</div>
+        <button class="dday-add-toggle ${open?'open':''}" data-action="toggleDdayAdd">
+          디데이 추가 <span class="dday-add-chevron">${icon('chevron')}</span>
+        </button>
+      </div>
       ${rowsHtml}
-      <div class="dday-add-row">
-        <input type="text" class="dday-add-input" id="ddayName" placeholder="이름 (예: 중간고사)">
-        <input type="date" class="dday-add-date" id="ddayDate">
-        <button class="btn-outline" data-action="addDday">추가</button>
+      <div class="dday-add-panel ${open?'open':''}">
+        <div class="dday-add-row">
+          <input type="text" class="dday-add-input" id="ddayName" placeholder="이름 (예: 중간고사)">
+          <input type="date" class="dday-add-date" id="ddayDate">
+          <button class="btn-outline" data-action="addDday">추가</button>
+        </div>
       </div>
     </div>`;
   }
@@ -1194,9 +1225,10 @@
       <div class="home-date">${todayDateStr}</div>
       <h1 class="home-greeting">${greetingWord()}${name?', '+escapeHtml(name):''}</h1>
 
-      ${renderDdayCard()}
-
-      ${renderStopwatchCard()}
+      <div class="dday-sw-row">
+        ${renderDdayCard()}
+        ${renderStopwatchCard()}
+      </div>
 
       <div class="box-grid">${boxHtml}</div>
 
@@ -1305,7 +1337,7 @@
     free.sort((a,b)=>b.item.createdAt-a.item.createdAt);
 
     const reviewHtml = review.length===0 ? `<div class="empty">수업 과제가 없어.</div>` : review.map(q=>{
-      const stale = q.u.days>=5;
+      const stale = q.u.days>=4;
       if(isEditingTask('teacher', q.item.id, q.x.key, 'review')){
         return taskEditRowHtml({text:q.item.text,
           saveAttrs:`data-action="saveTaskEdit" data-kind="teacher" data-key="${q.x.key}" data-corner="review" data-id="${q.item.id}"`});
@@ -1326,7 +1358,7 @@
     function freeRowHtml(entry){
       const it = entry.item;
       const days = itemStaleDays(it);
-      const stale = days>=5;
+      const stale = days>=4;
       if(entry.kind==='teacher' && isEditingTask('teacher', it.id, entry.x.key, 'self')){
         return taskEditRowHtml({text:it.text,
           saveAttrs:`data-action="saveTaskEdit" data-kind="teacher" data-key="${entry.x.key}" data-corner="self" data-id="${it.id}"`});
@@ -1526,16 +1558,19 @@
   // 차(수업 과제): 3단계 — 막힘/정체 컨셉은 빼고 정상→연기→고장으로 단순화
   function carDecayStage(days){
     if(days>=12) return 2; // 고장
-    if(days>=5) return 1;  // 연기
+    if(days>=4) return 1;  // 연기
     return 0;               // 정상 주행
   }
   // 집(자율학습): 4단계 — 평온→연기→화재→붕괴
   function houseDecayStage(days){
     if(days>=15) return 3; // 붕괴
     if(days>=10) return 2; // 화재
-    if(days>=5) return 1;  // 연기
+    if(days>=4) return 1;  // 연기
     return 0;               // 평온
   }
+  // 연기 단계(1단계)에 들어선 뒤로도 4~7일째에 걸쳐 연기가 점점 짙어지게 — 하루 만에
+  // 뚝 나타났다 그대로 머무는 대신 방치가 길어질수록 눈에 띄게 다급해 보인다
+  function smokeLevel(days){ return Math.max(0, Math.min(3, days-4)); }
   function collectCityCitizens(){
     const citizens = [];
     TEACHER_LIST.forEach(x=>{
@@ -1543,16 +1578,16 @@
       const color = citySubjectColor({kind:'teacher', x});
       td.review.forEach(item=>{
         const days = itemStaleDays(item);
-        citizens.push({vehicle:'car', kind:'teacher', corner:'review', x, item, days, stage:carDecayStage(days), color});
+        citizens.push({vehicle:'car', kind:'teacher', corner:'review', x, item, days, stage:carDecayStage(days), smoke:smokeLevel(days), color});
       });
       td.self.forEach(item=>{
         const days = itemStaleDays(item);
-        citizens.push({vehicle:'house', kind:'teacher', corner:'self', x, item, days, stage:houseDecayStage(days), color});
+        citizens.push({vehicle:'house', kind:'teacher', corner:'self', x, item, days, stage:houseDecayStage(days), smoke:smokeLevel(days), color});
       });
     });
     (state.data.personal?.tasks||[]).forEach(item=>{
       const days = itemStaleDays(item);
-      citizens.push({vehicle:'house', kind:'personal', item, days, stage:houseDecayStage(days), color:citySubjectColor({kind:'personal', item})});
+      citizens.push({vehicle:'house', kind:'personal', item, days, stage:houseDecayStage(days), smoke:smokeLevel(days), color:citySubjectColor({kind:'personal', item})});
     });
     return citizens;
   }
@@ -1641,8 +1676,9 @@
   }
   function citySignature(){
     const cz = collectCityCitizens();
-    // 망각의 시민도 도시 구성의 일부 — 빼먹으면 복습 과제를 새로 뽑아도 씬이 안 바뀐다
-    return cz.map(c=>c.item.id+':'+c.stage+':'+c.vehicle).sort().join('|')
+    // 망각의 시민도 도시 구성의 일부 — 빼먹으면 복습 과제를 새로 뽑아도 씬이 안 바뀐다.
+    // smoke는 같은 단계 안에서도 날마다 짙어지는 연기 세기라 signature에 넣어야 갱신됨
+    return cz.map(c=>c.item.id+':'+c.stage+':'+c.smoke+':'+c.vehicle).sort().join('|')
       + '#' + pendingRecall().map(t=>t.id).sort().join(',');
   }
   function setCityStatus(msg){
@@ -1823,7 +1859,9 @@
       const base = axis==='h' ? size.y
                  : axis==='m' ? Math.max(size.x, size.y, size.z)
                  : Math.max(size.x, size.z);
-      o.scale.setScalar(target / (base || 1));
+      // multiplyScalar가 맞다 — quantize()로 합친 모델 중 상당수가 이미 1이 아닌
+      // 스케일을 갖고 있어서 setScalar로 덮으면 그 보정값이 날아가 크기가 뒤틀린다
+      o.scale.multiplyScalar(target / (base || 1));
       box = new T.Box3().setFromObject(o);
       const c = new T.Vector3(); box.getCenter(c);
       o.position.x -= c.x; o.position.z -= c.z; o.position.y -= box.min.y;
@@ -1838,7 +1876,7 @@
       const size = new T.Vector3(); box.getSize(size);
       const byW = targetW / (Math.max(size.x, size.z) || 1);
       const byH = maxH / (size.y || 1);
-      o.scale.setScalar(Math.min(byW, byH));
+      o.scale.multiplyScalar(Math.min(byW, byH));
       box = new T.Box3().setFromObject(o);
       const c = new T.Vector3(); box.getCenter(c);
       o.position.x -= c.x; o.position.z -= c.z; o.position.y -= box.min.y;
@@ -1926,7 +1964,7 @@
       } else {
         const b = spawn(CITY_BUILDINGS[hashStr(cz.item.id)%CITY_BUILDINGS.length]);
         if(b){ fitBuilding(b, CITY_TILE*0.78, CITY_TILE*0.72); recolor(b, hex, 'tint', 0.34); holder.add(b); }
-        if(cz.stage===1) addHazard(holder, 'smoke', 2.6, hex);
+        if(cz.stage===1) addHazard(holder, 'smoke', 2.6, hex, 0.4+cz.smoke*0.2);
         if(cz.stage===2){ addHazard(holder, 'fire', 2.2, hex); addHazard(holder, 'smoke', 3.4, hex); }
       }
       addGlow(holder, hex, CITY_TILE*1.5);
@@ -1996,7 +2034,7 @@
         addBeacon(holder, hex, 2.2);
       } else {
         const beacon = addBeacon(holder, hex, 2.2);
-        const hazard = cz.stage===1 ? addHazard(holder, 'smoke', 1.4, hex) : null;
+        const hazard = cz.stage===1 ? addHazard(holder, 'smoke', 1.4, hex, 0.4+cz.smoke*0.2) : null;
         // 차체·링·글로우 재질을 투명 처리 가능하게 만들어서 도로 양 끝에서 페이드시킨다
         const fadeMats = [];
         function collect(n){
@@ -2006,8 +2044,8 @@
         }
         [o, ring, glow].forEach(node=>{ if(node) node.traverse(collect); });
         holder.position.copy(a);
-        // 도로 폭 1.6칸만큼을 도로 양 끝 '터널 구간'으로 삼는다 — 도시가 커도 항상 같은 물리적 길이
-        const fadeFrac = Math.min(0.24, (CITY_TILE*1.6)/span);
+        // 도로 폭 0.6칸만큼을 도로 양 끝 '터널 구간'으로 삼는다 — 도시가 커도 항상 같은 물리적 길이
+        const fadeFrac = Math.min(0.1, (CITY_TILE*0.6)/span);
         CITY3D.cars.push({obj:holder, a, b, p:(hs%100)/100, fadeMats, fadeFrac, hazard, beacon,
                           speed:(cz.stage===1 ? 0.008 : 0.014) + ((hs>>4)%12)/4000});
       }
@@ -2044,7 +2082,9 @@
     });
 
     // 연기는 그 항목의 과목 테마색으로 — 어느 과목을 방치하고 있는지 멀리서도 보이게
-    function addHazard(parent, type, baseY, hex){
+    function addHazard(parent, type, baseY, hex, intensity){
+      // intensity(0~1) — 연기 단계에 갓 들어선 날은 옅게, 며칠 지날수록 짙게(점층적으로)
+      const iv = intensity==null ? 1 : Math.max(0.15, Math.min(1, intensity));
       const isFire = type==='fire';
       const rgb = isFire ? '255,120,25' : hexToRgbStr(hex);
       const tex = makePuffTexture(rgb);
@@ -2052,7 +2092,7 @@
       group.position.y = baseY;
       parent.add(group);
       const puffs = [];
-      const count = isFire ? 14 : 22;
+      const count = Math.max(4, Math.round((isFire ? 14 : 22) * iv));
       for(let i=0;i<count;i++){
         const m = new T.SpriteMaterial({map:tex, transparent:true, depthWrite:false,
           blending: isFire ? T.AdditiveBlending : T.NormalBlending, opacity:0});
@@ -2063,7 +2103,8 @@
         group.add(s); puffs.push(s);
       }
       const entry = {puffs, rise:isFire?2.0:5.2, speed:isFire?0.8:0.24,
-                     size:isFire?1.3:2.6, alpha:isFire?0.5:0.34, drift:isFire?0.15:1.1, fadeMul:1};
+                     size:(isFire?1.3:2.6)*(0.55+0.45*iv), alpha:(isFire?0.5:0.34)*iv,
+                     drift:isFire?0.15:1.1, fadeMul:1};
       CITY3D.hazards.push(entry);
       return entry;
     }
@@ -3512,6 +3553,7 @@ ${text}`}]
       case 'addDday': addDday(); break;
       case 'deleteDday': deleteDday(el.dataset.id); break;
       case 'toggleDdayHidden': toggleDdayHidden(el.dataset.id); break;
+      case 'toggleDdayAdd': toggleDdayAdd(); break;
       case 'toggleAssignment': {
         const id = el.dataset.id;
         const a = state.data.assignments.find(x=>x.id===id);
