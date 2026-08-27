@@ -2808,9 +2808,39 @@
     try{ const v = JSON.parse(s); if(Array.isArray(v)) return v; }catch(e){}
     const i = s.indexOf('['), j = s.lastIndexOf(']');
     if(i >= 0 && j > i){
-      try{ const v = JSON.parse(s.slice(i, j+1)); if(Array.isArray(v)) return v; }catch(e){}
+      const body = s.slice(i, j+1);
+      try{ const v = JSON.parse(body); if(Array.isArray(v)) return v; }catch(e){}
+      // 배열 전체가 깨져도(항목 하나에 이스케이프 안 된 따옴표가 섞이는 등) 나머지 항목까지
+      // 통째로 버리지 않게, 최상위 {...} 객체 단위로 하나씩 따로 파싱을 시도해서 살릴 수 있는 만큼 살린다.
+      const recovered = recoverJsonObjects(s.slice(i+1, j));
+      if(recovered.length > 0) return recovered;
     }
     return null;
+  }
+  // 문자열 리터럴 안의 중괄호/따옴표는 건너뛰면서 최상위 { ... } 객체의 경계만 찾아
+  // 하나씩 개별적으로 JSON.parse를 시도한다. 깨진 객체 하나는 조용히 건너뛴다.
+  function recoverJsonObjects(s){
+    const out = [];
+    let depth = 0, start = -1, inStr = false, esc = false;
+    for(let k=0; k<s.length; k++){
+      const c = s[k];
+      if(inStr){
+        if(esc) esc = false;
+        else if(c==='\\') esc = true;
+        else if(c==='"') inStr = false;
+        continue;
+      }
+      if(c==='"'){ inStr = true; continue; }
+      if(c==='{'){ if(depth===0) start = k; depth++; }
+      else if(c==='}'){
+        depth--;
+        if(depth===0 && start>=0){
+          try{ out.push(JSON.parse(s.slice(start, k+1))); }catch(e){}
+          start = -1;
+        }
+      }
+    }
+    return out;
   }
 
   /* ============ 액션: 코너 항목 ============ */
@@ -3181,7 +3211,8 @@ ${text}`}]
 
 각 과제에 태그를 하나 붙인다: RECALL, APPLICATION, TRANSFER, ERROR_CORRECTION, CONNECTION
 
-아래 JSON 배열로만 답한다 (설명·코드블록 금지, 만들 게 없으면 []):
+아래 JSON 배열로만 답한다 (설명·코드블록 금지, 만들 게 없으면 []).
+text 안에는 큰따옴표(")를 절대 쓰지 마라 — JSON이 깨진다. 강조하고 싶으면 따옴표 대신 그냥 풀어서 써라:
 [{"subject":"과목명","boxKey":"박스키","text":"...하기","minutes":4,"tag":"RECALL"}]
 
 boxKey 는 다음 중 하나를 정확히 쓴다: ${boxList}
