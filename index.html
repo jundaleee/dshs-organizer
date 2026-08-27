@@ -2806,16 +2806,18 @@
     if(!raw) return null;
     const s = raw.trim().replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/, '').trim();
     try{ const v = JSON.parse(s); if(Array.isArray(v)) return v; }catch(e){}
-    const i = s.indexOf('['), j = s.lastIndexOf(']');
-    if(i >= 0 && j > i){
-      const body = s.slice(i, j+1);
-      try{ const v = JSON.parse(body); if(Array.isArray(v)) return v; }catch(e){}
-      // 배열 전체가 깨져도(항목 하나에 이스케이프 안 된 따옴표가 섞이는 등) 나머지 항목까지
-      // 통째로 버리지 않게, 최상위 {...} 객체 단위로 하나씩 따로 파싱을 시도해서 살릴 수 있는 만큼 살린다.
-      const recovered = recoverJsonObjects(s.slice(i+1, j));
-      if(recovered.length > 0) return recovered;
+    const i = s.indexOf('[');
+    if(i < 0) return null;
+    const j = s.lastIndexOf(']');
+    if(j > i){
+      try{ const v = JSON.parse(s.slice(i, j+1)); if(Array.isArray(v)) return v; }catch(e){}
     }
-    return null;
+    // 여기까지 오면 둘 중 하나: 항목 하나가 깨졌거나(이스케이프 안 된 따옴표 등),
+    // max_tokens에 걸려 응답이 배열을 다 닫지 못하고 중간에 끊겼거나(이 경우 닫는 ]가
+    // 아예 없어서 j<=i). 어느 쪽이든 최상위 {...} 객체 단위로 하나씩 파싱을 시도해서
+    // 살릴 수 있는 만큼 살린다 — 끊긴 지점 이후는 자연히 못 살리고 버려진다.
+    const recovered = recoverJsonObjects(s.slice(i+1, j > i ? j : s.length));
+    return recovered.length > 0 ? recovered : null;
   }
   // 문자열 리터럴 안의 중괄호/따옴표는 건너뛰면서 최상위 { ... } 객체의 경계만 찾아
   // 하나씩 개별적으로 JSON.parse를 시도한다. 깨진 객체 하나는 조용히 건너뛴다.
@@ -3190,7 +3192,7 @@ ${text}`}]
         },
         body: JSON.stringify({
           model:'claude-sonnet-5',
-          max_tokens:2000,
+          max_tokens:4000,
           messages:[{role:'user', content:
 `너는 영재학교 학생의 복습 과제를 자동 생성하는 학습 최적화 Agent다.
 목표는 과제를 많이 주는 게 아니라, 완료된 과제 이력을 보고 가장 적은 시간으로
