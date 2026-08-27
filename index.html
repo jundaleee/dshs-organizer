@@ -3179,6 +3179,10 @@ ${text}`}]
 
     const histText = history.map(h=>`- [${h.subject}/${h.kind}] ${h.text} (완료 ${daysAgo(h.at)}일 전)`).join('\n');
     const openText = pendingRecall().map(t=>`- [${t.subject}] ${t.text}`).join('\n') || '(없음)';
+    // 끝낸 복습 과제도 흔적 없이 사라지면 안 됨 — 이게 있어야 같은 내용을 회상→적용→전이로
+    // 실제로 발전시킬 수 있고, 이미 확인된 걸 또 만드는 중복도 피할 수 있음
+    const doneRecall = recallList().filter(t=>t.done).sort((a,b)=>(b.completedAt||0)-(a.completedAt||0)).slice(0,20);
+    const doneRecallText = doneRecall.map(t=>`- [${t.subject}/${RECALL_TAGS[t.tag]||'회상'}] ${t.text} (완료 ${daysAgo(t.completedAt)}일 전)`).join('\n') || '(없음)';
     const boxList = BOXES.map(b=>`${b.key} = ${b.label}`).join(', ');
 
     try{
@@ -3207,7 +3211,11 @@ ${text}`}]
 - 완료 자체보다 "시간이 지난 뒤에도 인출되는가"를 중요하게 본다.
   마지막 수행 이후 경과일이 길수록, 혼동·실패 가능성이 클수록 우선한다.
 - 같은 내용을 다시 다룰 땐 형태를 바꾼다: 회상 → 적용 → 전이 방향으로 발전시킨다.
-- 이미 열려 있는 복습 과제와 겹치는 건 만들지 않는다.
+  아래 "이미 완료한 복습 과제" 목록을 보고 그 항목이 어느 단계까지 왔는지 확인한 다음,
+  다음 단계로 넘어가는 과제를 만들어라 (예: RECALL을 이미 끝냈으면 APPLICATION을 만든다).
+- 이미 열려 있는 복습 과제와 겹치는 건 만들지 않는다. 이미 완료한 복습 과제와 완전히
+  똑같은 내용·같은 단계를 그대로 다시 만드는 것도 금지 — 다음 단계로 발전시키거나,
+  그 주제가 이미 충분히 다져졌다면 다른 걸 고른다.
 - 복습이 필요 없다고 판단되면 만들지 않는 것도 정답이다. 억지로 개수를 채우지 마라.
 - 학생은 시간이 매우 부족하다. 최대 5개까지, 각각 3~10분 분량으로.
 
@@ -3223,7 +3231,10 @@ boxKey 는 다음 중 하나를 정확히 쓴다: ${boxList}
 ${histText}
 
 이미 만들어져 아직 안 끝낸 복습 과제 (중복 금지):
-${openText}`}]
+${openText}
+
+이미 완료한 복습 과제 (최신순, 단계 발전의 기준):
+${doneRecallText}`}]
         })
       });
       if(!res.ok){
