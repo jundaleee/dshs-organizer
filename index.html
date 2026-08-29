@@ -793,7 +793,7 @@
     quickAddKey:null, quickAddCorner:'review',
     asgSortMode:'due',
     cityView:'main', cityInspectTarget:null, editingAssignment:null, editingTask:null,
-    ddayAddOpen:false,
+    ddayAddOpen:false, feedbackTargetId:null,
     data:buildSkeleton()
   };
   function getTD(key){ return state.data.teachers[key]; }
@@ -897,6 +897,7 @@
     else if(state.modal==='completedPersonal') document.body.insertAdjacentHTML('beforeend', renderCompletedPersonalModal());
     else if(state.modal==='quickAdd') document.body.insertAdjacentHTML('beforeend', renderQuickAddModal());
     else if(state.modal==='cityInspect') document.body.insertAdjacentHTML('beforeend', renderCityInspectModal());
+    else if(state.modal==='completionFeedback') document.body.insertAdjacentHTML('beforeend', renderCompletionFeedbackModal());
 
     const apiKeyInput = document.getElementById('apiKeyInput');
     if(apiKeyInput) apiKeyInput.value = getApiKey();
@@ -2879,7 +2880,7 @@
     const idx = td[corner].findIndex(i=>i.id===id); if(idx<0) return;
     const [it] = td[corner].splice(idx,1);
     td.completed.push({...it, corner, completedAt:Date.now()});
-    persist(); render();
+    persist(); openCompletionFeedback(id);
   }
   function deleteItem(key, corner, id){
     const td = getTD(key);
@@ -3079,7 +3080,7 @@ ${text}`}]
     const idx = state.data.personal.tasks.findIndex(i=>i.id===id); if(idx<0) return;
     const [it] = state.data.personal.tasks.splice(idx,1);
     state.data.personal.completed.push({...it, completedAt:Date.now()});
-    persist(); render();
+    persist(); openCompletionFeedback(id);
   }
   function deletePersonalTask(id){
     state.data.personal.tasks = state.data.personal.tasks.filter(i=>i.id!==id);
@@ -3131,6 +3132,68 @@ ${text}`}]
                        ERROR_CORRECTION:'오답 교정', CONNECTION:'개념 연결'};
   function recallList(){ return (state.data.recall && state.data.recall.tasks) || []; }
   function pendingRecall(){ return recallList().filter(t=>!t.done); }
+
+  /* ============ 완료 피드백 — 끝낸 것마다 얼마나 잘 기억났는지/어떻게 끝냈는지 물어봄 ============
+     체크만으로는 "제대로 끝냈는지 대충 끝냈는지"가 구분이 안 돼서, 완료 직후 짧은 대화창을
+     띄워 자기 평가를 받는다. 이 값들이 다음 망각의 시민 생성에 그대로 들어간다. */
+  const RECALL_RATINGS = {AGAIN:'거의 기억 안 남', HARD:'가물가물했음', GOOD:'잘 기억남', EASY:'완벽했음'};
+  // 완료 항목은 선생님별/개인/망각의 시민, 세 군데 중 하나에 흩어져 있어서 id로 다 뒤져서 찾는다.
+  // 반환하는 건 배열 안의 실제 객체 참조라, 여기 속성을 바로 고쳐도 state에 반영됨(persist만 해주면 됨).
+  function findAnyCompletedItem(id){
+    for(const x of TEACHER_LIST){
+      const it = (getTD(x.key).completed||[]).find(i=>i.id===id);
+      if(it) return it;
+    }
+    const p = (state.data.personal?.completed||[]).find(i=>i.id===id);
+    if(p) return p;
+    return recallList().find(i=>i.id===id) || null;
+  }
+  // 완료 직후 자동으로 열림 — completeItem/completePersonalTask/completeRecall 끝에서 호출됨
+  function openCompletionFeedback(id){
+    state.modal = 'completionFeedback';
+    state.feedbackTargetId = id;
+    render();
+  }
+  function submitCompletionFeedback(rating){
+    const it = findAnyCompletedItem(state.feedbackTargetId);
+    if(it){
+      const noteEl = document.getElementById('feedbackNoteInput');
+      it.recallRating = rating;
+      const note = noteEl ? noteEl.value.trim() : '';
+      if(note) it.feedbackNote = note;
+      it.feedbackAt = Date.now();
+      persist();
+    }
+    state.modal = null;
+    state.feedbackTargetId = null;
+    render();
+  }
+  function skipCompletionFeedback(){
+    state.modal = null;
+    state.feedbackTargetId = null;
+    render();
+  }
+  function renderCompletionFeedbackModal(){
+    const it = findAnyCompletedItem(state.feedbackTargetId);
+    if(!it) return '';
+    return `<div class="modal-overlay" data-action="closeModal">
+      <div class="modal" style="max-width:380px;">
+        <div class="modal-head"><h2>학습 후기</h2><button class="modal-close" data-action="skipCompletionFeedback">${icon('close')}</button></div>
+        <div class="modal-body">
+          <div class="city-inspect-text" style="margin-bottom:4px;">${escapeHtml(it.text)}</div>
+          <div class="city-inspect-meta" style="margin-bottom:14px;">방금 끝낸 거, 얼마나 확실하게 알고 있었어?</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
+            <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="AGAIN">거의 기억 안 남</button>
+            <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="HARD">가물가물했음</button>
+            <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="GOOD">잘 기억남</button>
+            <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="EASY">완벽했음</button>
+          </div>
+          <textarea class="ai-textarea" id="feedbackNoteInput" placeholder="더 남기고 싶은 말 있으면 (예: 대충 훑기만 함, 이 부분 계속 헷갈림) — 선택"></textarea>
+          <button class="section-link" data-action="skipCompletionFeedback">그냥 넘어가기</button>
+        </div>
+      </div>
+    </div>`;
+  }
   function recallColor(t){
     const box = (t.boxKey && BOX_KEYS.has(t.boxKey)) ? BOXES.find(b=>b.key===t.boxKey) : null;
     return box ? box.qc : 'var(--text-3)';
@@ -3144,16 +3207,24 @@ ${text}`}]
         if(it.corner!=='review' && it.corner!=='self') return;
         rows.push({subject:x.subjLabel, boxKey:box?box.key:null,
                    kind: it.corner==='review' ? '수업 과제' : '자율학습',
-                   text:it.text, at:it.completedAt});
+                   text:it.text, at:it.completedAt, rating:it.recallRating, note:it.feedbackNote});
       });
     });
     (state.data.personal?.completed||[]).forEach(it=>{
       const box = BOX_KEYS.has(it.boxKey) ? BOXES.find(b=>b.key===it.boxKey) : null;
       rows.push({subject: box?box.label:'미분류', boxKey: box?box.key:null,
-                 kind:'자율학습', text:it.text, at:it.completedAt});
+                 kind:'자율학습', text:it.text, at:it.completedAt, rating:it.recallRating, note:it.feedbackNote});
     });
     rows.sort((a,b)=>b.at-a.at);
     return rows.slice(0, limit||40);
+  }
+  // 완료 이력 한 줄을 프롬프트용 텍스트로 — 자기 평가(얼마나 기억났는지)와 남긴 메모가
+  // 있으면 같이 붙여서, "완료했다"는 사실보다 "얼마나 확실하게 아는가"를 우선하게 함
+  function historyLineText(h){
+    const bits = [`- [${h.subject}/${h.kind}] ${h.text} (완료 ${daysAgo(h.at)}일 전)`];
+    if(h.rating) bits.push(`자기평가: ${RECALL_RATINGS[h.rating]||h.rating}`);
+    if(h.note) bits.push(`메모: ${h.note}`);
+    return bits.join(' — ');
   }
   function daysAgo(ms){ return Math.max(0, Math.floor((Date.now()-ms)/86400000)); }
 
@@ -3177,12 +3248,15 @@ ${text}`}]
     recallStatus = '완료 이력을 보고 복습 과제를 고르는 중...';
     render();
 
-    const histText = history.map(h=>`- [${h.subject}/${h.kind}] ${h.text} (완료 ${daysAgo(h.at)}일 전)`).join('\n');
+    const histText = history.map(historyLineText).join('\n');
     const openText = pendingRecall().map(t=>`- [${t.subject}] ${t.text}`).join('\n') || '(없음)';
     // 끝낸 복습 과제도 흔적 없이 사라지면 안 됨 — 이게 있어야 같은 내용을 회상→적용→전이로
     // 실제로 발전시킬 수 있고, 이미 확인된 걸 또 만드는 중복도 피할 수 있음
     const doneRecall = recallList().filter(t=>t.done).sort((a,b)=>(b.completedAt||0)-(a.completedAt||0)).slice(0,20);
-    const doneRecallText = doneRecall.map(t=>`- [${t.subject}/${RECALL_TAGS[t.tag]||'회상'}] ${t.text} (완료 ${daysAgo(t.completedAt)}일 전)`).join('\n') || '(없음)';
+    const doneRecallText = doneRecall.map(t=>historyLineText({
+      subject:t.subject, kind:RECALL_TAGS[t.tag]||'회상', text:t.text, at:t.completedAt,
+      rating:t.recallRating, note:t.feedbackNote
+    })).join('\n') || '(없음)';
     const boxList = BOXES.map(b=>`${b.key} = ${b.label}`).join(', ');
 
     try{
@@ -3210,6 +3284,10 @@ ${text}`}]
 - 최소 충분량으로 만든다. "대표 문제 10개" 대신 "대표 문제 2개를 풀이 전략부터 세워 해결하기".
 - 완료 자체보다 "시간이 지난 뒤에도 인출되는가"를 중요하게 본다.
   마지막 수행 이후 경과일이 길수록, 혼동·실패 가능성이 클수록 우선한다.
+- 각 완료 이력에 "자기평가"가 붙어 있으면 경과일보다 그걸 더 믿는다. "거의 기억 안 남"
+  이나 "가물가물했음"으로 끝낸 건 실제 경과일과 무관하게 우선순위를 높게 잡는다.
+  "완벽했음"으로 끝낸 건 얼마 안 지났어도 급하지 않다고 봐도 된다. "메모"가 있으면
+  거기 적힌 대로(예: 대충 훑기만 함, 특정 부분이 헷갈림) 그 약점을 정확히 겨냥해서 만든다.
 - 같은 내용을 다시 다룰 땐 형태를 바꾼다: 회상 → 적용 → 전이 방향으로 발전시킨다.
   아래 "이미 완료한 복습 과제" 목록을 보고 그 항목이 어느 단계까지 왔는지 확인한 다음,
   다음 단계로 넘어가는 과제를 만들어라 (예: RECALL을 이미 끝냈으면 APPLICATION을 만든다).
@@ -3279,7 +3357,7 @@ ${doneRecallText}`}]
   function completeRecall(id){
     const t = recallList().find(x=>x.id===id); if(!t) return;
     t.done = true; t.completedAt = Date.now();
-    persist(); render();
+    persist(); openCompletionFeedback(id);
   }
   function deleteRecall(id){
     if(!state.data.recall) return;
@@ -3582,6 +3660,8 @@ ${text}`}]
       case 'openCityInspect': openCityInspect(el.dataset.kind, el.dataset.key, el.dataset.corner, el.dataset.id); break;
       case 'completeRecall': state.modal=null; state.cityInspectTarget=null; completeRecall(el.dataset.id); break;
       case 'deleteRecall': state.modal=null; state.cityInspectTarget=null; deleteRecall(el.dataset.id); break;
+      case 'submitCompletionFeedback': submitCompletionFeedback(el.dataset.rating); break;
+      case 'skipCompletionFeedback': skipCompletionFeedback(); break;
       case 'cityCompleteFromInspect': cityCompleteFromInspect(); break;
       case 'goCityArchive': state.cityView='archive'; render(); break;
       case 'goCityMain': state.cityView='main'; render(); break;
