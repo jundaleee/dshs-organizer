@@ -482,8 +482,15 @@
     -webkit-backdrop-filter:blur(var(--blur)) saturate(1.4);backdrop-filter:blur(var(--blur)) saturate(1.4);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 18px 44px rgba(0,0,0,.45);}
   .city3d-canvas{width:100%;height:100%;}
-  /* 도시가 들어가는 자리 — 스크롤 체인의 도시 섹션에서 화면 가득 */
+  /* 도시가 들어가는 자리 — 도시 섹션에선 화면 가득, 홈 미리보기에선 뷰포트 높이만큼 */
   .city-slot-full{height:calc(100vh - 230px);min-height:420px;}
+  .city-slot-home{height:calc(100vh - 132px);min-height:420px;}
+  .home-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:26px;align-items:start;}
+  .home-city{position:sticky;top:24px;}
+  .home-city-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    margin-bottom:10px;font-size:13px;font-weight:600;color:var(--text-2);}
+  @media(max-width:1179px){ .home-split{display:block;} .home-city{display:none;} }
+  .scroll-sec.sec-home-wide{max-width:1560px;}
   .city3d-canvas canvas{display:block;width:100%;height:100%;touch-action:none;}
   .city3d-tip{position:absolute;z-index:4;max-width:250px;pointer-events:none;
     background:rgba(20,22,28,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
@@ -879,7 +886,10 @@
     lastRenderedView = state.view;
     let html = renderTopbarMini();
     if(!storageOK) html += `<div class="empty" style="color:var(--danger);">이 브라우저에서는 로컬 저장이 안 돼(시크릿 모드이거나 저장 공간이 꽉 찼을 수 있어). 작업 후 꼭 설정에서 내보내기로 백업해줘.</div>`;
-    html += SCROLL_CHAIN.map(v=>`<section class="scroll-sec${v==='city'?' sec-city':''}" id="sec-${v}">${renderChainSection(v)}</section>`).join('');
+    html += SCROLL_CHAIN.map(v=>{
+      const wideCls = v==='city' ? ' sec-city' : (v==='home' && isWideScreen() ? ' sec-home-wide' : '');
+      return `<section class="scroll-sec${wideCls}" id="sec-${v}">${renderChainSection(v)}</section>`;
+    }).join('');
     app.classList.toggle('chain-mode', chainModeActive);
     app.innerHTML = html;
     // 3D 도시 캔버스는 #app 바깥에 살아있으므로 갈아엎은 뒤 제자리에 다시 끼워 넣는다
@@ -938,12 +948,15 @@
       if(el.getBoundingClientRect().top <= SCROLL_TRIGGER_LINE) best = v; else break;
     }
     if(!best) best = SCROLL_CHAIN[0];
-    if(best==='city') startCityLoop(); else stopCityLoop();
     if(best !== state.activeSection){
+      const prev = state.activeSection;
       state.activeSection = best;
       state.view = best;
       updateNavActiveClasses();
+      // 홈 미리보기 ↔ 도시 섹션 사이를 넘나들 때만 캔버스를 다시 옮겨 끼운다(둘 다 슬롯을 가짐)
+      if(best==='home' || best==='city' || prev==='home' || prev==='city') mountCity3D();
     }
+    if(best==='city' || best==='home') startCityLoop(); else stopCityLoop();
   }
   function updateNavActiveClasses(){
     const activeKey = chainModeActive ? state.activeSection : state.view;
@@ -1332,9 +1345,21 @@
         ${asgHtml}
       </div>`;
 
-    // 홈도 스크롤 체인의 일부라, 조금만 내리면 바로 도시로 이어져 — 여기 따로
-    // 미리보기를 둘 필요가 없어짐(예전엔 화면 우측에 작은 3D 미리보기가 있었음)
-    return `<div class="fade-in">${left}</div>`;
+    // 데스크탑에서만 오른쪽에 살아있는 도시 미리보기를 띄운다 (좁은 화면에선 3D를 아예 안 받음).
+    // 도시 섹션의 #city3dSlot과는 별도 id(#city3dSlotHome)를 써야 함 — 홈과 도시가 이제
+    // 같은 스크롤 체인 안에 항상 같이 떠 있어서, id가 같으면 getElementById가 항상 앞쪽(홈)
+    // 것만 찾아버려 도시 섹션 쪽이 영영 비어버리는 버그가 났었음(mountCityHost 참고).
+    if(!isWideScreen()) return `<div class="fade-in">${left}</div>`;
+    return `<div class="fade-in home-split">
+      <div class="home-main">${left}</div>
+      <aside class="home-city">
+        <div class="home-city-head">
+          <span>도시</span>
+          <button class="section-link" data-action="goView" data-view="city">크게 보기</button>
+        </div>
+        <div id="city3dSlotHome" class="city-slot-home"></div>
+      </aside>
+    </div>`;
   }
 
   const PRIORITY_LABELS = {high:'상', mid:'중', low:'하'};
@@ -1964,6 +1989,8 @@ ${prevSummary}`}]
     u.searchParams.set('v', CITY_ASSET_V);
     return u.href;
   }
+  // 홈 화면 2단 구성(할 일 + 살아있는 도시 미리보기)은 가로가 충분할 때만
+  function isWideScreen(){ return window.innerWidth >= 1180; }
   function hexToRgbStr(hex){
     const h = (hex||'').replace('#','').trim();
     if(h.length!==6) return '198,204,216';
@@ -2668,8 +2695,17 @@ ${prevSummary}`}]
   }
 
   // render()가 #app을 갈아엎은 뒤 3D 컨테이너를 제자리에 다시 끼워 넣는다
+  // 홈(미리보기)과 도시 섹션 둘 다 캔버스를 넣을 자리(id가 다름)를 갖고 있어서,
+  // 지금 스크롤로 보고 있는 곳에 맞는 슬롯을 골라준다. 캔버스는 하나뿐이라 옮겨 다님.
+  function pickCityHostSlot(){
+    if(state.activeSection==='home'){
+      const homeSlot = document.getElementById('city3dSlotHome');
+      if(homeSlot) return homeSlot;
+    }
+    return document.getElementById('city3dSlot');
+  }
   function mountCity3D(){
-    const slot = document.getElementById('city3dSlot');
+    const slot = pickCityHostSlot();
     if(!slot) { stopCityLoop(); return; }
     if(!CITY3D.host) makeCityHost();
     if(CITY3D.host.parentElement !== slot) slot.appendChild(CITY3D.host);
@@ -3868,6 +3904,17 @@ ${text}`}]
       }
       render();
     }
+  });
+
+  // 홈의 2단 ↔ 1단 경계(1180px)를 넘어갈 때만 다시 그림 — renderHome()이 이 값에 따라
+  // 아예 다른 마크업(도시 미리보기 aside 유무)을 내놓기 때문에 다시 그려야 반영됨
+  let lastWide = isWideScreen(), resizeTimer = null;
+  window.addEventListener('resize', function(){
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(()=>{
+      const w = isWideScreen();
+      if(w !== lastWide){ lastWide = w; render(); }
+    }, 180);
   });
 
   document.getElementById('importFile').addEventListener('change', function(e){
