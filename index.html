@@ -2077,8 +2077,19 @@ ${prevSummary}`}]
       const wk = mondayOf(new Date(it.completedAt)).getTime();
       add(wk, {vehicle:'house', kind:'personal', item:it, color:citySubjectColor({kind:'personal', item:it})});
     });
+    // 해결한 망각의 시민 — archiveLog(append-only)의 recall 완료 기록에서. 같은 항목을
+    // 여러 번 복습하면 매 회가 한 줄로 남는다(그날 그 복습을 했다는 기록).
+    (state.data.archiveLog||[]).forEach(e=>{
+      if(e.kind!=='recall') return;
+      const wk = mondayOf(new Date(e.ts)).getTime();
+      add(wk, {vehicle:'recall', kind:'recall',
+        item:{id:e.id, text:e.text, completedAt:e.ts},
+        subjectLabel: canonSubject(e.subject),
+        tagLabel: RECALL_TAGS[e.tag] || '회상',
+        color: boxColorForKey(e.subjectKey)});
+    });
     return Object.keys(groups).map(Number).sort((a,b)=>b-a)
-      .map(wk=>({weekStart:wk, items:groups[wk].sort((a,b)=>b.item.completedAt-a.item.completedAt)}));
+      .map(wk=>({weekStart:wk, items:groups[wk].sort((a,b)=>(b.item.completedAt||0)-(a.item.completedAt||0))}));
   }
 
   /* ============ 도시 3D (Kenney CC0 킷 + three.js) ============
@@ -2998,15 +3009,20 @@ ${prevSummary}`}]
       const rows = w.items.map(entry=>{
         const tag = entry.kind==='teacher'
           ? `${entry.x.subjLabel} · ${entry.x.teacher}`
-          : (entry.item.boxKey && BOX_KEYS.has(entry.item.boxKey) ? BOXES.find(b=>b.key===entry.item.boxKey).label : '미분류');
+          : entry.kind==='recall'
+            ? `${entry.subjectLabel} · ${entry.tagLabel}`
+            : (entry.item.boxKey && BOX_KEYS.has(entry.item.boxKey) ? BOXES.find(b=>b.key===entry.item.boxKey).label : '미분류');
         // 잘못 졸업 처리된 항목을 지울 수 있게 — 기존 영구삭제 액션을 그대로 재사용
         const del = entry.kind==='teacher'
           ? `data-action="deletePermanent" data-key="${entry.x.key}" data-id="${entry.item.id}"`
-          : `data-action="deletePersonalPermanent" data-id="${entry.item.id}"`;
+          : entry.kind==='recall'
+            ? `data-action="deleteArchiveEntry" data-id="${entry.item.id}"`
+            : `data-action="deletePersonalPermanent" data-id="${entry.item.id}"`;
+        const ic = entry.kind==='recall' ? 'sparkle' : (entry.vehicle==='car' ? 'car' : 'house');
         return `<div class="city-grad-row">
-          <span class="city-grad-icon" style="--fc:${entry.color};">${icon(entry.vehicle==='car'?'car':'house')}</span>
+          <span class="city-grad-icon" style="--fc:${entry.color};">${icon(ic)}</span>
           <div class="city-grad-body"><div class="city-grad-tag">${escapeHtml(tag)}</div><div class="city-grad-text">${escapeHtml(entry.item.text)}</div></div>
-          <button class="city-grad-del" title="졸업 취소하고 기록 지우기" ${del}>${icon('trash')}</button>
+          <button class="city-grad-del" title="이 기록 지우기" ${del}>${icon('trash')}</button>
         </div>`;
       }).join('');
       return `<div class="section">
@@ -3933,6 +3949,11 @@ ${doneRecallText}`}]
     state.data.recall.tasks = state.data.recall.tasks.filter(x=>x.id!==id);
     persist(); render();
   }
+  // 졸업 앨범에서 해결한 망각의 시민 기록 한 줄 지우기 (잘못 완료 처리한 경우)
+  function deleteArchiveEntry(id){
+    state.data.archiveLog = (state.data.archiveLog||[]).filter(e=>e.id!==id);
+    persist(); render();
+  }
 
   /* ============ 액션: 자연어 → 할 일 자동 분류 (Tasks 페이지) ============ */
   async function classifyTasks(){
@@ -4233,6 +4254,7 @@ ${text}`}]
       case 'goCityMain': state.cityView='main'; render(); break;
       case 'restorePersonal': restorePersonalTask(el.dataset.id); break;
       case 'deletePersonalPermanent': deletePersonalPermanent(el.dataset.id); break;
+      case 'deleteArchiveEntry': deleteArchiveEntry(el.dataset.id); break;
       case 'quickAdd': state.quickAddKey = el.dataset.key; state.quickAddCorner = 'review'; state.modal = 'quickAdd'; render(); break;
       case 'setQuickAddCorner': state.quickAddCorner = el.dataset.corner; renderOverlaysOnly(); break;
       case 'openSettings': settingsStatus=''; githubTokenStatus=''; state.modal='settings'; renderOverlaysOnly(); break;
