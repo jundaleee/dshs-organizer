@@ -97,6 +97,8 @@
 
   .topbar-mini{display:flex;justify-content:flex-end;margin-bottom:10px;}
   .notif-badge{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--red);color:#fff;font-size:9.5px;font-weight:700;}
+  .feedback-hint{font-size:11.5px;color:var(--text-3);line-height:1.55;margin-bottom:10px;}
+  .feedback-explain-label{font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:4px;}
   .notif-row{font-size:13px;line-height:1.6;padding:9px 0;border-bottom:1px solid var(--border);}
   .notif-row:last-child{border-bottom:none;}
   .iconbtn{background:var(--glass);border:1px solid var(--border);color:var(--text-2);font-size:12.5px;padding:7px 14px;border-radius:var(--r-pill);display:inline-flex;align-items:center;gap:6px;transition:all var(--dur) var(--ease);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));}
@@ -1674,6 +1676,38 @@
     }).sort((a,b)=>b.total-a.total);
     return {subjects, totalAll: log.length};
   }
+  /* 캘리브레이션 — 자기평가가 실제와 얼마나 맞는지.
+     "잘 기억남/완벽했음"이라고 한 항목이 예정일에 다시 돌아왔을 때 "가물가물/기억 안 남"으로
+     떨어졌다면, 그건 그때 안다고 느꼈을 뿐 실제로는 안 붙어 있었다는 뜻(과신).
+     항목이 반복해서 돌아오는 구조가 생긴 뒤에야 계산할 수 있는 지표다. */
+  function computeCalibration(){
+    const CONFIDENT = {GOOD:1, EASY:1}, FAILED = {AGAIN:1, HARD:1};
+    let confidentThenFailed = 0, confidentWithFollowUp = 0;
+    const bySubject = {};
+    recallList().forEach(t=>{
+      const h = t.ratingHistory || [];
+      for(let i=0; i<h.length-1; i++){
+        if(!CONFIDENT[h[i].rating]) continue;
+        confidentWithFollowUp++;
+        const subj = t.subject || '미분류';
+        bySubject[subj] = bySubject[subj] || {subject:subj, confident:0, slipped:0};
+        bySubject[subj].confident++;
+        if(FAILED[h[i+1].rating]){
+          confidentThenFailed++;
+          bySubject[subj].slipped++;
+        }
+      }
+    });
+    const subjects = Object.values(bySubject)
+      .filter(s=>s.confident>=3)          // 표본 3개 미만이면 판단 보류 — 원칙 4
+      .map(s=>({...s, rate: s.slipped/s.confident}))
+      .sort((a,b)=>b.rate-a.rate);
+    return {
+      confidentWithFollowUp, confidentThenFailed,
+      overconfidenceRate: confidentWithFollowUp>0 ? confidentThenFailed/confidentWithFollowUp : null,
+      subjects
+    };
+  }
   function weekLogEntries(weekStartMs){
     const weekEndMs = weekStartMs + 7*86400000;
     return (state.data.archiveLog||[]).filter(e=>e.ts>=weekStartMs && e.ts<weekEndMs);
@@ -1717,6 +1751,14 @@
         ${bar}
       </div>`;
     }).join('');
+    const calib = computeCalibration();
+    const calibHtml = calib.confidentWithFollowUp < 3
+      ? `<div class="empty">복습 항목이 예정일에 다시 돌아와서 재평가돼야 계산할 수 있어 — 아직 표본이 부족해(${calib.confidentWithFollowUp}개). 며칠 더 쓰면 여기에 나와.</div>`
+      : `<div class="arc-pick">"잘 기억남/완벽했음"이라고 했던 ${calib.confidentWithFollowUp}번 중 <b>${calib.confidentThenFailed}번</b>은 다시 돌아왔을 때 가물가물했어 — 과신 비율 <b>${Math.round(calib.overconfidenceRate*100)}%</b>.</div>`
+        + (calib.subjects.length
+            ? calib.subjects.slice(0,3).map(s=>`<div class="arc-pick">${escapeHtml(s.subject)} — 안다고 느낀 ${s.confident}번 중 ${s.slipped}번이 다음에 무너짐 (${Math.round(s.rate*100)}%)</div>`).join('')
+            : `<div class="empty">과목별로 나누기엔 아직 표본이 부족해(과목당 3개 이상 필요).</div>`)
+        + `<div class="empty" style="padding-top:8px;">과신 비율이 높은 과목은 "안다는 느낌"을 믿지 말고, 완료 전에 설명을 소리 내어 해보는 걸 추천해.</div>`;
     const recent = (state.data.archiveLog||[]).slice(-30).reverse();
     const recentHtml = recent.length===0 ? `<div class="empty">아직 완료 기록이 없어.</div>` : recent.map(e=>`
       <div class="arc-log-row">
@@ -1737,6 +1779,10 @@
       <div class="section">
         <div class="section-head"><div class="section-title">잘 다져진 과목</div></div>
         ${strongHtml}
+      </div>
+      <div class="section">
+        <div class="section-head"><div class="section-title">자기평가가 실제와 맞는지 (캘리브레이션)</div></div>
+        ${calibHtml}
       </div>
       <div class="section">
         <div class="section-head"><div class="section-title">과목별 현황</div></div>
@@ -3281,6 +3327,58 @@ ${prevSummary}`}]
   function recallList(){ return (state.data.recall && state.data.recall.tasks) || []; }
   function pendingRecall(){ return recallList().filter(t=>!t.done); }
 
+  /* ============ 간격 반복 스케줄러 (SM-2 계열) ============
+     "언제 다시 볼지"는 여기서 수식으로 정하고, "무엇을 물어볼지"만 Claude가 만든다.
+     예전엔 하루 한 번 통째로 새로 생성하는 고정 간격이라, 유독 안 외워지는 개념과
+     이미 확실히 아는 개념이 똑같은 빈도로 돌아왔다 — 개인차가 전혀 반영되지 않았음.
+     각 복습 항목은 완료돼도 사라지지 않고 dueAt이 되면 도시로 다시 돌아온다. */
+  const SR_EASE_DEFAULT = 2.3, SR_EASE_MIN = 1.3, SR_EASE_MAX = 2.8;
+  const SR_INTERVAL_MAX = 180;      // 반년 넘게는 안 미룸
+  const RECALL_QUEUE_TARGET = 6;    // 밀린 복습이 이만큼 있으면 새로 만들지 않음
+  function scheduleNextReview(item, rating){
+    const ease0 = typeof item.ease === 'number' ? item.ease : SR_EASE_DEFAULT;
+    const iv0 = typeof item.interval === 'number' ? item.interval : 0;
+    const reps = item.srReps || 0;
+    let ease = ease0, iv;
+    if(rating==='AGAIN'){        // 다시 처음부터 — 반나절 뒤 재도전
+      ease = ease0 - 0.20; iv = 0.5; item.srReps = 0;
+    } else if(rating==='HARD'){  // 겨우 떠올림 — 간격을 거의 안 늘림
+      ease = ease0 - 0.15; iv = iv0 > 0 ? iv0 * 1.2 : 1; item.srReps = reps + 1;
+    } else if(rating==='EASY'){  // 완벽 — 크게 건너뜀
+      ease = Math.min(SR_EASE_MAX, ease0 + 0.15);
+      iv = iv0 > 0 ? iv0 * ease * 1.3 : 4; item.srReps = reps + 1;
+    } else {                     // GOOD(기본) — 표준 SM-2 곡선
+      iv = iv0 > 0 ? iv0 * ease0 : (reps === 0 ? 1 : 3); item.srReps = reps + 1;
+    }
+    ease = Math.min(SR_EASE_MAX, Math.max(SR_EASE_MIN, ease));
+    iv = Math.min(SR_INTERVAL_MAX, Math.max(0.5, iv));
+    item.ease = Math.round(ease * 100) / 100;
+    item.interval = Math.round(iv * 10) / 10;
+    item.dueAt = Date.now() + item.interval * 86400000;
+    // 캘리브레이션(자기평가 vs 실제)을 나중에 계산하려면 등급 이력이 남아 있어야 함
+    (item.ratingHistory = item.ratingHistory || []).push({at: Date.now(), rating});
+    return item;
+  }
+  // 예정일이 된 복습 항목을 다시 도시로 불러온다 (앱을 열 때마다 확인)
+  function reviveDueRecall(){
+    const t = Date.now();
+    let revived = 0;
+    recallList().forEach(item=>{
+      if(item.done && item.dueAt && item.dueAt <= t){
+        item.done = false;
+        delete item.completedAt;
+        item.createdAt = t;   // 도시에서의 방치 일수는 "다시 돌아온 시점"부터 셈
+        revived++;
+      }
+    });
+    if(revived) persist();
+    return revived;
+  }
+  function dueRecallCount(){
+    const t = Date.now();
+    return recallList().filter(i=>i.done && i.dueAt && i.dueAt <= t).length;
+  }
+
   /* ============ 완료 피드백 — 끝낸 것마다 얼마나 잘 기억났는지/어떻게 끝냈는지 물어봄 ============
      체크만으로는 "제대로 끝냈는지 대충 끝냈는지"가 구분이 안 돼서, 완료 직후 짧은 대화창을
      띄워 자기 평가를 받는다. 이 값들이 다음 망각의 시민 생성에 그대로 들어간다. */
@@ -3311,15 +3409,18 @@ ${prevSummary}`}]
     render();
   }
   function submitCompletionFeedback(rating){
-    const it = findAnyCompletedItem(state.feedbackTargetId);
+    const id = state.feedbackTargetId;
+    const it = findAnyCompletedItem(id);
     if(it){
       const noteEl = document.getElementById('feedbackNoteInput');
       it.recallRating = rating;
       const note = noteEl ? noteEl.value.trim() : '';
       if(note) it.feedbackNote = note;
       it.feedbackAt = Date.now();
-      const log = (state.data.archiveLog||[]).find(e=>e.id===state.feedbackTargetId);
+      const log = (state.data.archiveLog||[]).find(e=>e.id===id);
       if(log){ log.rating = rating; if(note) log.note = note; }
+      // 복습 항목이면 이 등급으로 다음 복습일을 계산해둔다 (수업 과제·자율학습은 일회성이라 제외)
+      if(recallList().some(t=>t.id===id)) scheduleNextReview(it, rating);
       persist();
     }
     state.modal = null;
@@ -3327,6 +3428,13 @@ ${prevSummary}`}]
     render();
   }
   function skipCompletionFeedback(){
+    // 그냥 넘어가도 복습 순환에서 영영 빠지면 안 되니 GOOD 기준으로 일단 잡아둔다
+    const id = state.feedbackTargetId;
+    const it = findAnyCompletedItem(id);
+    if(it && recallList().some(t=>t.id===id) && !it.dueAt){
+      scheduleNextReview(it, 'GOOD');
+      persist();
+    }
     state.modal = null;
     state.feedbackTargetId = null;
     render();
@@ -3340,13 +3448,16 @@ ${prevSummary}`}]
         <div class="modal-body">
           <div class="city-inspect-text" style="margin-bottom:4px;">${escapeHtml(it.text)}</div>
           <div class="city-inspect-meta" style="margin-bottom:14px;">방금 끝낸 거, 얼마나 확실하게 알고 있었어?</div>
+          <div class="feedback-hint">고른 등급에 따라 다음 복습 날짜가 자동으로 잡혀.</div>
           <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
             <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="AGAIN">거의 기억 안 남</button>
             <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="HARD">가물가물했음</button>
             <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="GOOD">잘 기억남</button>
             <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="EASY">완벽했음</button>
           </div>
-          <textarea class="ai-textarea" id="feedbackNoteInput" placeholder="더 남기고 싶은 말 있으면 (예: 대충 훑기만 함, 이 부분 계속 헷갈림) — 선택"></textarea>
+          <div class="feedback-explain-label">방금 이해한 걸 네 언어로 설명해봐</div>
+          <div class="feedback-hint">여기서 막히면 아직 모르는 거야. 짧아도 되니까 남의 말 말고 네 말로. 나중에 이 설명 자체가 복습 자료가 돼.</div>
+          <textarea class="ai-textarea" id="feedbackNoteInput" placeholder="예: 급수가 수렴하는지는 항이 0으로 가는 속도로 판단하는데, 0으로 가도 느리면 발산할 수 있다 — 선택"></textarea>
           <button class="section-link" data-action="skipCompletionFeedback">그냥 넘어가기</button>
         </div>
       </div>
@@ -3386,11 +3497,14 @@ ${prevSummary}`}]
   }
   function daysAgo(ms){ return Math.max(0, Math.floor((Date.now()-ms)/86400000)); }
 
-  // 유저가 직접 누르지 않아도, 앱을 열 때마다 하루에 한 번 정도만 조용히 확인해서 자동으로 만들어줌
+  // 새 복습 항목은 "밀린 게 부족할 때만" 만든다. 언제 복습할지는 스케줄러가 이미 정해뒀으므로,
+  // Claude는 큐가 비었을 때 새 내용을 채우는 역할만 한다(예전엔 매일 무조건 새로 만들어서,
+  // 스케줄과 무관하게 항목이 계속 쌓였다).
   function maybeAutoGenerateRecall(){
     if(!getApiKey()) return;
+    if(pendingRecall().length >= RECALL_QUEUE_TARGET) return;
     const last = state.data.recall && state.data.recall.lastGeneratedAt;
-    if(last && (Date.now() - last) < 86400000) return;
+    if(last && (Date.now() - last) < 6*3600000) return;  // 과호출 방지용 최소 간격
     if(completedHistory(1).length === 0) return;
     generateRecall();
   }
@@ -3440,18 +3554,19 @@ ${prevSummary}`}]
   나쁜 예: "수학 복습하기", "물리 공부하기"
 - 무엇을 · 어떻게 · 어느 정도까지 할지가 반드시 드러나야 한다.
 - 최소 충분량으로 만든다. "대표 문제 10개" 대신 "대표 문제 2개를 풀이 전략부터 세워 해결하기".
-- 완료 자체보다 "시간이 지난 뒤에도 인출되는가"를 중요하게 본다.
-  마지막 수행 이후 경과일이 길수록, 혼동·실패 가능성이 클수록 우선한다.
-- 각 완료 이력에 "자기평가"가 붙어 있으면 경과일보다 그걸 더 믿는다. "거의 기억 안 남"
-  이나 "가물가물했음"으로 끝낸 건 실제 경과일과 무관하게 우선순위를 높게 잡는다.
-  "완벽했음"으로 끝낸 건 얼마 안 지났어도 급하지 않다고 봐도 된다. "메모"가 있으면
+- 복습 "시점"은 네가 정하지 않는다. 한 번 만들어진 항목은 간격 반복 알고리즘이 자기평가
+  등급에 따라 다음 복습일을 계산해서 자동으로 다시 띄운다. 그러니 "언제 볼지"는 신경 쓰지 말고,
+  아직 아무도 다루지 않은 내용 중 무엇을 물어볼지에만 집중해라.
+- 각 완료 이력에 "자기평가"가 붙어 있으면 그걸 가장 중요한 신호로 본다. "거의 기억 안 남"
+  이나 "가물가물했음"으로 끝낸 주제는 아직 약한 곳이니 그 주제를 더 파고드는 항목을 만든다.
+  "완벽했음"으로 끝낸 주제는 이미 다져졌으니 굳이 새로 만들지 않아도 된다. "메모"가 있으면
   거기 적힌 대로(예: 대충 훑기만 함, 특정 부분이 헷갈림) 그 약점을 정확히 겨냥해서 만든다.
 - 같은 내용을 다시 다룰 땐 형태를 바꾼다: 회상 → 적용 → 전이 방향으로 발전시킨다.
   아래 "이미 완료한 복습 과제" 목록을 보고 그 항목이 어느 단계까지 왔는지 확인한 다음,
   다음 단계로 넘어가는 과제를 만들어라 (예: RECALL을 이미 끝냈으면 APPLICATION을 만든다).
-- 이미 열려 있는 복습 과제와 겹치는 건 만들지 않는다. 이미 완료한 복습 과제와 완전히
-  똑같은 내용·같은 단계를 그대로 다시 만드는 것도 금지 — 다음 단계로 발전시키거나,
-  그 주제가 이미 충분히 다져졌다면 다른 걸 고른다.
+- 이미 열려 있는 복습 과제와 겹치는 건 만들지 않는다. 아래 "이미 완료한 복습 과제"는
+  알고리즘이 예정일에 알아서 다시 띄울 것이므로, 그걸 똑같이 다시 만드는 건 절대 금지다.
+  같은 주제를 다시 다루려면 반드시 다음 단계(회상→적용→전이)로 발전시켜라.
 - 복습이 필요 없다고 판단되면 만들지 않는 것도 정답이다. 억지로 개수를 채우지 마라.
 - 학생은 시간이 매우 부족하다. 최대 5개까지, 각각 3~10분 분량으로.
 
@@ -3498,7 +3613,8 @@ ${doneRecallText}`}]
           text: String(it.text).trim(),
           minutes: (typeof it.minutes==='number' && it.minutes>0) ? Math.round(it.minutes) : 5,
           tag: RECALL_TAGS[it.tag] ? it.tag : 'RECALL',
-          createdAt: now, done:false
+          createdAt: now, done:false,
+          ease: SR_EASE_DEFAULT, interval: 0, srReps: 0, dueAt: null, ratingHistory: []
         });
         added++;
       });
@@ -3956,6 +4072,7 @@ ${text}`}]
         state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[], recall:{tasks:[],lastGeneratedAt:null}, archiveLog:[] };
       }
     }
+    reviveDueRecall();   // 예정일이 된 복습을 도시로 되돌린 뒤에 그려야 함
     render();
     syncClassroom(false);
     maybeAutoGenerateRecall();
