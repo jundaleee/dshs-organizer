@@ -476,6 +476,23 @@
   .completed-modal .item-text{flex:1;font-size:13.5px;}
   .completed-modal .item-date{font-size:11px;color:var(--text-3);margin-top:4px;}
 
+  /* ---- 아카이브 ---- */
+  .arc-pick{font-size:13px;line-height:1.6;padding:9px 0;border-bottom:1px solid var(--border);}
+  .arc-pick:last-child{border-bottom:none;}
+  .arc-subject-row{padding:10px 0;border-bottom:1px solid var(--border);}
+  .arc-subject-row:last-child{border-bottom:none;}
+  .arc-subject-head{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px;margin-bottom:6px;}
+  .arc-subject-head span{font-size:11.5px;color:var(--text-3);font-weight:400;}
+  .arc-bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:var(--glass);}
+  .arc-bar-seg{height:100%;}
+  .arc-bar-empty{font-size:11px;color:var(--text-3);}
+  .arc-log-row{display:flex;gap:10px;align-items:baseline;font-size:12.5px;padding:7px 0;border-bottom:1px solid var(--border);}
+  .arc-log-row:last-child{border-bottom:none;}
+  .arc-log-date{color:var(--text-3);flex-shrink:0;width:34px;}
+  .arc-log-subject{color:var(--text-2);flex-shrink:0;font-weight:600;}
+  .arc-log-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .arc-log-rating{color:var(--text-3);flex-shrink:0;font-size:11px;}
+
   /* ---- 도시 (City, beta) ---- */
   .recall-note{font-size:12px;color:var(--text-3);margin-bottom:10px;line-height:1.55;}
   .city-graduating{font-size:12.5px;color:var(--teal);background:rgba(100,210,255,.1);border:1px solid rgba(100,210,255,.3);border-radius:var(--r-md);padding:9px 13px;margin-bottom:18px;}
@@ -707,7 +724,8 @@
       importedClassroomIds:[], importedNoticeIds:[],
       personal:{ tasks:[], completed:[] },
       ddays:[],
-      recall:{ tasks:[], lastGeneratedAt:null }
+      recall:{ tasks:[], lastGeneratedAt:null },
+      archiveLog:[]
     };
   }
 
@@ -843,7 +861,10 @@
       truck:'<path d="M2 13.5h8V7.5H5L2 10.5v3z"/><path d="M10 13.5h6v-4h-2.5l-1-2H10v6z"/><circle cx="5.5" cy="15" r="1.4"/><circle cx="14" cy="15" r="1.4"/>',
       smoke:'<path d="M6 14c-1-2 1-2.5 0-4.5M10 14c-1-2 1-2.5 0-4.5M14 14c-1-2 1-2.5 0-4.5"/>',
       fire:'<path d="M10 3c0 2-2.5 3-2.5 5.5a2.5 2.5 0 0 0 5 0c0-1.5-1-2-1-3.2 0 1.7 1.5 2.2 1.5 4a3 3 0 1 1-6 0C6.5 6 10 5 10 3z"/>',
-      wrench:'<path d="M13.2 4.2a1.8 1.8 0 1 0 2.3 2.3l1.8 1.8-1.1 1.1-1.8-1.8a1.8 1.8 0 0 0-1.2-3.4z"/><path d="M4.5 15.5 11 9"/>'
+      wrench:'<path d="M13.2 4.2a1.8 1.8 0 1 0 2.3 2.3l1.8 1.8-1.1 1.1-1.8-1.8a1.8 1.8 0 0 0-1.2-3.4z"/><path d="M4.5 15.5 11 9"/>',
+      archive:'<rect x="3" y="4" width="14" height="3.5" rx="1"/><path d="M4 7.5V15a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7.5"/><path d="M8.2 11h3.6"/>',
+      bell:'<path d="M6 8.5a4 4 0 0 1 8 0c0 3 1 4 1.5 4.5H4.5C5 12.5 6 11.5 6 8.5z"/><path d="M8.3 15.5a1.9 1.9 0 0 0 3.4 0"/>',
+      download:'<path d="M10 3v9M6.5 8.5 10 12l3.5-3.5"/><path d="M4 14.5v1a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1v-1"/>'
     }[name] || '';
     return `<svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">${p}</svg>`;
   }
@@ -855,6 +876,7 @@
     {view:'schedule', label:'시간표', icon:'schedule', color:'var(--purple)'},
     {view:'teachers', label:'선생님', icon:'teachers', color:'var(--pink)'},
     {view:'materials', label:'자료', icon:'materials', color:'var(--indigo)'},
+    {view:'archive', label:'아카이브', icon:'archive', color:'var(--red)'},
     {view:'city', label:'도시', icon:'city', color:'var(--teal)', beta:true}
   ];
 
@@ -877,6 +899,7 @@
     else if(state.view==='schedule') html += renderSchedulePage();
     else if(state.view==='teachers') html += renderTeachersPage();
     else if(state.view==='materials') html += renderMaterialsPage();
+    else if(state.view==='archive') html += renderArchivePage();
     else if(state.view==='city') html += renderCityPage();
     // 도시가 보이는 화면에선 본문 폭 제한을 풀어서 넓게 쓴다
     const cityVisible = (state.view==='city' && state.cityView!=='archive')
@@ -1540,6 +1563,219 @@
         ${notices.length===0?`<div class="empty">받은 공지가 없어.</div>`:notices.map(n=>materialRowHtml(n)).join('')}
       </div>
     </div>`;
+  }
+
+  /* ============ 아카이브 — 완료 이력 원자료 조회 + 주간 리포트 생성 ============
+     archiveLog(원자료)에서 매번 다시 계산만 하지, 요약값을 따로 저장해두지 않는다.
+     탭 자체는 규칙 기반 집계만 보여주고(비용 없이 바로 확인), 개념 단위의 진짜 정성적
+     분석은 다운로드하는 주간 리포트에서 AI가 원자료를 보고 새로 생성한다. */
+  function computeArchiveStats(){
+    const log = state.data.archiveLog || [];
+    const bySubject = {};
+    log.forEach(e=>{
+      const key = e.subject || '미분류';
+      if(!bySubject[key]) bySubject[key] = {subject:key, total:0, ratings:{AGAIN:0,HARD:0,GOOD:0,EASY:0}, unrated:0};
+      const b = bySubject[key];
+      b.total++;
+      if(e.rating && b.ratings[e.rating]!=null) b.ratings[e.rating]++;
+      else b.unrated++;
+    });
+    const subjects = Object.values(bySubject).map(b=>{
+      const rated = b.ratings.AGAIN + b.ratings.HARD + b.ratings.GOOD + b.ratings.EASY;
+      const weakRatio = rated>0 ? (b.ratings.AGAIN + b.ratings.HARD) / rated : null;
+      return {...b, rated, weakRatio};
+    }).sort((a,b)=>b.total-a.total);
+    return {subjects, totalAll: log.length};
+  }
+  function weekLogEntries(weekStartMs){
+    const weekEndMs = weekStartMs + 7*86400000;
+    return (state.data.archiveLog||[]).filter(e=>e.ts>=weekStartMs && e.ts<weekEndMs);
+  }
+  function downloadTextFile(filename, content, mime){
+    const blob = new Blob([content], {type: mime||'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  }
+  function exportArchiveLog(){
+    downloadTextFile(
+      `archive-log-${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}.json`,
+      JSON.stringify(state.data.archiveLog||[], null, 2), 'application/json'
+    );
+  }
+  function renderArchivePage(){
+    const stats = computeArchiveStats();
+    const thisWeekStart = mondayOf(now).getTime();
+    const thisWeekLog = weekLogEntries(thisWeekStart);
+    // 최소 표본(3개) 없이는 강점/약점 판단을 보류한다 — 원칙 4
+    const withSample = stats.subjects.filter(s=>s.rated>=3);
+    const weak = withSample.slice().sort((a,b)=>b.weakRatio-a.weakRatio).slice(0,3);
+    const strong = withSample.slice().sort((a,b)=>a.weakRatio-b.weakRatio).slice(0,3);
+    const weakHtml = weak.length===0
+      ? `<div class="empty">아직 판단하기엔 데이터가 부족해(과목당 자기평가 3개 이상 필요) — 판단 보류.</div>`
+      : weak.map(s=>`<div class="arc-pick"><b>${escapeHtml(s.subject)}</b> — "가물가물했음/거의 기억 안 남" 비율 ${Math.round(s.weakRatio*100)}% (표본 ${s.rated}개)</div>`).join('');
+    const strongHtml = strong.length===0
+      ? `<div class="empty">아직 판단하기엔 데이터가 부족해 — 판단 보류.</div>`
+      : strong.map(s=>`<div class="arc-pick"><b>${escapeHtml(s.subject)}</b> — "잘 기억남/완벽했음" 비율 ${Math.round((1-s.weakRatio)*100)}% (표본 ${s.rated}개)</div>`).join('');
+    const subjectRows = stats.subjects.map(s=>{
+      const bar = s.rated>0 ? `<div class="arc-bar">
+          <div class="arc-bar-seg" style="width:${s.ratings.EASY/s.rated*100}%;background:var(--green);"></div>
+          <div class="arc-bar-seg" style="width:${s.ratings.GOOD/s.rated*100}%;background:var(--teal);"></div>
+          <div class="arc-bar-seg" style="width:${s.ratings.HARD/s.rated*100}%;background:var(--orange);"></div>
+          <div class="arc-bar-seg" style="width:${s.ratings.AGAIN/s.rated*100}%;background:var(--red);"></div>
+        </div>` : `<div class="arc-bar-empty">자기평가 없음</div>`;
+      return `<div class="arc-subject-row">
+        <div class="arc-subject-head"><b>${escapeHtml(s.subject)}</b><span>${s.total}개 완료${s.rated>0?` · 평가 ${s.rated}개`:''}</span></div>
+        ${bar}
+      </div>`;
+    }).join('');
+    const recent = (state.data.archiveLog||[]).slice(-30).reverse();
+    const recentHtml = recent.length===0 ? `<div class="empty">아직 완료 기록이 없어.</div>` : recent.map(e=>`
+      <div class="arc-log-row">
+        <span class="arc-log-date">${fmtDate(e.ts)}</span>
+        <span class="arc-log-subject">${escapeHtml(e.subject||'미분류')}</span>
+        <span class="arc-log-text">${escapeHtml(e.text)}</span>
+        <span class="arc-log-rating">${e.rating?escapeHtml(RECALL_RATINGS[e.rating]||''):''}</span>
+      </div>`).join('');
+    return `<div class="fade-in">
+      <div class="page-head"><h1>아카이브</h1><button class="iconbtn" data-action="generateWeeklyReport">${icon('download')} 이번 주 리포트 다운로드</button></div>
+      ${reportStatus?`<div class="empty" style="padding:0 0 14px;">${escapeHtml(reportStatus)}</div>`:''}
+      <div class="empty" style="padding:0 0 14px;">지금까지 총 ${stats.totalAll}개 완료 · 이번 주 ${thisWeekLog.length}개</div>
+
+      <div class="section">
+        <div class="section-head"><div class="section-title">보완이 필요해 보이는 과목</div></div>
+        ${weakHtml}
+      </div>
+      <div class="section">
+        <div class="section-head"><div class="section-title">잘 다져진 과목</div></div>
+        ${strongHtml}
+      </div>
+      <div class="section">
+        <div class="section-head"><div class="section-title">과목별 현황</div></div>
+        ${subjectRows || `<div class="empty">아직 완료 기록이 없어.</div>`}
+      </div>
+      <div class="section">
+        <div class="section-head"><div class="section-title">최근 완료 기록</div><button class="section-link" data-action="exportArchiveLog">원자료 내보내기</button></div>
+        ${recentHtml}
+      </div>
+    </div>`;
+  }
+  // 원칙 20개를 그대로 시스템 지침으로 넣고, 실제 데이터(정오답 대신 자기평가 등급,
+  // 반응시간 없음, reps가 있으면 시도횟수로 사용)에 맞춰 용어를 매핑하도록 명시한다.
+  // 원자료에 없는 활동은 절대 지어내지 말고, 데이터 공백은 "데이터 없음"이라고 쓰게 한다.
+  async function generateWeeklyReport(){
+    const apiKey = getApiKey();
+    if(!apiKey){ reportStatus = 'API 키가 필요해 — 설정에서 먼저 등록해줘.'; render(); return; }
+    const weekStart = mondayOf(now).getTime();
+    const thisWeek = weekLogEntries(weekStart);
+    if(thisWeek.length===0){
+      reportStatus = '이번 주엔 아직 완료한 게 없어 — 리포트로 보여줄 데이터가 없어.';
+      render(); return;
+    }
+    const prevWeeks = [1,2,3].map(n=>weekLogEntries(weekStart - n*7*86400000));
+    reportStatus = '이번 주 기록을 바탕으로 리포트를 쓰는 중...';
+    render();
+
+    const KIND_LABEL = {review:'수업 과제', self:'자율학습', personal:'자율학습', recall:'망각의 시민(복습)'};
+    const logLine = e => `- [${fmtDate(e.ts)}] ${e.subject||'미분류'} / ${KIND_LABEL[e.kind]||e.kind}: ${e.text}`
+      + (e.rating ? ` — 자기평가: ${RECALL_RATINGS[e.rating]}` : ' — 자기평가: 데이터 없음')
+      + (e.attempts ? `, 시도횟수: ${e.attempts}` : '')
+      + (e.note ? `, 메모: ${e.note}` : '');
+    const thisWeekText = thisWeek.map(logLine).join('\n');
+    const prevSummary = prevWeeks.map((wk,i)=>{
+      if(wk.length===0) return `- ${i+1}주 전: 데이터 없음`;
+      const rated = wk.filter(e=>e.rating);
+      const weakN = rated.filter(e=>e.rating==='AGAIN'||e.rating==='HARD').length;
+      return `- ${i+1}주 전: 완료 ${wk.length}개, 자기평가된 것 중 "가물가물함 이하" ${rated.length>0?Math.round(weakN/rated.length*100):'—'}%`;
+    }).join('\n');
+
+    try{
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model:'claude-sonnet-5',
+          max_tokens:4000,
+          messages:[{role:'user', content:
+`너는 학생의 학습 이력을 분석해 주간 리포트("통지표")를 쓰는 AI 에이전트다.
+통지표는 평가 문서가 아니라 다음 행동을 위한 나침반이어야 한다. 아래 20개 원칙을 반드시 지켜라.
+
+[데이터 원칙]
+1. 원자료 보존: 아래 로그가 유일한 근거다. 로그에 없는 활동을 지어내지 마라. 데이터가 없으면 "데이터 없음"이라고 명시해라.
+2. 준거참조 우선: 타인과 비교하지 말고, 본인의 지난 주/이전 기록 대비 변화만 본다.
+3. 단일 지표 과신 금지: 자기평가 하나로 숙달을 단정하지 말고, 완료 빈도·메모·시도횟수(있으면)를 같이 본다.
+4. 표본 크기 명시: 항목이 적은 과목에서 "완전히 이해했다"처럼 과잉 일반화하지 말고, 데이터가 적으면 "판단 보류"라고 써라.
+
+[기억·파지 원칙]
+5. 간격반복: "졸업(완료)" 자체보다, 지연된 뒤에도 다시 잘 됐는지(재복습 자기평가)를 더 신뢰해라.
+6. 인출 연습 우선 가중: 단순 완료보다 "망각의 시민"(능동적 인출 연습) 항목의 성과에 더 가중치를 둬라.
+7. 교차 학습 여부: 로그에서 같은 과목만 몰아 했는지, 여러 과목을 섞어 했는지 관찰되면 언급해라.
+
+[진단 원칙]
+8. 오류 유형 구분: 메모에서 단순 실수/개념 오류/지식 공백처럼 구분되는 단서가 있으면 구분해서 써라. 구분할 근거가 없으면 뭉뚱그리지 말고 "구분 불가"라고 해라.
+9. 인지과부하 별도 처리: 특정 항목에서 "가물가물했음/거의 기억 안 남"이 반복되면 "실력 부족" 대신 "부하 가능성"으로 조심스럽게 표현해라.
+10. 해상도 원칙: "화학이 약하다" 같은 막연한 서술 금지. 로그의 실제 text/메모를 근거로 구체적인 개념·행동 단위로 써라. 강점 서술도 같은 해상도로.
+
+[피드백 원칙]
+11. 성장 마인드셋 언어: 능력이 아니라 과정·전략을 언급해라. 사람 자체를 평가하지 마라.
+12. 자기결정성 보호: 순위·등급·비교·낙인 표현 금지.
+13. 진행 모델: "못했다" 대신 "아직 도달하지 않았다(not yet)" 프레임을 써라.
+14. 실행 가능성: 모든 약점 서술에는 구체적이고 바로 실행 가능한 다음 스텝을 1~2개 반드시 붙여라.
+
+[메타인지 원칙]
+15. 계획-수행-성찰 구조를 리포트 흐름에 반영해라.
+16. 캘리브레이션: 자기평가(느낌)와 실제 완료 패턴(빈도·기록) 사이에 차이가 보이면 짚어줘라. 이 차이 자체가 중요한 데이터다.
+17. 성급한 인과 추론 금지: "이번 주 하락 원인은 OO"처럼 로그에 없는 원인을 단정하지 마라. 상관관계만 보여주고 해석은 학생 몫으로 남겨라.
+
+[안전장치]
+18. 환각 방지: 로그에 없는 학습 활동·수치를 절대 만들어내지 마라.
+19. 판정 기준 투명성: 약점/강점으로 분류한 기준(예: 자기평가 비율, 표본 수)을 리포트 안에 명시해라.
+20. 과최적화 경고: 같은 유형만 반복해서 완료 수만 늘린 것처럼 보이면, 그것이 실제 이해도 상승과 다를 수 있다고 짚어줘라.
+
+이 앱은 퀴즈가 아니라 할 일 완료 로그다. "정오답"은 자기평가 등급(거의 기억 안 남/가물가물했음/잘 기억남/완벽했음)으로,
+"반응시간"은 기록이 없으니 언급하지 마라. "시도횟수"는 로그에 있을 때만 언급해라.
+
+다음 목차로, 마크다운으로 작성해라(통지표 톤, 학생에게 직접 말하듯):
+# 이번 주 학습 리포트 (통지표)
+## 이번 주 요약
+## 과목별 숙달도
+## 이번 주 패턴 Top 3 (구체적으로)
+## 지난 3주 대비 인출 성공 추이
+## 캘리브레이션 코멘트
+## 다음 주 추천 미션
+## 원자료 안내 (아카이브 탭에서 전체 원자료를 내려받을 수 있다고 안내)
+
+이번 주(${fmtDate(weekStart)}~) 완료 로그:
+${thisWeekText}
+
+지난 3주 요약(추이 비교용):
+${prevSummary}`}]
+        })
+      });
+      if(!res.ok){
+        const errBody = await res.json().catch(()=>({}));
+        throw new Error((errBody.error && errBody.error.message) || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const report = modelText(data);
+      if(!report){
+        reportStatus = '모델이 빈 응답을 보냈어 — 잠시 뒤 다시 시도해줘.';
+        render(); return;
+      }
+      const fname = `주간리포트-${fmtDate(weekStart).replace('/','')}-${now.getFullYear()}.md`;
+      downloadTextFile(fname, report, 'text/markdown');
+      reportStatus = '리포트를 다운로드했어.';
+      render();
+    }catch(err){
+      reportStatus = `실패 — ${err.message || '알 수 없는 오류'}. API 키가 맞는지 확인해줘.`;
+      render();
+    }
   }
 
   /* ---- 도시 (City, beta) ----
@@ -2879,7 +3115,12 @@
     const td = getTD(key);
     const idx = td[corner].findIndex(i=>i.id===id); if(idx<0) return;
     const [it] = td[corner].splice(idx,1);
-    td.completed.push({...it, corner, completedAt:Date.now()});
+    const completedAt = Date.now();
+    td.completed.push({...it, corner, completedAt});
+    const x = TEACHER_LIST.find(t=>t.key===key);
+    logArchiveEvent({id, ts:completedAt, createdAt:it.createdAt||null,
+      subject: x?x.subjLabel:key, subjectKey:key, kind:corner, text:it.text,
+      attempts: it.reps||null});
     persist(); openCompletionFeedback(id);
   }
   function deleteItem(key, corner, id){
@@ -2941,7 +3182,7 @@
   }
 
   /* ============ 액션: 설정 ============ */
-  let settingsStatus = '', githubTokenStatus = '', otStatus = '', syncStatus = '', taskClassifyStatus = '', recallStatus = '';
+  let settingsStatus = '', githubTokenStatus = '', otStatus = '', syncStatus = '', taskClassifyStatus = '', recallStatus = '', reportStatus = '';
   let templateCopyStatus = ''; // 방금 복사한 템플릿 id (버튼에 "복사됨!" 잠깐 표시용)
   // Classroom 동기화 상태 — 자동 동기화가 조용히 실패하는 걸 막기 위해 수동/자동 구분 없이 항상 기록
   let lastSyncCheckedAt = null; // Apps Script가 마지막으로 Gmail을 확인해서 파일을 쓴 시각 (upstream, payload.lastCheckedAt)
@@ -3079,7 +3320,11 @@ ${text}`}]
   function completePersonalTask(id){
     const idx = state.data.personal.tasks.findIndex(i=>i.id===id); if(idx<0) return;
     const [it] = state.data.personal.tasks.splice(idx,1);
-    state.data.personal.completed.push({...it, completedAt:Date.now()});
+    const completedAt = Date.now();
+    state.data.personal.completed.push({...it, completedAt});
+    const box = BOX_KEYS.has(it.boxKey) ? BOXES.find(b=>b.key===it.boxKey) : null;
+    logArchiveEvent({id, ts:completedAt, createdAt:it.createdAt||null,
+      subject: box?box.label:'미분류', subjectKey: box?box.key:null, kind:'personal', text:it.text});
     persist(); openCompletionFeedback(id);
   }
   function deletePersonalTask(id){
@@ -3137,6 +3382,14 @@ ${text}`}]
      체크만으로는 "제대로 끝냈는지 대충 끝냈는지"가 구분이 안 돼서, 완료 직후 짧은 대화창을
      띄워 자기 평가를 받는다. 이 값들이 다음 망각의 시민 생성에 그대로 들어간다. */
   const RECALL_RATINGS = {AGAIN:'거의 기억 안 남', HARD:'가물가물했음', GOOD:'잘 기억남', EASY:'완벽했음'};
+  /* ============ 아카이브 로그 — append-only 원자료 ============
+     완료 즉시 한 줄 기록하고, 이후 이 항목 자체를 지우거나 다른 배열에서 옮겨도(졸업 앨범
+     정리 등) 이 로그는 절대 건드리지 않는다. 요약(주간 리포트, 아카이브 탭 통계)은 전부
+     이 원자료에서 매번 다시 계산하지, 별도로 저장해두지 않는다. */
+  function logArchiveEvent(entry){
+    state.data.archiveLog = state.data.archiveLog || [];
+    state.data.archiveLog.push(entry);
+  }
   // 완료 항목은 선생님별/개인/망각의 시민, 세 군데 중 하나에 흩어져 있어서 id로 다 뒤져서 찾는다.
   // 반환하는 건 배열 안의 실제 객체 참조라, 여기 속성을 바로 고쳐도 state에 반영됨(persist만 해주면 됨).
   function findAnyCompletedItem(id){
@@ -3162,6 +3415,8 @@ ${text}`}]
       const note = noteEl ? noteEl.value.trim() : '';
       if(note) it.feedbackNote = note;
       it.feedbackAt = Date.now();
+      const log = (state.data.archiveLog||[]).find(e=>e.id===state.feedbackTargetId);
+      if(log){ log.rating = rating; if(note) log.note = note; }
       persist();
     }
     state.modal = null;
@@ -3357,6 +3612,8 @@ ${doneRecallText}`}]
   function completeRecall(id){
     const t = recallList().find(x=>x.id===id); if(!t) return;
     t.done = true; t.completedAt = Date.now();
+    logArchiveEvent({id, ts:t.completedAt, createdAt:t.createdAt||null,
+      subject:t.subject, subjectKey:t.boxKey||null, kind:'recall', text:t.text, tag:t.tag});
     persist(); openCompletionFeedback(id);
   }
   function deleteRecall(id){
@@ -3673,6 +3930,8 @@ ${text}`}]
       case 'closeModal': state.modal=null; render(); break;
       case 'exportData': exportData(); break;
       case 'importTrigger': document.getElementById('importFile').click(); break;
+      case 'generateWeeklyReport': generateWeeklyReport(); break;
+      case 'exportArchiveLog': exportArchiveLog(); break;
       case 'addAssignment': addAssignment(); break;
       case 'addDday': addDday(); break;
       case 'deleteDday': deleteDday(el.dataset.id); break;
@@ -3831,10 +4090,11 @@ ${text}`}]
           importedNoticeIds: saved.importedNoticeIds || [],
           personal: saved.personal || { tasks:[], completed:[] },
           ddays: saved.ddays || [],
-          recall: saved.recall || { tasks:[], lastGeneratedAt:null }
+          recall: saved.recall || { tasks:[], lastGeneratedAt:null },
+          archiveLog: saved.archiveLog || []
         };
       } else {
-        state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[], recall:{tasks:[],lastGeneratedAt:null} };
+        state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[], recall:{tasks:[],lastGeneratedAt:null}, archiveLog:[] };
       }
     }
     render();
