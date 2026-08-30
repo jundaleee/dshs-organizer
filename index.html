@@ -91,6 +91,9 @@
   .main-inner.wide{max-width:1560px;}
 
   .topbar-mini{display:flex;justify-content:flex-end;margin-bottom:10px;}
+  .notif-badge{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--red);color:#fff;font-size:9.5px;font-weight:700;}
+  .notif-row{font-size:13px;line-height:1.6;padding:9px 0;border-bottom:1px solid var(--border);}
+  .notif-row:last-child{border-bottom:none;}
   .iconbtn{background:var(--glass);border:1px solid var(--border);color:var(--text-2);font-size:12.5px;padding:7px 14px;border-radius:var(--r-pill);display:inline-flex;align-items:center;gap:6px;transition:all var(--dur) var(--ease);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));}
   .iconbtn:hover{color:var(--text);border-color:var(--border-strong);background:var(--glass-strong);}
 
@@ -371,27 +374,6 @@
     .week-day-block h3{font-size:13px;color:var(--text-2);margin:0 0 8px;font-weight:600;}
   }
 
-  /* ---- teachers ---- */
-  .teacher-group{margin-bottom:26px;}
-  .teacher-group-label{font-size:12.5px;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding:0 4px;}
-  .teacher-row{border-bottom:1px solid var(--border);}
-  .teacher-row:last-child{border-bottom:none;}
-  .teacher-head{display:flex;align-items:center;gap:12px;padding:13px 4px;background:none;border:none;width:100%;text-align:left;color:var(--text);border-radius:10px;}
-  .teacher-head:hover{background:var(--glass);}
-  .teacher-name{font-size:15px;font-weight:500;flex:1;}
-  .teacher-subj{font-size:12.5px;color:var(--text-3);}
-  .teacher-dot{width:7px;height:7px;border-radius:50%;background:var(--blue);flex-shrink:0;box-shadow:0 0 6px rgba(10,132,255,.7);}
-  .teacher-chevron{color:var(--text-3);transition:transform var(--dur) var(--ease);flex-shrink:0;}
-  .teacher-row.open .teacher-chevron{transform:rotate(90deg);}
-  .teacher-detail{overflow:hidden;max-height:0;transition:max-height 260ms var(--ease);}
-  .teacher-row.open .teacher-detail{max-height:4000px;}
-  .teacher-detail-inner{padding:10px 4px 28px;}
-
-  .field-label{font-size:12px;color:var(--text-3);margin-bottom:7px;display:flex;align-items:center;gap:6px;}
-  .field-box{margin-bottom:16px;}
-  .field-box textarea{width:100%;min-height:44px;resize:vertical;background:var(--glass);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));border:1px solid var(--border);border-radius:var(--r-md);color:var(--text);padding:11px 13px;font-size:13.5px;line-height:1.55;}
-  .field-box textarea::placeholder{color:var(--text-3);}
-
   .corner-tabs{display:inline-flex;gap:2px;margin-bottom:16px;padding:3px;border-radius:var(--r-pill);background:var(--glass);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));border:1px solid var(--border);}
   .corner-tab{background:none;border:none;padding:7px 14px;border-radius:var(--r-pill);font-size:12.5px;color:var(--text-2);transition:all var(--dur) var(--ease);}
   .corner-tab.active{color:var(--text);background:var(--glass-strong);font-weight:600;}
@@ -400,21 +382,6 @@
   .add-row{display:flex;gap:8px;margin-bottom:14px;}
   .add-row input,.add-row select{flex:1;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:9px 15px;font-size:13px;min-width:0;}
   .add-row input::placeholder{color:var(--text-3);}
-
-  .rep-row{display:flex;align-items:center;gap:8px;margin-top:8px;}
-  .rep-btn{font-size:11px;background:var(--glass);border:1px solid var(--border);color:var(--text-2);border-radius:var(--r-pill);padding:4px 11px;}
-  .rep-count{font-size:11px;color:var(--text-3);}
-  .retry-btn{width:22px;height:22px;border-radius:50%;border:1px solid var(--border);background:var(--glass);color:var(--text-3);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
-  .retry-btn.on{color:#fff;border-color:var(--red);background:var(--red);}
-  .meter{position:relative;height:4px;background:var(--border);border-radius:4px;margin-top:9px;max-width:220px;}
-  .meter .fill{position:absolute;left:0;top:0;height:100%;border-radius:4px;background:linear-gradient(90deg,var(--blue),var(--purple));}
-
-  .ot-box{border:1px solid var(--border);border-top-color:var(--border-hi);border-radius:var(--r-lg);padding:18px;margin-top:26px;background:var(--glass);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.7);backdrop-filter:blur(var(--blur)) saturate(1.7);}
-  .ot-head{font-size:13.5px;font-weight:600;margin-bottom:10px;}
-  .ot-textarea{width:100%;min-height:72px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text);padding:11px 13px;font-size:13px;margin-bottom:10px;}
-  .ot-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-  .ot-status{font-size:11.5px;color:var(--text-3);}
-  .ot-note{font-size:11px;color:var(--text-3);margin-top:9px;line-height:1.5;}
 
   .completed-link{font-size:12.5px;color:var(--text-3);background:none;border:none;padding:0;margin-top:8px;}
   .completed-link:hover{color:var(--text);}
@@ -464,11 +431,6 @@
   .rot-btn{background:none;border:none;color:var(--text-2);border-radius:var(--r-pill);padding:6px 13px;font-size:11.5px;transition:all var(--dur) var(--ease);}
   .rot-btn.active{background:var(--blue);color:#fff;font-weight:600;}
 
-  .tpl-item{margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--border);}
-  .tpl-item:last-of-type{border-bottom:none;}
-  .tpl-head{display:flex;gap:6px;align-items:center;margin-bottom:6px;}
-  .tpl-name{flex:1;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:7px 12px;font-size:13px;font-weight:600;min-width:0;}
-  .tpl-content{width:100%;min-height:70px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text);padding:9px 11px;font-size:12.5px;line-height:1.5;font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace;resize:vertical;}
 
   .completed-modal .item{padding:11px 4px;border-bottom:1px solid var(--border);}
   .completed-modal .item:last-child{border-bottom:none;}
@@ -787,27 +749,11 @@
     try{ if(name) localStorage.setItem(STUDENT_NAME_KEY, name); else localStorage.removeItem(STUDENT_NAME_KEY); }catch(e){}
   }
 
-  const TEMPLATES_KEY = 'organizer-templates';
-  const DEFAULT_TEMPLATES = [
-    {id:'tpl-physics', name:'물리 보고서', content:'초록(Abstract)\n\n서론(Introduction)\n\n이론적 배경\n\n실험 방법\n\n결과 및 분석\n\n결론\n\n참고문헌'},
-    {id:'tpl-chem', name:'화학 보고서', content:'실험 목적\n\n실험 원리\n\n실험 기구 및 시약\n\n실험 과정\n\n실험 결과\n\n고찰\n\n결론'},
-    {id:'tpl-cpp', name:'C++ 기본 세팅', content:'#include <iostream>\nusing namespace std;\n\nint main() {\n    \n    return 0;\n}'}
-  ];
-  function getTemplates(){
-    try{
-      const raw = localStorage.getItem(TEMPLATES_KEY);
-      if(raw!==null) return JSON.parse(raw);
-    }catch(e){}
-    return DEFAULT_TEMPLATES.slice();
-  }
-  function setTemplates(list){
-    try{ localStorage.setItem(TEMPLATES_KEY, JSON.stringify(list)); }catch(e){}
-  }
 
   /* ============ 상태 ============ */
   const state = {
-    view:'home', expandedTeacher:null, cornerTab:'review',
-    modal:null, completedTeacherKey:null,
+    view:'home',
+    modal:null,
     quickAddKey:null, quickAddCorner:'review',
     asgSortMode:'due',
     cityView:'main', cityInspectTarget:null, editingAssignment:null, editingTask:null,
@@ -840,7 +786,6 @@
       tasks:'<path d="M4 6h1.5M4 10h1.5M4 14h1.5"/><path d="M8 6h8M8 10h8M8 14h5"/>',
       assignments:'<path d="M5 3h7l3 3v11H5z"/><path d="M12 3v3h3"/><path d="M7.5 10h5M7.5 13h5"/>',
       schedule:'<rect x="3.5" y="4" width="13" height="12" rx="2"/><path d="M3.5 8h13M7 2.5v3M13 2.5v3"/>',
-      teachers:'<circle cx="10" cy="7" r="3"/><path d="M4 17c0-3.3 2.7-6 6-6s6 2.7 6 6"/>',
       materials:'<path d="M3 6a1 1 0 0 1 1-1h4l1.5 2H16a1 1 0 0 1 1 1v7a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6z"/>',
       settings:'<circle cx="10" cy="10" r="2.6"/><path d="M10 3v2M10 15v2M3 10h2M15 10h2M5 5l1.4 1.4M13.6 13.6 15 15M15 5l-1.4 1.4M6.4 13.6 5 15"/>',
       check:'<path d="M4 8.5 7 11.5 12 5"/>',
@@ -874,7 +819,6 @@
     {view:'tasks', label:'할 일', icon:'tasks', color:'var(--green)'},
     {view:'assignments', label:'과제', icon:'assignments', color:'var(--orange)'},
     {view:'schedule', label:'시간표', icon:'schedule', color:'var(--purple)'},
-    {view:'teachers', label:'선생님', icon:'teachers', color:'var(--pink)'},
     {view:'materials', label:'자료', icon:'materials', color:'var(--indigo)'},
     {view:'archive', label:'아카이브', icon:'archive', color:'var(--red)'},
     {view:'city', label:'도시', icon:'city', color:'var(--teal)', beta:true}
@@ -897,7 +841,6 @@
     else if(state.view==='tasks') html += renderTasksPage();
     else if(state.view==='assignments') html += renderAssignmentsPage();
     else if(state.view==='schedule') html += renderSchedulePage();
-    else if(state.view==='teachers') html += renderTeachersPage();
     else if(state.view==='materials') html += renderMaterialsPage();
     else if(state.view==='archive') html += renderArchivePage();
     else if(state.view==='city') html += renderCityPage();
@@ -916,10 +859,10 @@
 
     document.querySelectorAll('.modal-overlay').forEach(el=>el.remove());
     if(state.modal==='settings') document.body.insertAdjacentHTML('beforeend', renderSettingsModal());
-    else if(state.modal==='completed') document.body.insertAdjacentHTML('beforeend', renderCompletedModal());
     else if(state.modal==='completedPersonal') document.body.insertAdjacentHTML('beforeend', renderCompletedPersonalModal());
     else if(state.modal==='quickAdd') document.body.insertAdjacentHTML('beforeend', renderQuickAddModal());
     else if(state.modal==='cityInspect') document.body.insertAdjacentHTML('beforeend', renderCityInspectModal());
+    else if(state.modal==='notifications') document.body.insertAdjacentHTML('beforeend', renderNotificationsModal());
     else if(state.modal==='completionFeedback') document.body.insertAdjacentHTML('beforeend', renderCompletionFeedbackModal());
 
     const apiKeyInput = document.getElementById('apiKeyInput');
@@ -952,8 +895,48 @@
       </button>`).join('');
     return `<div class="bottom-nav glass">${items}</div>`;
   }
+  // 알림 — 디데이 일주일 전, 과제 마감 3일/1일 전에만(그 외엔 조용히 아무것도 안 뜸),
+  // 그리고 이번 주 통지표를 바로 받을 수 있는 통로. 오른쪽 위 종 아이콘 하나로 통합.
+  function computeNotifications(){
+    const list = [];
+    (state.data.ddays||[]).forEach(d=>{
+      if(d.hidden) return;
+      const dueMid = new Date(d.date+'T00:00:00').getTime();
+      const daysLeft = Math.round((dueMid-todayMid)/86400000);
+      if(daysLeft===7) list.push(`"${d.name}" 디데이가 일주일 남았어 (D-7)`);
+    });
+    (state.data.assignments||[]).filter(a=>!a.done && DATE_RE.test(a.dueDate)).forEach(a=>{
+      const dueMid = new Date(a.dueDate+'T00:00:00').getTime();
+      const daysLeft = Math.round((dueMid-todayMid)/86400000);
+      if(daysLeft===3) list.push(`"${a.title}" 마감이 3일 남았어`);
+      if(daysLeft===1) list.push(`"${a.title}" 마감이 내일이야`);
+    });
+    return list;
+  }
   function renderTopbarMini(){
-    return `<div class="topbar-mini"><button class="iconbtn" data-action="openSettings">${icon('settings')} 설정</button></div>`;
+    const n = computeNotifications().length;
+    return `<div class="topbar-mini"><button class="iconbtn" data-action="openNotifications">${icon('bell')}${n>0?`<span class="notif-badge">${n}</span>`:''}</button></div>`;
+  }
+  function renderNotificationsModal(){
+    const notes = computeNotifications();
+    const notesHtml = notes.length===0 ? `<div class="empty">지금은 알림이 없어.</div>` : notes.map(n=>`<div class="notif-row">${escapeHtml(n)}</div>`).join('');
+    return `<div class="modal-overlay" data-action="closeModal">
+      <div class="modal" style="max-width:380px;">
+        <div class="modal-head"><h2>알림</h2><button class="modal-close" data-action="closeModal">${icon('close')}</button></div>
+        <div class="modal-body">
+          ${reportStatus?`<div class="empty" style="padding:0 0 10px;">${escapeHtml(reportStatus)}</div>`:''}
+          <div class="settings-group">
+            <h3>이번 주 통지표</h3>
+            <div class="desc">이번 주 학습 리포트를 지금 바로 받아볼 수 있어.</div>
+            <button class="btn-outline" data-action="generateWeeklyReport">${icon('download')} 이번 주 리포트 받기</button>
+          </div>
+          <div class="settings-group">
+            <h3>다가오는 일정</h3>
+            ${notesHtml}
+          </div>
+        </div>
+      </div>
+    </div>`;
   }
 
   /* ---- Home: 과목별 박스 ---- */
@@ -2760,128 +2743,6 @@ ${prevSummary}`}]
     </div>`;
   }
 
-  /* ---- Teachers ---- */
-  function renderTeachersPage(){
-    const groups = Object.keys(CATS).map(c=>{
-      const rows = TEACHER_LIST.filter(x=>x.cat===c).map(x=>{
-        const open = state.expandedTeacher===x.key;
-        return `<div class="teacher-row ${open?'open':''}" data-subj="${x.subj}">
-          <button class="teacher-head" data-action="toggleTeacher" data-key="${x.key}">
-            ${hasClassToday(x.teacher)?'<span class="teacher-dot"></span>':'<span style="width:6px;"></span>'}
-            <span class="teacher-name">${x.teacher}</span>
-            <span class="teacher-subj">${x.subjLabel}</span>
-            <span class="teacher-chevron">${icon('chevron')}</span>
-          </button>
-          <div class="teacher-detail">${open?renderTeacherDetail(x):''}</div>
-        </div>`;
-      }).join('');
-      return `<div class="teacher-group" id="catgroup-${c}">
-        <div class="teacher-group-label">${CATS[c].label}</div>
-        ${rows}
-      </div>`;
-    }).join('');
-
-    return `<div class="fade-in">
-      <div class="page-head"><h1>선생님</h1></div>
-      ${groups}
-    </div>`;
-  }
-
-  function renderTeacherDetail(x){
-    const td = getTD(x.key);
-    const rep = isRepetitionSubject(x.cat, x.subj);
-    const tab = state.cornerTab;
-
-    const tabsHtml = CORNERS.map(cfg=>`
-      <button class="corner-tab ${tab===cfg.key?'active':''}" data-action="setCornerTab" data-corner="${cfg.key}">${cfg.label} <span class="n">${td[cfg.key].length}</span></button>
-    `).join('');
-
-    const list = td[tab];
-    const itemsHtml = list.length===0
-      ? `<div class="empty">아직 항목이 없어.</div>`
-      : list.slice().sort((a,b)=>b.createdAt-a.createdAt).map(it=>teacherItemHtml(it, tab, rep, x.key)).join('');
-
-    return `<div class="teacher-detail-inner">
-      <div class="field-box">
-        <div class="field-label">수업 정보</div>
-        <textarea data-role="info" data-key="${x.key}" placeholder="이 선생님이 어떤 세부 과목·단원을 가르치는지 적어둬">${escapeHtml(td.info)}</textarea>
-      </div>
-      <div class="field-box">
-        <div class="field-label">메모</div>
-        <textarea data-role="memo" data-key="${x.key}" placeholder="부족했던 부분이나 기억할 것">${escapeHtml(td.memo)}</textarea>
-      </div>
-
-      <div class="corner-tabs">${tabsHtml}</div>
-      <div class="add-row">
-        <input type="text" class="add-input" data-key="${x.key}" data-corner="${tab}" placeholder="추가할 내용 입력 후 Enter">
-        <button class="btn-outline" data-action="addItem" data-key="${x.key}" data-corner="${tab}">추가</button>
-      </div>
-      <div>${itemsHtml}</div>
-      <button class="completed-link" data-action="openCompleted" data-key="${x.key}">완료 목록 (${td.completed.length}) →</button>
-
-      <div class="ot-box">
-        <div class="ot-head">${icon('sparkle')} 무엇이든 붙여넣기 → AI 자동 분류</div>
-        <textarea class="ot-textarea" id="otInput" placeholder="OT 내용, 수업 필기, 하고 싶은 말 뭐든 그대로 붙여넣으면 이 선생님의 복습·자율학습·팁으로 자동 분류해서 추가해줘."></textarea>
-        <div class="ot-row">
-          <button class="btn-ai" data-action="otParse" data-key="${x.key}">${icon('sparkle')} AI로 정리해서 추가</button>
-          <span class="ot-status" id="otStatus">${otStatus}</span>
-        </div>
-        <div class="ot-note">Claude API 키가 필요해 — 설정에서 등록해줘. (선생님과 무관한 개인 공부는 "할 일" 탭 상단의 분류 상자를 써줘.)</div>
-      </div>
-    </div>`;
-  }
-
-  function teacherItemHtml(it, corner, rep, key){
-    let metaHtml = '';
-    if(corner==='review'){
-      const u = urgency(it, rep);
-      const repsRow = rep ? `<div class="rep-row">
-        <button class="rep-btn" data-action="incReps" data-key="${key}" data-id="${it.id}">+ 풀이</button>
-        <span class="rep-count">풀이 ${it.reps||0}회</span>
-        <button class="retry-btn ${it.retry?'on':''}" title="재교정 필요" data-action="toggleRetry" data-key="${key}" data-id="${it.id}">${icon('retry')}</button>
-      </div>` : `<div class="rep-row"><button class="retry-btn ${it.retry?'on':''}" title="재교정 필요" data-action="toggleRetry" data-key="${key}" data-id="${it.id}">${icon('retry')}</button></div>`;
-      metaHtml = `<div class="meter"><div class="fill" style="width:${u.pct}%"></div></div>
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:6px;">
-          <span class="task-badge">${u.label}</span>
-        </div>
-        ${repsRow}`;
-    }
-    return `<div class="task-row">
-      <button class="task-check" data-action="completeItem" data-corner="${corner}" data-key="${key}" data-id="${it.id}">${icon('check')}</button>
-      <div class="task-body">
-        <div class="task-text">${escapeHtml(it.text)}</div>
-        ${metaHtml}
-      </div>
-      <button class="task-del" title="삭제" data-action="deleteItem" data-corner="${corner}" data-key="${key}" data-id="${it.id}">${icon('trash')}</button>
-    </div>`;
-  }
-
-  function renderCompletedModal(){
-    const key = state.completedTeacherKey;
-    const td = getTD(key);
-    const x = TEACHER_LIST.find(t=>t.key===key);
-    const groups = CORNERS.map(cfg=>{
-      const items = td.completed.filter(c=>c.corner===cfg.key).sort((a,b)=>b.completedAt-a.completedAt);
-      if(items.length===0) return '';
-      const rows = items.map(it=>`<div class="item">
-        <div class="item-top">
-          <div class="item-text">${escapeHtml(it.text)}</div>
-          <div class="item-actions" style="display:flex;gap:4px;">
-            <button class="task-del" style="opacity:1;" title="복원" data-action="restoreItem" data-key="${key}" data-id="${it.id}">${icon('retry')}</button>
-            <button class="task-del" style="opacity:1;" title="영구삭제" data-action="deletePermanent" data-key="${key}" data-id="${it.id}">${icon('trash')}</button>
-          </div>
-        </div>
-        <div class="item-date">완료: ${fmtDate(it.completedAt)}</div>
-      </div>`).join('');
-      return `<div style="margin-bottom:16px;"><div class="section-title" style="margin-bottom:8px;">${cfg.label}</div>${rows}</div>`;
-    }).join('');
-    return `<div class="modal-overlay" data-action="closeModal">
-      <div class="modal completed-modal">
-        <div class="modal-head"><h2>완료 목록 — ${x?x.teacher:''} 선생님</h2><button class="modal-close" data-action="closeModal">${icon('close')}</button></div>
-        <div class="modal-body">${td.completed.length===0?`<div class="empty">아직 완료한 항목이 없어.</div>`:groups}</div>
-      </div>
-    </div>`;
-  }
 
   function renderCompletedPersonalModal(){
     const list = (state.data.personal?.completed||[]).slice().sort((a,b)=>b.completedAt-a.completedAt);
@@ -2938,17 +2799,6 @@ ${prevSummary}`}]
 
   /* ---- Settings ---- */
   function renderSettingsModal(){
-    const templates = getTemplates();
-    const tplRows = templates.map(t=>`
-      <div class="tpl-item">
-        <div class="tpl-head">
-          <input type="text" class="tpl-name" data-role="templateName" data-id="${t.id}" value="${escapeHtml(t.name)}">
-          <button class="btn-outline" data-action="copyTemplate" data-id="${t.id}">${templateCopyStatus===t.id?'복사됨!':'복사'}</button>
-          <button class="task-del" style="opacity:1;" title="삭제" data-action="deleteTemplate" data-id="${t.id}">${icon('trash')}</button>
-        </div>
-        <textarea class="tpl-content" data-role="templateContent" data-id="${t.id}" rows="4">${escapeHtml(t.content)}</textarea>
-      </div>`).join('');
-
     const rotationRows = Object.keys(ROTATIONS).map(rotKey=>{
       const cfg = ROTATIONS[rotKey];
       const override = getRotationOverride(rotKey);
@@ -2997,16 +2847,6 @@ ${prevSummary}`}]
               <button class="btn-outline" data-action="saveGithubToken">저장</button>
               <button class="btn-outline" data-action="clearGithubToken">삭제</button>
               <span class="settings-status ${githubTokenStatus.startsWith('✗')?'err':''}">${githubTokenStatus}</span>
-            </div>
-          </div>
-
-          <div class="settings-group">
-            <h3>보고서 템플릿</h3>
-            <div class="desc">자주 쓰는 보고서 뼈대나 기본 코드를 저장해두고 "복사" 버튼으로 바로 클립보드에 복사해서 붙여넣을 수 있어. 여기서 자유롭게 수정·추가·삭제해줘 (이 브라우저에만 저장, 내보내기 백업에는 포함 안 됨).</div>
-            ${tplRows}
-            <div class="add-row">
-              <input type="text" class="add-input" id="newTplName" placeholder="새 템플릿 이름 (예: 정보 수행평가)">
-              <button class="btn-outline" data-action="addTemplate">추가</button>
             </div>
           </div>
 
@@ -3182,8 +3022,7 @@ ${prevSummary}`}]
   }
 
   /* ============ 액션: 설정 ============ */
-  let settingsStatus = '', githubTokenStatus = '', otStatus = '', syncStatus = '', taskClassifyStatus = '', recallStatus = '', reportStatus = '';
-  let templateCopyStatus = ''; // 방금 복사한 템플릿 id (버튼에 "복사됨!" 잠깐 표시용)
+  let settingsStatus = '', githubTokenStatus = '', syncStatus = '', taskClassifyStatus = '', recallStatus = '', reportStatus = '';
   // Classroom 동기화 상태 — 자동 동기화가 조용히 실패하는 걸 막기 위해 수동/자동 구분 없이 항상 기록
   let lastSyncCheckedAt = null; // Apps Script가 마지막으로 Gmail을 확인해서 파일을 쓴 시각 (upstream, payload.lastCheckedAt)
   let lastSyncError = ''; // 클라이언트의 가장 최근 fetch 시도가 실패한 이유 (성공하면 비움)
@@ -3252,65 +3091,6 @@ ${prevSummary}`}]
   }
 
   /* ============ 액션: OT AI 정리 ============ */
-  async function otParse(key){
-    const ta = document.getElementById('otInput');
-    const statusEl = document.getElementById('otStatus');
-    const text = ta.value.trim();
-    if(!text) return;
-    const apiKey = getApiKey();
-    if(!apiKey){ statusEl.textContent = 'API 키가 필요해 — 설정에서 먼저 등록해줘.'; return; }
-    statusEl.textContent = '정리 중...';
-    try{
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method:'POST',
-        headers:{
-          'Content-Type':'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-          'anthropic-dangerous-direct-browser-access': 'true'
-        },
-        body: JSON.stringify({
-          model:'claude-sonnet-5',
-          max_tokens:1000,
-          messages:[{role:'user', content:
-`다음은 학생이 수업 OT에서 들은 내용을 그대로 받아적은 텍스트야. 아래 JSON 형식으로만 출력해(다른 설명, 코드블록 금지):
-{"review":["복습해야 할 수업 내용"],"self":["스스로 더 공부해야 할 항목"],"tips":["선생님이 언급한 팁/조언/유의사항"]}
-각 배열 항목은 한국어 한 문장으로 간결하게. 해당 없으면 빈 배열.
-
-원문:
-${text}`}]
-        })
-      });
-      if(!res.ok){
-        const errBody = await res.json().catch(()=>({}));
-        throw new Error((errBody.error && errBody.error.message) || `HTTP ${res.status}`);
-      }
-      const data = await res.json();
-      const raw = modelText(data);
-      const clean = raw.replace(/^```[a-z]*\s*/i,'').replace(/```\s*$/,'').trim();
-      let parsed = null;
-      try{ parsed = JSON.parse(clean); }catch(e){
-        const i = clean.indexOf('{'), j = clean.lastIndexOf('}');
-        if(i>=0 && j>i){ try{ parsed = JSON.parse(clean.slice(i,j+1)); }catch(e2){} }
-      }
-      if(!parsed || typeof parsed !== 'object'){
-        statusEl.textContent = raw
-          ? `응답을 이해하지 못했어 — 모델이 이렇게 답했어: "${raw.slice(0,120)}"`
-          : '모델이 빈 응답을 보냈어 — 잠시 뒤 다시 시도해줘.';
-        return;
-      }
-      const td = getTD(key);
-      const t = Date.now();
-      (parsed.review||[]).forEach(x=> td.review.push({id:genId(), text:x, createdAt:t, reps:0, retry:false}));
-      (parsed.self||[]).forEach(x=> td.self.push({id:genId(), text:x, createdAt:t}));
-      (parsed.tips||[]).forEach(x=> td.tips.push({id:genId(), text:x, createdAt:t}));
-      otStatus = '';
-      persist(); render();
-    }catch(err){
-      statusEl.textContent = `실패 — ${err.message || '알 수 없는 오류'}. API 키가 맞는지 확인하거나 직접 추가해줘.`;
-    }
-  }
-
   /* ============ 액션: 개인 학습 ============ */
   function addPersonalTask(text, boxKey){
     text = (text||'').trim(); if(!text) return;
@@ -3888,23 +3668,7 @@ ${text}`}]
     if(el.dataset.action==='closeModal' && el.classList.contains('modal-overlay') && e.target!==el) return;
     switch(el.dataset.action){
       case 'goView': state.view=el.dataset.view; render(); break;
-      case 'goCategory': {
-        const cat = el.dataset.cat;
-        const subj = el.dataset.subj;
-        state.view = 'teachers';
-        render();
-        const target = (subj && document.querySelector(`.teacher-row[data-subj="${subj}"]`)) || document.getElementById('catgroup-' + cat);
-        if(target) target.scrollIntoView({behavior:'smooth', block:'start'});
-        break;
-      }
-      case 'toggleTeacher': {
-        const k = el.dataset.key;
-        state.expandedTeacher = state.expandedTeacher===k ? null : k;
-        state.cornerTab = 'review';
-        render();
-        break;
-      }
-      case 'setCornerTab': state.cornerTab = el.dataset.corner; render(); break;
+      case 'goCategory': state.view = 'tasks'; render(); break;
       case 'addItem': { const input = el.parentElement.querySelector('.add-input'); addItem(el.dataset.key, el.dataset.corner, input.value); break; }
       case 'completeItem': completeItem(el.dataset.key, el.dataset.corner, el.dataset.id); break;
       case 'deleteItem': deleteItem(el.dataset.key, el.dataset.corner, el.dataset.id); break;
@@ -3912,7 +3676,6 @@ ${text}`}]
       case 'deletePermanent': deletePermanent(el.dataset.key, el.dataset.id); break;
       case 'incReps': incReps(el.dataset.key, el.dataset.id); break;
       case 'toggleRetry': toggleRetry(el.dataset.key, el.dataset.id); break;
-      case 'openCompleted': state.completedTeacherKey = el.dataset.key; state.modal='completed'; render(); break;
       case 'openCompletedPersonal': state.modal='completedPersonal'; render(); break;
       case 'openCityInspect': openCityInspect(el.dataset.kind, el.dataset.key, el.dataset.corner, el.dataset.id); break;
       case 'completeRecall': state.modal=null; state.cityInspectTarget=null; completeRecall(el.dataset.id); break;
@@ -3927,6 +3690,7 @@ ${text}`}]
       case 'quickAdd': state.quickAddKey = el.dataset.key; state.quickAddCorner = 'review'; state.modal = 'quickAdd'; render(); break;
       case 'setQuickAddCorner': state.quickAddCorner = el.dataset.corner; render(); break;
       case 'openSettings': settingsStatus=''; githubTokenStatus=''; state.modal='settings'; render(); break;
+      case 'openNotifications': state.modal='notifications'; render(); break;
       case 'closeModal': state.modal=null; render(); break;
       case 'exportData': exportData(); break;
       case 'importTrigger': document.getElementById('importFile').click(); break;
@@ -3970,7 +3734,6 @@ ${text}`}]
       case 'swPause': swPause(); break;
       case 'swReset': swReset(); break;
       case 'swCompleteLinked': swCompleteLinked(); break;
-      case 'otParse': otParse(el.dataset.key); break;
       case 'classifyTasks': classifyTasks(); break;
       case 'addPersonal': {
         const input = document.getElementById('personalAddInput');
@@ -3987,33 +3750,6 @@ ${text}`}]
       case 'saveStudentName': saveStudentName(); break;
       case 'setRotation': setRotationOverride(el.dataset.rot, el.dataset.val || null); render(); break;
       case 'syncClassroom': syncClassroom(true); break;
-      case 'copyTemplate': {
-        const t = getTemplates().find(x=>x.id===el.dataset.id);
-        if(t){
-          navigator.clipboard.writeText(t.content).then(()=>{
-            templateCopyStatus = el.dataset.id;
-            render();
-            setTimeout(()=>{ if(templateCopyStatus===el.dataset.id){ templateCopyStatus=''; render(); } }, 1500);
-          }).catch(()=>{});
-        }
-        break;
-      }
-      case 'addTemplate': {
-        const input = document.getElementById('newTplName');
-        const name = (input.value||'').trim();
-        if(!name) break;
-        const list = getTemplates();
-        list.push({id:genId(), name, content:''});
-        setTemplates(list);
-        input.value = '';
-        render();
-        break;
-      }
-      case 'deleteTemplate': {
-        setTemplates(getTemplates().filter(t=>t.id!==el.dataset.id));
-        render();
-        break;
-      }
     }
   });
 
@@ -4044,19 +3780,6 @@ ${text}`}]
         else if(parts[0]==='teacher'){ sw.target = {type:'teacher', key:parts[1], corner:parts[2], id:parts[3]}; }
       }
       render();
-    } else if(e.target.dataset.role==='memo' || e.target.dataset.role==='info'){
-      const role = e.target.dataset.role, key=e.target.dataset.key, val=e.target.value;
-      clearTimeout(debTimer);
-      debTimer = setTimeout(()=>{ state.data.teachers[key][role] = val; persist(); }, 400);
-    } else if(e.target.dataset.role==='templateName' || e.target.dataset.role==='templateContent'){
-      const field = e.target.dataset.role==='templateName' ? 'name' : 'content';
-      const id = e.target.dataset.id, val = e.target.value;
-      clearTimeout(debTimer);
-      debTimer = setTimeout(()=>{
-        const list = getTemplates();
-        const t = list.find(x=>x.id===id);
-        if(t){ t[field] = val; setTemplates(list); }
-      }, 400);
     }
   });
 
