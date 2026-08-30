@@ -1835,16 +1835,8 @@
     const stats = computeArchiveStats();
     const thisWeekStart = mondayOf(now).getTime();
     const thisWeekLog = weekLogEntries(thisWeekStart);
-    // 최소 표본(3개) 없이는 강점/약점 판단을 보류한다 — 원칙 4
-    const withSample = stats.subjects.filter(s=>s.rated>=3);
-    const weak = withSample.slice().sort((a,b)=>b.weakRatio-a.weakRatio).slice(0,3);
-    const strong = withSample.slice().sort((a,b)=>a.weakRatio-b.weakRatio).slice(0,3);
-    const weakHtml = weak.length===0
-      ? `<div class="empty">아직 판단하기엔 데이터가 부족해(과목당 자기평가 3개 이상 필요) — 판단 보류.</div>`
-      : weak.map(s=>`<div class="arc-pick"><b>${escapeHtml(s.subject)}</b> — "가물가물했음/거의 기억 안 남" 비율 ${Math.round(s.weakRatio*100)}% (표본 ${s.rated}개)</div>`).join('');
-    const strongHtml = strong.length===0
-      ? `<div class="empty">아직 판단하기엔 데이터가 부족해 — 판단 보류.</div>`
-      : strong.map(s=>`<div class="arc-pick"><b>${escapeHtml(s.subject)}</b> — "잘 기억남/완벽했음" 비율 ${Math.round((1-s.weakRatio)*100)}% (표본 ${s.rated}개)</div>`).join('');
+    // 아카이브는 "너에 대한 평가"를 늘어놓는 곳이 아니다 — 분포만 그대로 보여주고
+    // 해석(약점 지목·과신율 등)은 망각의 시민 생성과 완료 대화창 넛지 쪽에서만 쓴다.
     const subjectRows = stats.subjects.map(s=>{
       const bar = s.rated>0 ? `<div class="arc-bar">
           <div class="arc-bar-seg" style="width:${s.ratings.EASY/s.rated*100}%;background:var(--green);"></div>
@@ -1857,14 +1849,6 @@
         ${bar}
       </div>`;
     }).join('');
-    const calib = computeCalibration();
-    const calibHtml = calib.confidentWithFollowUp < 3
-      ? `<div class="empty">복습 항목이 예정일에 다시 돌아와서 재평가돼야 계산할 수 있어 — 아직 표본이 부족해(${calib.confidentWithFollowUp}개). 며칠 더 쓰면 여기에 나와.</div>`
-      : `<div class="arc-pick">"잘 기억남/완벽했음"이라고 했던 ${calib.confidentWithFollowUp}번 중 <b>${calib.confidentThenFailed}번</b>은 다시 돌아왔을 때 가물가물했어 — 과신 비율 <b>${Math.round(calib.overconfidenceRate*100)}%</b>.</div>`
-        + (calib.subjects.length
-            ? calib.subjects.slice(0,3).map(s=>`<div class="arc-pick">${escapeHtml(s.subject)} — 안다고 느낀 ${s.confident}번 중 ${s.slipped}번이 다음에 무너짐 (${Math.round(s.rate*100)}%)</div>`).join('')
-            : `<div class="empty">과목별로 나누기엔 아직 표본이 부족해(과목당 3개 이상 필요).</div>`)
-        + `<div class="empty" style="padding-top:8px;">과신 비율이 높은 과목은 "안다는 느낌"을 믿지 말고, 완료 전에 설명을 소리 내어 해보는 걸 추천해.</div>`;
     const recent = (state.data.archiveLog||[]).slice(-30).reverse();
     const recentHtml = recent.length===0 ? `<div class="empty">아직 완료 기록이 없어.</div>` : recent.map(e=>`
       <div class="arc-log-row">
@@ -1879,20 +1863,13 @@
       <div class="empty" style="padding:0 0 14px;">지금까지 총 ${stats.totalAll}개 완료 · 이번 주 ${thisWeekLog.length}개</div>
 
       <div class="section">
-        <div class="section-head"><div class="section-title">보완이 필요해 보이는 과목</div></div>
-        ${weakHtml}
-      </div>
-      <div class="section">
-        <div class="section-head"><div class="section-title">잘 다져진 과목</div></div>
-        ${strongHtml}
-      </div>
-      <div class="section">
-        <div class="section-head"><div class="section-title">자기평가가 실제와 맞는지 (캘리브레이션)</div></div>
-        ${calibHtml}
-      </div>
-      <div class="section">
         <div class="section-head"><div class="section-title">과목별 현황</div></div>
-        ${subjectRows || `<div class="empty">아직 완료 기록이 없어.</div>`}
+        ${subjectRows ? `<div class="city-legend" style="margin-bottom:12px;">
+          <span><i class="cl-dot" style="background:var(--green)"></i>완벽했음</span>
+          <span><i class="cl-dot" style="background:var(--teal)"></i>잘 기억남</span>
+          <span><i class="cl-dot" style="background:var(--orange)"></i>가물가물</span>
+          <span><i class="cl-dot" style="background:var(--red)"></i>거의 기억 안 남</span>
+        </div>${subjectRows}` : `<div class="empty">아직 완료 기록이 없어.</div>`}
       </div>
       <div class="section">
         <div class="section-head"><div class="section-title">최근 완료 기록</div><button class="section-link" data-action="exportArchiveLog">원자료 내보내기</button></div>
@@ -3815,6 +3792,16 @@ ${prevSummary}`}]
       rating:t.recallRating, note:t.feedbackNote
     })).join('\n') || '(없음)';
     const boxList = BOXES.map(b=>`${b.key} = ${b.label}`).join(', ');
+    // 캘리브레이션은 학생에게 안 보이는, 오직 이 생성을 위한 신호 — 과신이 심한 과목엔
+    // "완벽했음"으로 끝냈어도 설명형 항목을 한 번 더 넣게 한다
+    const calib = computeCalibration();
+    let calibText = '(아직 표본 부족)';
+    if(calib.confidentWithFollowUp >= 3){
+      calibText = `전체: "안다(잘 기억남/완벽했음)"고 한 것의 ${Math.round(calib.overconfidenceRate*100)}%가 다음 복습 때 무너짐`;
+      if(calib.subjects.length){
+        calibText += '\n과목별 과신율: ' + calib.subjects.slice(0,4).map(s=>`${s.subject} ${Math.round(s.rate*100)}%`).join(', ');
+      }
+    }
 
     try{
       const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -3854,14 +3841,16 @@ ${prevSummary}`}]
   같은 주제를 다시 다루려면 반드시 다음 단계(회상→적용→전이)로 발전시켜라.
 - 복습이 필요 없다고 판단되면 만들지 않는 것도 정답이다. 억지로 개수를 채우지 마라.
 - 학생은 시간이 매우 부족하다. 최대 5개까지, 각각 3~10분 분량으로.
-- 서로 다른 과목이 최근 완료 이력에 함께 등장하고 구조적으로 닮은 개념이 보이면
-  (예: 물리의 운동방정식 ↔ 수학의 미분방정식, 화학 평형 ↔ 생물 항상성,
-  정보과학의 재귀 ↔ 수학의 점화식) 그 둘을 잇는 CONNECTION 과제를 우선적으로 만든다.
-  이 앱의 홈 화면은 과목을 완전히 분리된 박스로 보여주기 때문에, 이렇게 이어주는
-  항목이 없으면 학생은 과목 간 연결을 스스로 볼 기회가 없다. 단, 한 세션에 CONNECTION 은
-  최대 2개까지만. CONNECTION 항목은 subject/boxKey 에 주 과목을, subjectB/boxKeyB 에
-  잇는 상대 과목을 넣고, text 는 "A의 ~와 B의 ~가 왜 같은 구조인지 한 문장으로 설명하기"
-  처럼 두 개념을 실제로 견주게 쓴다.
+- CONNECTION(과목 잇기)은 조건이 있다: 잇는 두 개념이 **둘 다 아래 완료 이력에 이미 등장한 것**,
+  즉 학생이 실제로 배운 범위 안이어야 하고, 학생이 지금 수준에서 그 연결을 실제로 써먹을 수 있어야 한다.
+  아직 안 배운 개념을 미리 잇거나, 연결은 그럴듯하지만 문제 풀이에 쓸 수 없는 건 만들지 마라.
+  조건을 만족할 때만, 구조적으로 닮은 두 개념(예: 물리의 운동방정식 ↔ 수학의 미분방정식,
+  정보과학의 재귀 ↔ 수학의 점화식)을 잇는 CONNECTION 과제를 우선적으로 만든다. 홈 화면이 과목을
+  완전히 분리해 보여주기 때문에 이렇게 이어주는 항목이 없으면 학생은 연결을 스스로 볼 기회가 없다.
+  한 세션에 CONNECTION 은 최대 2개. subject/boxKey 에 주 과목을, subjectB/boxKeyB 에 잇는 상대
+  과목을 넣고, text 는 "A의 ~와 B의 ~가 왜 같은 구조인지 한 문장으로 설명하기"처럼 두 개념을 실제로 견주게 쓴다.
+- 자기평가 캘리브레이션(아래 참고): 과신율이 높은 과목은 "완벽했음"으로 끝냈어도 방심하지 말고
+  RECALL/설명형 항목을 한 번 더 넣어라. 이 수치는 학생에게 보여주지 말고 항목 선택에만 써라.
 
 각 과제에 태그를 하나 붙인다: RECALL, APPLICATION, TRANSFER, ERROR_CORRECTION, CONNECTION
 
@@ -3873,8 +3862,11 @@ CONNECTION 일 때만 subjectB, boxKeyB 를 추가로 넣는다:
 
 boxKey 는 다음 중 하나를 정확히 쓴다: ${boxList}
 
-최근 완료한 과제 (최신순):
+최근 완료한 과제 (최신순 — CONNECTION 은 여기 등장한 개념끼리만):
 ${histText}
+
+자기평가 캘리브레이션 (학생 비공개, 항목 선택용):
+${calibText}
 
 이미 만들어져 아직 안 끝낸 복습 과제 (중복 금지):
 ${openText}
