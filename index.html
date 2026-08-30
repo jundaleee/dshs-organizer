@@ -476,6 +476,20 @@
 
   /* ---- 도시 (City, beta) ---- */
   .recall-note{font-size:12px;color:var(--text-3);margin-bottom:10px;line-height:1.55;}
+  .city-growth{background:var(--glass);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.7);backdrop-filter:blur(var(--blur)) saturate(1.7);
+    border:1px solid var(--border);border-top-color:var(--border-hi);border-radius:var(--r-md);padding:13px 16px;margin-bottom:12px;}
+  .city-growth-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:8px;}
+  .city-growth-head b{font-size:14px;font-weight:600;}
+  .city-growth-head span{font-size:11.5px;color:var(--text-3);}
+  .city-growth-track{height:5px;border-radius:3px;background:var(--glass-strong);overflow:hidden;}
+  .city-growth-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--teal),var(--green));transition:width 600ms var(--ease);}
+  .city-growth-sub{font-size:11.5px;color:var(--text-3);line-height:1.55;margin-top:8px;}
+  .city-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11.5px;color:var(--text-3);margin-bottom:14px;}
+  .city-legend span{display:inline-flex;align-items:center;gap:6px;}
+  .cl-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
+  .cl-dot.cl-car{background:var(--blue);}
+  .cl-dot.cl-house{background:var(--teal);border-radius:50%;}
+  .cl-dot.cl-fade{background:var(--orange);opacity:.65;}
   .city-graduating{font-size:12.5px;color:var(--text-2);background:var(--glass);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));border:1px solid var(--border);border-radius:var(--r-md);padding:9px 13px;margin-bottom:18px;}
   /* 검은 유리 상자 안에 도시가 들어있는 느낌 */
   .city3d{position:relative;width:100%;height:100%;border-radius:var(--r-lg);overflow:hidden;
@@ -2044,12 +2058,32 @@ ${prevSummary}`}]
     if(h.length!==6) return '198,204,216';
     return [0,2,4].map(i=>parseInt(h.slice(i,i+2),16)).join(',');
   }
+  /* ============ 도시의 성장 — 되돌릴 수 없는 축적 ============
+     방치하면 무너지는 것만 있으면 도시는 "안 하면 벌 받는 곳"이 된다. 그래서
+     지금까지 완료한 총량(archiveLog는 append-only라 절대 줄지 않음)에 따라 도시의
+     녹지가 영구적으로 늘어나게 했다. 며칠 손을 놓아도 이미 심어진 나무는 사라지지 않는다.
+     연기·화재는 벌이 아니라 "그 기억이 지금 흐려지고 있다"는 신호로 읽히게 문구를 맞췄다. */
+  const CITY_GROWTH_PER_LEVEL = 12;   // 완료 12개마다 한 단계
+  const CITY_GROWTH_MAX_LEVEL = 10;
+  function cityGrowth(){
+    const total = (state.data.archiveLog || []).length;
+    const level = Math.min(CITY_GROWTH_MAX_LEVEL, Math.floor(total / CITY_GROWTH_PER_LEVEL));
+    const intoLevel = total - level * CITY_GROWTH_PER_LEVEL;
+    return {
+      total, level,
+      atMax: level >= CITY_GROWTH_MAX_LEVEL,
+      toNext: level >= CITY_GROWTH_MAX_LEVEL ? 0 : CITY_GROWTH_PER_LEVEL - intoLevel,
+      progress: level >= CITY_GROWTH_MAX_LEVEL ? 1 : intoLevel / CITY_GROWTH_PER_LEVEL,
+      ratio: level / CITY_GROWTH_MAX_LEVEL   // 0~1, 녹지 밀도에 그대로 씀
+    };
+  }
   function citySignature(){
     const cz = collectCityCitizens();
     // 망각의 시민도 도시 구성의 일부 — 빼먹으면 복습 과제를 새로 뽑아도 씬이 안 바뀐다.
     // smoke는 같은 단계 안에서도 날마다 짙어지는 연기 세기라 signature에 넣어야 갱신됨
     return cz.map(c=>c.item.id+':'+c.stage+':'+c.smoke+':'+c.vehicle).sort().join('|')
-      + '#' + pendingRecall().map(t=>t.id).sort().join(',');
+      + '#' + pendingRecall().map(t=>t.id).sort().join(',')
+      + '#g' + cityGrowth().level;   // 성장 단계가 오르면 녹지가 늘어나므로 씬을 다시 짓는다
   }
   function setCityStatus(msg){
     if(CITY3D.statusEl) CITY3D.statusEl.textContent = msg || '';
@@ -2343,21 +2377,32 @@ ${prevSummary}`}]
       pick(cz, holder);
     });
 
-    // 빈 구획엔 건물을 세우지 않는다 — 집은 할 일 하나당 하나. 대신 가끔 나무만 심어서
+    // 빈 구획엔 건물을 세우지 않는다 — 집은 할 일 하나당 하나. 대신 나무를 심어서
     // 허전하지 않게 하고, 어느 집이 진짜 할 일인지 헷갈리지 않게 한다.
+    // 이 녹지의 밀도·크기가 곧 "지금까지 쌓아온 것"이다 — 완료가 누적될수록 도시가 푸르러지고,
+    // 한 번 심긴 건 며칠 쉬어도 사라지지 않는다(archiveLog가 줄지 않으므로).
+    const growth = cityGrowth();
+    const plantChance = 0.30 + growth.ratio * 0.62;   // 초반엔 듬성듬성, 성장할수록 빽빽하게
+    const sizeBoost = 1 + growth.ratio * 0.45;        // 나무도 함께 자란다
     plots.forEach(p=>{
       if(used.has(p.c+'x'+p.r)) return;
       const hs = hashStr('f'+p.c+'_'+p.r);
-      if(hs%2!==0) return;
+      if((hs % 100) / 100 >= plantChance) return;
       const holder = new T.Group();
       holder.position.set(wx(p.c), 0, wx(p.r));
       holder.rotation.y = (hs%4)*Math.PI/2;
       g.add(holder);
-      const t1 = spawn(hs%2 ? 'tree-large' : 'tree-small');
-      if(t1){ fitMax(t1, CITY_TILE*(hs%2?0.6:0.46)); t1.position.x += 0.6; holder.add(t1); }
+      const big = hs % 2 === 0;
+      const t1 = spawn(big ? 'tree-large' : 'tree-small');
+      if(t1){ fitMax(t1, CITY_TILE*(big?0.6:0.46)*sizeBoost); t1.position.x += 0.6; holder.add(t1); }
       if(hs%5===0){
         const t2 = spawn('tree-small');
-        if(t2){ fitMax(t2, CITY_TILE*0.38); t2.position.set(-1, t2.position.y, 0.8); holder.add(t2); }
+        if(t2){ fitMax(t2, CITY_TILE*0.38*sizeBoost); t2.position.set(-1, t2.position.y, 0.8); holder.add(t2); }
+      }
+      // 충분히 자란 도시에는 화단까지 생긴다
+      if(growth.ratio >= 0.5 && hs%7===0){
+        const pl = spawn('planter');
+        if(pl){ fitMax(pl, CITY_TILE*0.3); pl.position.set(0.7, pl.position.y, -0.9); holder.add(pl); }
       }
     });
 
@@ -2662,8 +2707,8 @@ ${prevSummary}`}]
     const tag = cz.kind==='teacher' ? `${cz.x.subjLabel} · ${cz.x.teacher}`
       : (cz.item.boxKey && BOX_KEYS.has(cz.item.boxKey) ? BOXES.find(b=>b.key===cz.item.boxKey).label : '미분류');
     const stageLabel = isCar
-      ? ['정상 주행 중','연기가 나는 중','완전히 고장남'][cz.stage]
-      : ['평온함','굴뚝에서 연기','집에 불이 남','집이 무너짐'][cz.stage];
+      ? ['생생함','흐려지는 중','기억에서 거의 지워짐'][cz.stage]
+      : ['생생함','슬슬 흐려지는 중','많이 잊힌 상태','기억에서 거의 지워짐'][cz.stage];
     CITY3D.tip.innerHTML = `<div class="ct-tag">${escapeHtml(tag)} · ${isCar?'수업 과제':'자율학습'}</div>`
       + `<div class="ct-text">${escapeHtml(cz.item.text)}</div>`
       + `<div class="ct-meta">${cz.days}일째 · ${stageLabel}</div>`;
@@ -2774,13 +2819,35 @@ ${prevSummary}`}]
     startCityLoop();
   }
 
+  // 도시의 정체성은 "얼마나 망가졌나"가 아니라 "지금까지 뭘 쌓았나" — 그래서 맨 위에 이걸 둔다
+  function renderCityGrowthBar(){
+    const g = cityGrowth();
+    const sub = g.total === 0
+      ? '할 일을 하나씩 끝낼 때마다 이 도시에 나무가 심겨. 심긴 건 사라지지 않아.'
+      : (g.atMax
+          ? `지금까지 완료한 ${g.total}개가 이 도시를 다 키웠어. 여기까지 온 건 되돌아가지 않아.`
+          : `지금까지 완료한 ${g.total}개가 이 도시를 키웠어. ${g.toNext}개 더 하면 도시가 한 번 더 자라.`);
+    return `<div class="city-growth">
+      <div class="city-growth-head">
+        <b>도시 성장 Lv.${g.level}</b>
+        <span>${g.total}개 완료</span>
+      </div>
+      <div class="city-growth-track"><div class="city-growth-fill" style="width:${Math.round(g.progress*100)}%;"></div></div>
+      <div class="city-growth-sub">${sub}</div>
+    </div>`;
+  }
   function renderCityPage(){
     if(state.cityView==='archive') return renderGraduationArchive();
     const citizens = collectCityCitizens();
     const graduating = collectGraduatingThisWeek();
     return `<div class="fade-in">
       <div class="page-head"><h1>도시</h1><button class="iconbtn" data-action="goCityArchive">${icon('external')} 졸업 앨범</button></div>
-      <div class="empty" style="padding:0 0 14px;">수업 과제는 도로를 달리는 자동차, 자율학습은 집에 사는 시민이야. 방치하면 연기가 나고 결국 불이 붙어.</div>
+      ${renderCityGrowthBar()}
+      <div class="city-legend">
+        <span><i class="cl-dot cl-car"></i>자동차 = 수업 과제</span>
+        <span><i class="cl-dot cl-house"></i>집 = 자율학습</span>
+        <span><i class="cl-dot cl-fade"></i>연기가 짙을수록 그 기억이 흐려지는 중</span>
+      </div>
       ${graduating.length>0?`<div class="city-graduating">🎓 이번 주 졸업 예정 ${graduating.length}명 — 다음 주 월요일에 졸업 앨범으로 넘어가</div>`:''}
       <div id="city3dSlot" class="city-slot-full"></div>
       ${citizens.length===0?`<div class="empty">아직 시민이 없어 — 할 일 탭에서 수업 과제나 자율학습을 추가하면 도시에 나타나.</div>`:''}
@@ -2826,8 +2893,8 @@ ${prevSummary}`}]
     const days = itemStaleDays(entry.item);
     const stage = isCar ? carDecayStage(days) : houseDecayStage(days);
     const stageLabel = isCar
-      ? ['정상 주행 중이야','연기가 나고 있어','완전히 고장났어'][stage]
-      : ['평온해','굴뚝에서 연기가 나','집에 불이 났어','집이 무너졌어'][stage];
+      ? ['아직 생생해','기억이 흐려지고 있어','기억에서 거의 지워졌어'][stage]
+      : ['아직 생생해','슬슬 흐려지고 있어','많이 잊힌 상태야','기억에서 거의 지워졌어'][stage];
     const tag = entry.kind==='teacher'
       ? `${entry.x.subjLabel} · ${entry.x.teacher}`
       : (entry.item.boxKey && BOX_KEYS.has(entry.item.boxKey) ? BOXES.find(b=>b.key===entry.item.boxKey).label : '미분류');
