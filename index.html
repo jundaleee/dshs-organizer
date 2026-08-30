@@ -956,6 +956,8 @@
       // 홈 미리보기 ↔ 도시 섹션 사이를 넘나들 때만 캔버스를 다시 옮겨 끼운다(둘 다 슬롯을 가짐)
       if(best==='home' || best==='city' || prev==='home' || prev==='city') mountCity3D();
     }
+    // 아직 3D 에셋을 안 받은 상태라면, 도시가 화면 근처까지 올라왔는지 계속 지켜보다가 그때 받는다
+    if(CITY3D.phase==='idle') mountCity3D();
     if(best==='city' || best==='home') startCityLoop(); else stopCityLoop();
   }
   function updateNavActiveClasses(){
@@ -2704,12 +2706,22 @@ ${prevSummary}`}]
     }
     return document.getElementById('city3dSlot');
   }
+  // 스크롤 체인 때문에 도시 섹션이 항상 DOM에 붙어있게 되면서, 그냥 두면 앱을 열자마자
+  // three.js(160KB)+모델(363KB)을 무조건 받아버린다 — 도시 근처에 가지도 않은 모바일에서도.
+  // 그래서 슬롯이 화면 근처(위아래 한 화면 이내)에 들어왔을 때만 실제 로딩을 시작한다.
+  function slotNearViewport(el){
+    const r = el.getBoundingClientRect();
+    return r.top < window.innerHeight * 1.5 && r.bottom > -window.innerHeight * 0.5;
+  }
   function mountCity3D(){
     const slot = pickCityHostSlot();
     if(!slot) { stopCityLoop(); return; }
     if(!CITY3D.host) makeCityHost();
     if(CITY3D.host.parentElement !== slot) slot.appendChild(CITY3D.host);
-    if(CITY3D.phase==='idle' || CITY3D.phase==='error'){ ensureCity3D(); return; }
+    if(CITY3D.phase==='idle' || CITY3D.phase==='error'){
+      if(slotNearViewport(slot)) ensureCity3D();
+      return;
+    }
     if(CITY3D.phase!=='ready') return;
     if(citySignature() !== CITY3D.sig) buildCityScene();
     resizeCity3D();
