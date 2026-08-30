@@ -507,6 +507,16 @@
   .city-growth-track{height:5px;border-radius:3px;background:var(--glass-strong);overflow:hidden;}
   .city-growth-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--teal),var(--green));transition:width 600ms var(--ease);}
   .city-growth-sub{font-size:11.5px;color:var(--text-3);line-height:1.55;margin-top:8px;}
+  /* 과목을 잇기 (홈) */
+  .conn-note{font-size:11.5px;color:var(--text-3);line-height:1.55;margin-bottom:10px;}
+  .conn-row{display:flex;flex-direction:column;gap:3px;width:100%;text-align:left;
+    background:var(--glass);border:1px solid var(--border);border-radius:var(--r-md);
+    padding:10px 13px;margin-bottom:8px;-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));}
+  .conn-row:hover{background:var(--glass-strong);}
+  .conn-pair{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:600;color:var(--text);}
+  .conn-pair i{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .conn-pair em{font-style:normal;color:var(--text-3);margin:0 1px;}
+  .conn-text{font-size:12.5px;color:var(--text-2);line-height:1.5;}
   .city-legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:11.5px;color:var(--text-3);margin-bottom:14px;}
   .city-legend span{display:inline-flex;align-items:center;gap:6px;}
   .cl-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0;}
@@ -1421,6 +1431,35 @@
     </div>`;
   }
 
+  function boxLabelForKey(key){
+    const b = BOX_KEYS.has(key) && BOXES.find(x=>x.key===key);
+    return b ? b.label : null;
+  }
+  function boxColorForKey(key){
+    const b = BOX_KEYS.has(key) && BOXES.find(x=>x.key===key);
+    return b ? b.qc : 'var(--text-3)';
+  }
+  function connectionRecalls(){ return pendingRecall().filter(t=>t.tag==='CONNECTION'); }
+  // 홈은 과목을 완전히 분리된 박스로 보여준다 — 과목 간 연결을 스스로 볼 자리가 없다.
+  // 서로 다른 과목을 잇는 복습 항목이 있으면 여기서 한 줄로 묶어 보여준다.
+  function renderConnectionStrip(){
+    const cs = connectionRecalls();
+    if(!cs.length) return '';
+    const rows = cs.map(t=>{
+      const a = t.subject || '';
+      const b = t.subjectB || boxLabelForKey(t.boxKeyB) || '?';
+      const ca = recallColor(t), cb = boxColorForKey(t.boxKeyB);
+      return `<button class="conn-row" data-action="openCityInspect" data-kind="recall" data-id="${t.id}">
+        <span class="conn-pair"><i style="background:${ca}"></i>${escapeHtml(a)}<em>↔</em><i style="background:${cb}"></i>${escapeHtml(b)}</span>
+        <span class="conn-text">${escapeHtml(t.text)}</span>
+      </button>`;
+    }).join('');
+    return `<div class="section">
+      <div class="section-head"><div class="section-title">과목을 잇기</div></div>
+      <div class="conn-note">다른 과목의 개념이 같은 구조일 때 이어서 복습해 — 홈이 과목별로 갈라져 있어도 여기서는 연결된다.</div>
+      ${rows}
+    </div>`;
+  }
   function renderHome(){
     const name = getStudentName();
 
@@ -1463,6 +1502,8 @@
       </div>
 
       <div class="box-grid">${boxHtml}</div>
+
+      ${renderConnectionStrip()}
 
       ${renderBalanceWarning()}
 
@@ -2518,9 +2559,16 @@ ${prevSummary}`}]
       const o = spawn(CITY_CHARS[hs % CITY_CHARS.length]);
       if(!o) return;
       const hex = cssVarHex(recallColor(rt));
+      // 과목을 잇는 시민은 두 과목색을 다 두른다 — 몸통은 섞은 색, 바닥엔 상대 과목색 링을 하나 더
+      const linkHex = (rt.tag==='CONNECTION' && rt.boxKeyB && BOX_KEYS.has(rt.boxKeyB))
+        ? cssVarHex(BOXES.find(b=>b.key===rt.boxKeyB).qc) : null;
       const rig = poseCharacter(o);
       fitH(o, CITY_TILE*0.42);
       recolor(o, hex, 'tint', 0.6);
+      if(linkHex){
+        const mix = new T.Color(hex).lerp(new T.Color(linkHex), 0.5);
+        recolor(o, '#'+mix.getHexString(), 'tint', 0.45);
+      }
       const road = walkRoads[i % walkRoads.length];
       const side = (hs%2) ? 1 : -1;
       const walk = roadLines[road.li] + side*(CITY_TILE*0.42);   // 인도 쪽으로 붙여서
@@ -2528,6 +2576,7 @@ ${prevSummary}`}]
       holder.add(o);
       addGlow(holder, hex, CITY_TILE*0.6);
       addRing(holder, hex, CITY_TILE*0.24);
+      if(linkHex) addRing(holder, linkHex, CITY_TILE*0.34);
       addBeacon(holder, hex, 1.9);
       g.add(holder);
       const from = new T.Vector3(), to = new T.Vector3();
@@ -3424,7 +3473,7 @@ ${prevSummary}`}]
     if(modalBody){
       modalBody.innerHTML = `<div class="city-fix-flourish ${isCar?'repair':'fire'}">
         <span class="city-fix-icon">${icon('truck')}</span>
-        <div>${isCar?'수리차가 와서 고쳐주고 있어...':'소방차가 와서 불을 끄고 있어...'}</div>
+        <div>이 기억을 다시 또렷하게 붙잡고 있어...</div>
       </div>`;
     }
     setTimeout(()=>{
@@ -3729,12 +3778,22 @@ ${prevSummary}`}]
   같은 주제를 다시 다루려면 반드시 다음 단계(회상→적용→전이)로 발전시켜라.
 - 복습이 필요 없다고 판단되면 만들지 않는 것도 정답이다. 억지로 개수를 채우지 마라.
 - 학생은 시간이 매우 부족하다. 최대 5개까지, 각각 3~10분 분량으로.
+- 서로 다른 과목이 최근 완료 이력에 함께 등장하고 구조적으로 닮은 개념이 보이면
+  (예: 물리의 운동방정식 ↔ 수학의 미분방정식, 화학 평형 ↔ 생물 항상성,
+  정보과학의 재귀 ↔ 수학의 점화식) 그 둘을 잇는 CONNECTION 과제를 우선적으로 만든다.
+  이 앱의 홈 화면은 과목을 완전히 분리된 박스로 보여주기 때문에, 이렇게 이어주는
+  항목이 없으면 학생은 과목 간 연결을 스스로 볼 기회가 없다. 단, 한 세션에 CONNECTION 은
+  최대 2개까지만. CONNECTION 항목은 subject/boxKey 에 주 과목을, subjectB/boxKeyB 에
+  잇는 상대 과목을 넣고, text 는 "A의 ~와 B의 ~가 왜 같은 구조인지 한 문장으로 설명하기"
+  처럼 두 개념을 실제로 견주게 쓴다.
 
 각 과제에 태그를 하나 붙인다: RECALL, APPLICATION, TRANSFER, ERROR_CORRECTION, CONNECTION
 
 아래 JSON 배열로만 답한다 (설명·코드블록 금지, 만들 게 없으면 []).
 text 안에는 큰따옴표(")를 절대 쓰지 마라 — JSON이 깨진다. 강조하고 싶으면 따옴표 대신 그냥 풀어서 써라:
 [{"subject":"과목명","boxKey":"박스키","text":"...하기","minutes":4,"tag":"RECALL"}]
+CONNECTION 일 때만 subjectB, boxKeyB 를 추가로 넣는다:
+[{"subject":"물리학","boxKey":"sci-phys","subjectB":"수학","boxKeyB":"math","text":"...설명하기","minutes":6,"tag":"CONNECTION"}]
 
 boxKey 는 다음 중 하나를 정확히 쓴다: ${boxList}
 
@@ -3766,13 +3825,17 @@ ${doneRecallText}`}]
       state.data.recall = state.data.recall || {tasks:[], lastGeneratedAt:null};
       items.forEach(it=>{
         if(!it || !it.text) return;
+        const tag = RECALL_TAGS[it.tag] ? it.tag : 'RECALL';
         state.data.recall.tasks.push({
           id: genId(),
           subject: (it.subject||'').trim() || '복습',
           boxKey: BOX_KEYS.has(it.boxKey) ? it.boxKey : null,
+          // 과목을 잇는 항목만 상대 과목을 함께 들고 다닌다 — 홈/도시에서 두 과목을 연결해 보여줌
+          subjectB: (tag==='CONNECTION' && it.subjectB) ? String(it.subjectB).trim() : null,
+          boxKeyB: (tag==='CONNECTION' && BOX_KEYS.has(it.boxKeyB)) ? it.boxKeyB : null,
           text: String(it.text).trim(),
           minutes: (typeof it.minutes==='number' && it.minutes>0) ? Math.round(it.minutes) : 5,
-          tag: RECALL_TAGS[it.tag] ? it.tag : 'RECALL',
+          tag,
           createdAt: now, done:false,
           ease: SR_EASE_DEFAULT, interval: 0, srReps: 0, dueAt: null, ratingHistory: []
         });
