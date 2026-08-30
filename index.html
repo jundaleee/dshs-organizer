@@ -3781,6 +3781,35 @@ ${text}`}]
     }
   });
 
+  /* ============ 스크롤로 탭 넘어가기 ============
+     할 일 → 과제 → 시간표 → 자료 → 아카이브 → 도시를 화면 전환 없이 스크롤 하나로
+     이어지는 흐름처럼 넘나든다. 사이드바 활성 표시는 state.view를 그대로 따라가므로
+     탭이 바뀌면 자동으로 같이 내려간다(별도 스크롤스파이 불필요).
+     도시 탭은 휠로 3D 카메라를 확대/축소하므로 체인에서 제외 — 들어올 수는 있어도
+     스크롤로는 못 빠져나가고, 나갈 땐 사이드바를 눌러야 함(충돌 방지). */
+  const SCROLL_CHAIN = ['tasks','assignments','schedule','materials','archive','city'];
+  let scrollChainLock = false;
+  function scrollChainStep(dir){
+    if(scrollChainLock) return;
+    const idx = SCROLL_CHAIN.indexOf(state.view);
+    if(idx<0) return;
+    const nextIdx = idx + dir;
+    if(nextIdx<0 || nextIdx>=SCROLL_CHAIN.length) return;
+    scrollChainLock = true;
+    state.view = SCROLL_CHAIN[nextIdx];
+    render();
+    window.scrollTo(0, dir>0 ? 0 : document.documentElement.scrollHeight);
+    setTimeout(()=>{ scrollChainLock = false; }, 650);
+  }
+  window.addEventListener('wheel', function(e){
+    if(state.view==='city') return;
+    if(!SCROLL_CHAIN.includes(state.view)) return;
+    const atBottom = window.scrollY + window.innerHeight >= document.documentElement.scrollHeight - 4;
+    const atTop = window.scrollY <= 2;
+    if(e.deltaY > 12 && atBottom) scrollChainStep(1);
+    else if(e.deltaY < -12 && atTop) scrollChainStep(-1);
+  }, {passive:true});
+
   // 홈 2단 ↔ 1단 경계를 넘어갈 때만 다시 그림 (매 resize마다 그리면 낭비)
   let lastWide = isWideScreen(), resizeTimer = null;
   window.addEventListener('resize', function(){
