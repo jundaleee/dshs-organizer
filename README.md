@@ -110,6 +110,10 @@
 
 화면을 안 막는 만큼 답하는 도중 다른 걸 클릭해 리렌더가 날 수 있어서, `captureFeedbackDraft()`/`restoreFeedbackDraft()`가 쓰던 설명을 보존한다. 단 `data-target`을 비교해서 **그 사이 다른 항목을 완료했으면 초안을 버린다** — 남의 항목 설명이 딸려가면 안 되니까.
 
+**실제로 겪은 버그 — 등급 버튼이 곧 제출이었던 문제**: 원래는 등급 버튼(거의 기억 안 남/가물가물했음/잘 기억남/완벽했음)을 누르는 순간 바로 제출·종료됐다. 완료 후 설명을 쓰던 중 먼저 등급부터 고르려고 버튼을 눌렀는데 그 즉시 대화창이 닫히면서 쓰던 텍스트가 그대로 날아가는 걸 실사용 중 겪었다. **지금은 2단계로 분리했다**: `selectFeedbackRating(rating)`은 `state.feedbackSelectedRating`만 바꾸고 대화창을 안 닫는다(선택된 버튼은 파란색으로 하이라이트). 실제 반영은 별도의 "제출" 버튼(등급을 고르기 전엔 `disabled`)을 눌러야 `submitCompletionFeedback()`이 실행된다. **자기평가 선택과 자유 서술을 동시에 요구하는 UI를 다시 만들 때는 반드시 "고르기"와 "확정"을 분리할 것** — 버튼 클릭이 클릭 즉시 제출·종료로 이어지면 안 됨.
+
+**되돌리기(실행취소)**: 그래도 실수는 생긴다(엉뚱한 항목을 완료했거나, 등급을 잘못 누르고 이미 제출해버린 경우 등). `lastCompletion`에 가장 최근 완료 1건의 스냅샷(완료 직전 원본 객체)을 담아뒀다가 `undoLastCompletion()`으로 통째로 되돌릴 수 있다 — 알림 벨(🔔) 안에 "마지막 완료 취소" 섹션으로 노출됨. 여러 단계 실행취소는 지원 안 함(가장 최근 한 건만). `archiveLog`에서도 해당 항목을 지우는데, 이건 "append-only 원칙"에 대한 의도적 예외다 — 그 원칙은 정상적으로 쌓인 기록을 함부로 편집하지 말라는 뜻이지, 오조작으로 생긴 항목까지 영구 보존하라는 뜻은 아니라고 판단함. **복습(recall) 항목을 되돌릴 땐 `Object.assign`으로 병합하면 안 됨** — 스냅샷 시점엔 없던 필드(`recallRating` 등)가 기존 객체에 남아버린다. 배열에서 인덱스를 찾아 스냅샷 객체로 통째로 교체해야 깨끗하게 지워진다(직접 겪고 고친 버그).
+
 - **Anki 스타일 4단계 자기평가**: `RECALL_RATINGS = {AGAIN:'거의 기억 안 남', HARD:'가물가물했음', GOOD:'잘 기억남', EASY:'완벽했음'}`
 - 선택지 아래 자유 텍스트(`feedbackNoteInput`, 선택)도 받음.
 - `submitCompletionFeedback(rating)`이 `findAnyCompletedItem(id)`(teachers/personal/recall 완료 배열 세 군데를 id로 뒤져서 찾는 헬퍼, 실제 객체 참조 반환)로 대상을 찾아 `item.recallRating`/`item.feedbackNote`/`item.feedbackAt`을 채우고, **같은 id의 `archiveLog` 항목에도 `rating`/`note`를 동기화**함.

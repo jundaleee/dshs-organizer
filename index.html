@@ -107,6 +107,8 @@
     padding:12px 14px 8px;font-size:13.5px;}
   .feedback-dock-body{padding:0 14px 14px;max-height:min(70vh,520px);overflow-y:auto;}
   .feedback-ratings{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  .feedback-ratings .btn-outline.is-selected{background:var(--blue);border-color:var(--blue);color:#fff;}
+  .feedback-dock-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;}
   @media(max-width:639px){
     .feedback-dock{right:12px;left:12px;bottom:calc(76px + env(safe-area-inset-bottom));width:auto;}
   }
@@ -368,6 +370,7 @@
   .asg-form input.date{flex:1;min-width:130px;}
   .asg-form input.tag{flex:1;min-width:110px;}
   .btn{background:var(--blue);color:#fff;border:none;border-radius:var(--r-pill);padding:9px 20px;font-size:13.5px;font-weight:600;transition:filter var(--dur) var(--ease),transform var(--dur) var(--ease);}
+  .btn[disabled]{opacity:.4;cursor:not-allowed;}
   .btn:hover{filter:brightness(1.12);}
   .btn:active{transform:scale(.97);}
   .btn-outline{background:var(--glass);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));border:1px solid var(--border-strong);color:var(--text);border-radius:var(--r-pill);padding:9px 20px;font-size:13.5px;font-weight:600;transition:all var(--dur) var(--ease);}
@@ -804,7 +807,7 @@
     quickAddKey:null, quickAddCorner:'review',
     asgSortMode:'due',
     cityView:'main', cityInspectTarget:null, editingAssignment:null, editingTask:null,
-    ddayAddOpen:false, feedbackTargetId:null,
+    ddayAddOpen:false, feedbackTargetId:null, feedbackSelectedRating:null,
     data:buildSkeleton()
   };
   function getTD(key){ return state.data.teachers[key]; }
@@ -1122,6 +1125,11 @@
         <div class="modal-head"><h2>알림</h2><button class="modal-close" data-action="closeModal">${icon('close')}</button></div>
         <div class="modal-body">
           ${reportStatus?`<div class="empty" style="padding:0 0 10px;">${escapeHtml(reportStatus)}</div>`:''}
+          ${lastCompletion?`<div class="settings-group">
+            <h3>마지막 완료 취소</h3>
+            <div class="desc">"${escapeHtml(lastCompletion.text)}" 방금 끝낸 걸 잘못 눌렀으면 되돌릴 수 있어.</div>
+            <button class="btn-outline" data-action="undoLastCompletion">되돌리기</button>
+          </div>`:''}
           <div class="settings-group">
             <h3>이번 주 통지표</h3>
             <div class="desc">이번 주 학습 리포트를 지금 바로 받아볼 수 있어.</div>
@@ -3277,6 +3285,7 @@ ${prevSummary}`}]
     logArchiveEvent({id, ts:completedAt, createdAt:it.createdAt||null,
       subject: x?x.subjLabel:key, subjectKey:key, kind:corner, text:it.text,
       attempts: it.reps||null});
+    lastCompletion = {kind:'teacher', key, corner, id, text:it.text, snapshot:{...it}};
     persist(); openCompletionFeedback(id);
   }
   function deleteItem(key, corner, id){
@@ -3339,6 +3348,9 @@ ${prevSummary}`}]
 
   /* ============ 액션: 설정 ============ */
   let settingsStatus = '', githubTokenStatus = '', syncStatus = '', taskClassifyStatus = '', recallStatus = '', reportStatus = '';
+  // 완료 하나를 실수로 잘못 눌렀을 때 되돌릴 수 있도록 가장 최근 완료 한 건만 기억해둔다
+  // (여러 단계 실행취소는 지원 안 함 — 알림 벨에서 "마지막 완료 취소"로 노출됨)
+  let lastCompletion = null;
   // Classroom 동기화 상태 — 자동 동기화가 조용히 실패하는 걸 막기 위해 수동/자동 구분 없이 항상 기록
   let lastSyncCheckedAt = null; // Apps Script가 마지막으로 Gmail을 확인해서 파일을 쓴 시각 (upstream, payload.lastCheckedAt)
   let lastSyncError = ''; // 클라이언트의 가장 최근 fetch 시도가 실패한 이유 (성공하면 비움)
@@ -3421,6 +3433,7 @@ ${prevSummary}`}]
     const box = BOX_KEYS.has(it.boxKey) ? BOXES.find(b=>b.key===it.boxKey) : null;
     logArchiveEvent({id, ts:completedAt, createdAt:it.createdAt||null,
       subject: box?box.label:'미분류', subjectKey: box?box.key:null, kind:'personal', text:it.text});
+    lastCompletion = {kind:'personal', id, text:it.text, snapshot:{...it}};
     persist(); openCompletionFeedback(id);
   }
   function deletePersonalTask(id){
@@ -3554,10 +3567,19 @@ ${prevSummary}`}]
     // 화면을 막지 않는 별도 대화창이라 state.modal에 얹지 않는다 — 설정·알림창을 열어도
     // 후기 대화창은 그대로 떠 있어야 한다(예전엔 다른 모달을 열면 통째로 사라졌음)
     state.feedbackTargetId = id;
+    state.feedbackSelectedRating = null;
     render();
   }
-  function submitCompletionFeedback(rating){
+  // 등급 버튼은 누른다고 바로 제출되지 않는다 — 고르기만 하고, 그 뒤에도 계속 글을 쓸 수 있다.
+  // (예전엔 등급 버튼 = 제출이라, 등급부터 고르고 이어서 후기를 쓰려던 사람의 글이 그대로 날아갔음)
+  function selectFeedbackRating(rating){
+    state.feedbackSelectedRating = rating;
+    renderOverlaysOnly();
+  }
+  function submitCompletionFeedback(){
     const id = state.feedbackTargetId;
+    const rating = state.feedbackSelectedRating;
+    if(!rating) return;   // 등급을 고르기 전엔 제출 버튼이 아예 안 보이지만, 방어적으로 한 번 더 막는다
     const it = findAnyCompletedItem(id);
     if(it){
       const noteEl = document.getElementById('feedbackNoteInput');
@@ -3572,6 +3594,7 @@ ${prevSummary}`}]
       persist();
     }
     state.feedbackTargetId = null;
+    state.feedbackSelectedRating = null;
     render();
   }
   function skipCompletionFeedback(){
@@ -3583,13 +3606,46 @@ ${prevSummary}`}]
       persist();
     }
     state.feedbackTargetId = null;
+    state.feedbackSelectedRating = null;
     render();
+  }
+  // 완료 자체를 잘못 눌렀거나(엉뚱한 항목, 등급 실수 등) 다시 처음부터 하고 싶을 때 되돌린다.
+  // 가장 최근 완료 한 건만 대상 — snapshot은 완료 직전 상태라 등급·스케줄링까지 통째로 원복됨.
+  function undoLastCompletion(){
+    const lc = lastCompletion;
+    if(!lc) return;
+    if(lc.kind==='teacher'){
+      const td = getTD(lc.key);
+      const idx = td.completed.findIndex(i=>i.id===lc.id); if(idx<0) return;
+      td.completed.splice(idx,1);
+      td[lc.corner].push(lc.snapshot);
+    } else if(lc.kind==='personal'){
+      const idx = state.data.personal.completed.findIndex(i=>i.id===lc.id); if(idx<0) return;
+      state.data.personal.completed.splice(idx,1);
+      state.data.personal.tasks.push(lc.snapshot);
+    } else if(lc.kind==='recall'){
+      // Object.assign으로 덮어쓰면 스냅샷 시점엔 없었던 필드(recallRating 등)가 남는다 —
+      // 통째로 새 객체로 갈아끼워야 제출/건너뛰기가 남긴 흔적이 완전히 사라짐
+      const idx = state.data.recall.tasks.findIndex(x=>x.id===lc.id); if(idx<0) return;
+      state.data.recall.tasks[idx] = lc.snapshot;
+    } else return;
+    // 실수로 생긴 기록이라 원자료에서도 지운다 — append-only 원칙은 "정상적으로 쌓인 기록을
+    // 보존"하기 위한 것이지, 오작동으로 생긴 항목까지 영구히 남기라는 뜻은 아니다.
+    state.data.archiveLog = (state.data.archiveLog||[]).filter(e=>e.id!==lc.id);
+    if(state.feedbackTargetId===lc.id){ state.feedbackTargetId=null; state.feedbackSelectedRating=null; }
+    lastCompletion = null;
+    persist(); render();
   }
   // 화면을 가로막는 모달이 아니라 구석에 떠 있는 대화창 — 답하는 동안에도 다른 걸
   // 계속 할 수 있다. 완료할 때마다 흐름이 끊기면 결국 아무 생각 없이 닫게 되기 때문.
   function renderCompletionFeedbackModal(){
     const it = findAnyCompletedItem(state.feedbackTargetId);
     if(!it) return '';
+    const RATINGS = [['AGAIN','거의 기억 안 남'],['HARD','가물가물했음'],['GOOD','잘 기억남'],['EASY','완벽했음']];
+    const selected = state.feedbackSelectedRating;
+    const ratingBtns = RATINGS.map(([key,label])=>
+      `<button class="btn-outline ${selected===key?'is-selected':''}" data-action="selectFeedbackRating" data-rating="${key}">${label}</button>`
+    ).join('');
     return `<div class="feedback-dock" role="dialog" aria-label="학습 후기" data-target="${escapeHtml(state.feedbackTargetId||'')}">
       <div class="feedback-dock-head">
         <b>학습 후기</b>
@@ -3598,17 +3654,15 @@ ${prevSummary}`}]
       <div class="feedback-dock-body">
         <div class="city-inspect-text" style="margin-bottom:4px;">${escapeHtml(it.text)}</div>
         <div class="city-inspect-meta" style="margin-bottom:10px;">방금 끝낸 거, 얼마나 확실하게 알고 있었어?</div>
-        <div class="feedback-hint">고른 등급에 따라 다음 복습 날짜가 자동으로 잡혀.</div>
-        <div class="feedback-ratings">
-          <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="AGAIN">거의 기억 안 남</button>
-          <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="HARD">가물가물했음</button>
-          <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="GOOD">잘 기억남</button>
-          <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="EASY">완벽했음</button>
-        </div>
+        <div class="feedback-hint">등급을 고른다고 바로 제출되지 않아 — 아래에 설명까지 쓰고 제출을 눌러줘. 등급에 따라 다음 복습 날짜가 자동으로 잡혀.</div>
+        <div class="feedback-ratings">${ratingBtns}</div>
         <div class="feedback-explain-label">방금 이해한 걸 네 언어로 설명해봐</div>
         <div class="feedback-hint">여기서 막히면 아직 모르는 거야. 짧아도 되니까 남의 말 말고 네 말로. 나중에 이 설명 자체가 복습 자료가 돼.</div>
         <textarea class="ai-textarea" id="feedbackNoteInput" placeholder="예: 급수가 수렴하는지는 항이 0으로 가는 속도로 판단하는데, 0으로 가도 느리면 발산할 수 있다 — 선택"></textarea>
-        <button class="section-link" data-action="skipCompletionFeedback">그냥 넘어가기</button>
+        <div class="feedback-dock-actions">
+          <button class="section-link" data-action="skipCompletionFeedback">그냥 넘어가기</button>
+          <button class="btn" data-action="submitCompletionFeedback" ${selected?'':'disabled'}>제출</button>
+        </div>
       </div>
     </div>`;
   }
@@ -3779,9 +3833,11 @@ ${doneRecallText}`}]
   }
   function completeRecall(id){
     const t = recallList().find(x=>x.id===id); if(!t) return;
+    const snapshot = {...t, ratingHistory:[...(t.ratingHistory||[])]};
     t.done = true; t.completedAt = Date.now();
     logArchiveEvent({id, ts:t.completedAt, createdAt:t.createdAt||null,
       subject:t.subject, subjectKey:t.boxKey||null, kind:'recall', text:t.text, tag:t.tag});
+    lastCompletion = {kind:'recall', id, text:t.text, snapshot};
     persist(); openCompletionFeedback(id);
   }
   function deleteRecall(id){
@@ -4080,8 +4136,10 @@ ${text}`}]
       case 'openCityInspect': openCityInspect(el.dataset.kind, el.dataset.key, el.dataset.corner, el.dataset.id); break;
       case 'completeRecall': state.modal=null; state.cityInspectTarget=null; completeRecall(el.dataset.id); break;
       case 'deleteRecall': state.modal=null; state.cityInspectTarget=null; deleteRecall(el.dataset.id); break;
-      case 'submitCompletionFeedback': submitCompletionFeedback(el.dataset.rating); break;
+      case 'selectFeedbackRating': selectFeedbackRating(el.dataset.rating); break;
+      case 'submitCompletionFeedback': if(!el.disabled) submitCompletionFeedback(); break;
       case 'skipCompletionFeedback': skipCompletionFeedback(); break;
+      case 'undoLastCompletion': undoLastCompletion(); break;
       case 'cityCompleteFromInspect': cityCompleteFromInspect(); break;
       case 'goCityArchive': state.cityView='archive'; render(); break;
       case 'goCityMain': state.cityView='main'; render(); break;
