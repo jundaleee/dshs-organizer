@@ -97,6 +97,19 @@
 
   .topbar-mini{display:flex;justify-content:flex-end;margin-bottom:10px;}
   .notif-badge{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--red);color:#fff;font-size:9.5px;font-weight:700;}
+  /* 완료 후기 — 화면을 덮지 않고 구석에 뜨는 대화창(오버레이 없음, 뒤쪽 조작 그대로 가능) */
+  .feedback-dock{position:fixed;right:18px;bottom:18px;width:340px;max-width:calc(100vw - 36px);z-index:70;
+    background:rgba(20,22,28,.92);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.7);backdrop-filter:blur(var(--blur)) saturate(1.7);
+    border:1px solid var(--border-strong);border-top-color:var(--border-hi);border-radius:var(--r-lg);
+    box-shadow:0 18px 48px rgba(0,0,0,.55);animation:dockIn 260ms var(--ease);}
+  @keyframes dockIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:none;}}
+  .feedback-dock-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
+    padding:12px 14px 8px;font-size:13.5px;}
+  .feedback-dock-body{padding:0 14px 14px;max-height:min(70vh,520px);overflow-y:auto;}
+  .feedback-ratings{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
+  @media(max-width:639px){
+    .feedback-dock{right:12px;left:12px;bottom:calc(76px + env(safe-area-inset-bottom));width:auto;}
+  }
   .feedback-hint{font-size:11.5px;color:var(--text-3);line-height:1.55;margin-bottom:10px;}
   .feedback-explain-label{font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:4px;}
   .notif-row{font-size:13px;line-height:1.6;padding:9px 0;border-bottom:1px solid var(--border);}
@@ -879,6 +892,43 @@
       default: return '';
     }
   }
+  /* 모달·대화창만 여닫는 경우엔 본문 일곱 섹션을 다시 그릴 이유가 없다.
+     스크롤 체인이 생긴 뒤로 render() 한 번이 항상 전 섹션을 새로 만들어서(측정값 ~34ms,
+     폰에선 그 몇 배) 설정·알림창을 여닫는 것마저 눈에 띄게 느려졌었다. */
+  function captureFeedbackDraft(){
+    const el = document.getElementById('feedbackNoteInput');
+    const dock = document.querySelector('.feedback-dock');
+    if(!el || !el.value) return null;
+    return {target: dock ? dock.dataset.target : '', text: el.value};
+  }
+  function restoreFeedbackDraft(draft){
+    if(!draft) return;
+    const el = document.getElementById('feedbackNoteInput');
+    const dock = document.querySelector('.feedback-dock');
+    if(!el || !dock) return;
+    if(dock.dataset.target !== draft.target) return;   // 다른 항목의 대화창이면 비워둔다
+    el.value = draft.text;
+  }
+  function renderOverlaysOnly(){
+    const feedbackDraft = captureFeedbackDraft();
+    document.querySelectorAll('.modal-overlay, .feedback-dock').forEach(el=>el.remove());
+    if(state.modal==='settings') document.body.insertAdjacentHTML('beforeend', renderSettingsModal());
+    else if(state.modal==='completedPersonal') document.body.insertAdjacentHTML('beforeend', renderCompletedPersonalModal());
+    else if(state.modal==='quickAdd') document.body.insertAdjacentHTML('beforeend', renderQuickAddModal());
+    else if(state.modal==='cityInspect') document.body.insertAdjacentHTML('beforeend', renderCityInspectModal());
+    else if(state.modal==='notifications') document.body.insertAdjacentHTML('beforeend', renderNotificationsModal());
+    if(state.feedbackTargetId) document.body.insertAdjacentHTML('beforeend', renderCompletionFeedbackModal());
+    restoreFeedbackDraft(feedbackDraft);
+    const apiKeyInput = document.getElementById('apiKeyInput');
+    if(apiKeyInput) apiKeyInput.value = getApiKey();
+    const githubTokenInput = document.getElementById('githubTokenInput');
+    if(githubTokenInput) githubTokenInput.value = getGithubToken();
+    const nameInput = document.getElementById('studentNameInput');
+    if(nameInput) nameInput.value = getStudentName();
+    const quickAddInput = document.getElementById('quickAddInput');
+    if(quickAddInput) quickAddInput.focus();
+    applyA11yLabels();
+  }
   function render(){
     const sidebarSlot = document.getElementById('sidebarSlot');
     const bottomNavSlot = document.getElementById('bottomNavSlot');
@@ -919,13 +969,21 @@
       if(fadeEl) fadeEl.classList.remove('fade-in');
     }
 
-    document.querySelectorAll('.modal-overlay').forEach(el=>el.remove());
+    // 후기 대화창은 화면을 안 막으므로, 답하는 도중에 다른 걸 클릭해서 리렌더가 나도
+    // 쓰던 글이 날아가면 안 된다 — 지우기 전에 초안을 챙겨뒀다가 다시 채워 넣는다.
+    // 단, 그 사이에 다른 항목을 완료해서 대상이 바뀌었으면 남의 설명이 딸려오면 안 되므로 버린다
+    const feedbackDraft = captureFeedbackDraft();
+    document.querySelectorAll('.modal-overlay, .feedback-dock').forEach(el=>el.remove());
     if(state.modal==='settings') document.body.insertAdjacentHTML('beforeend', renderSettingsModal());
     else if(state.modal==='completedPersonal') document.body.insertAdjacentHTML('beforeend', renderCompletedPersonalModal());
     else if(state.modal==='quickAdd') document.body.insertAdjacentHTML('beforeend', renderQuickAddModal());
     else if(state.modal==='cityInspect') document.body.insertAdjacentHTML('beforeend', renderCityInspectModal());
     else if(state.modal==='notifications') document.body.insertAdjacentHTML('beforeend', renderNotificationsModal());
-    else if(state.modal==='completionFeedback') document.body.insertAdjacentHTML('beforeend', renderCompletionFeedbackModal());
+    if(state.feedbackTargetId) document.body.insertAdjacentHTML('beforeend', renderCompletionFeedbackModal());
+
+    restoreFeedbackDraft(feedbackDraft);
+
+    applyA11yLabels();
 
     const apiKeyInput = document.getElementById('apiKeyInput');
     if(apiKeyInput) apiKeyInput.value = getApiKey();
@@ -951,6 +1009,28 @@
       updateActiveSectionFromScroll();
       updateNavActiveClasses();
     }
+  }
+
+  /* 아이콘만 있는 버튼은 스크린리더에서 그냥 "버튼"으로 읽힌다. 대부분 이미 title이 붙어
+     있으므로 그걸 aria-label로 옮겨주고, title이 없는 것들만 여기서 이름을 지어준다.
+     (호출부 20곳을 일일이 고치는 대신 렌더 끝에서 한 번에 훑는다) */
+  const A11Y_FALLBACK = [
+    ['.modal-close', '닫기'],
+    ['.task-check, .box-task-check, .asg-check', '완료 처리'],
+    ['[data-action="openNotifications"]', '알림'],
+    ['[data-action="openSettings"]', '설정'],
+    ['[data-action="goView"][data-view]', null]   // 라벨 텍스트가 이미 있음 — 건드리지 않음
+  ];
+  function applyA11yLabels(){
+    A11Y_FALLBACK.forEach(([sel, label])=>{
+      if(!label) return;
+      document.querySelectorAll(sel).forEach(el=>{
+        if(!el.getAttribute('aria-label') && !el.getAttribute('title')) el.setAttribute('aria-label', label);
+      });
+    });
+    document.querySelectorAll('button[title]:not([aria-label])').forEach(b=>{
+      b.setAttribute('aria-label', b.getAttribute('title'));
+    });
   }
 
   // 지금 뷰포트 위쪽 트리거 라인을 넘어간 마지막 섹션을 "활성 섹션"으로 판단한다.
@@ -3471,7 +3551,8 @@ ${prevSummary}`}]
   }
   // 완료 직후 자동으로 열림 — completeItem/completePersonalTask/completeRecall 끝에서 호출됨
   function openCompletionFeedback(id){
-    state.modal = 'completionFeedback';
+    // 화면을 막지 않는 별도 대화창이라 state.modal에 얹지 않는다 — 설정·알림창을 열어도
+    // 후기 대화창은 그대로 떠 있어야 한다(예전엔 다른 모달을 열면 통째로 사라졌음)
     state.feedbackTargetId = id;
     render();
   }
@@ -3490,7 +3571,6 @@ ${prevSummary}`}]
       if(recallList().some(t=>t.id===id)) scheduleNextReview(it, rating);
       persist();
     }
-    state.modal = null;
     state.feedbackTargetId = null;
     render();
   }
@@ -3502,31 +3582,33 @@ ${prevSummary}`}]
       scheduleNextReview(it, 'GOOD');
       persist();
     }
-    state.modal = null;
     state.feedbackTargetId = null;
     render();
   }
+  // 화면을 가로막는 모달이 아니라 구석에 떠 있는 대화창 — 답하는 동안에도 다른 걸
+  // 계속 할 수 있다. 완료할 때마다 흐름이 끊기면 결국 아무 생각 없이 닫게 되기 때문.
   function renderCompletionFeedbackModal(){
     const it = findAnyCompletedItem(state.feedbackTargetId);
     if(!it) return '';
-    return `<div class="modal-overlay" data-action="closeModal">
-      <div class="modal" style="max-width:380px;">
-        <div class="modal-head"><h2>학습 후기</h2><button class="modal-close" data-action="skipCompletionFeedback">${icon('close')}</button></div>
-        <div class="modal-body">
-          <div class="city-inspect-text" style="margin-bottom:4px;">${escapeHtml(it.text)}</div>
-          <div class="city-inspect-meta" style="margin-bottom:14px;">방금 끝낸 거, 얼마나 확실하게 알고 있었어?</div>
-          <div class="feedback-hint">고른 등급에 따라 다음 복습 날짜가 자동으로 잡혀.</div>
-          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;">
-            <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="AGAIN">거의 기억 안 남</button>
-            <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="HARD">가물가물했음</button>
-            <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="GOOD">잘 기억남</button>
-            <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="EASY">완벽했음</button>
-          </div>
-          <div class="feedback-explain-label">방금 이해한 걸 네 언어로 설명해봐</div>
-          <div class="feedback-hint">여기서 막히면 아직 모르는 거야. 짧아도 되니까 남의 말 말고 네 말로. 나중에 이 설명 자체가 복습 자료가 돼.</div>
-          <textarea class="ai-textarea" id="feedbackNoteInput" placeholder="예: 급수가 수렴하는지는 항이 0으로 가는 속도로 판단하는데, 0으로 가도 느리면 발산할 수 있다 — 선택"></textarea>
-          <button class="section-link" data-action="skipCompletionFeedback">그냥 넘어가기</button>
+    return `<div class="feedback-dock" role="dialog" aria-label="학습 후기" data-target="${escapeHtml(state.feedbackTargetId||'')}">
+      <div class="feedback-dock-head">
+        <b>학습 후기</b>
+        <button class="modal-close" data-action="skipCompletionFeedback" aria-label="후기 건너뛰기">${icon('close')}</button>
+      </div>
+      <div class="feedback-dock-body">
+        <div class="city-inspect-text" style="margin-bottom:4px;">${escapeHtml(it.text)}</div>
+        <div class="city-inspect-meta" style="margin-bottom:10px;">방금 끝낸 거, 얼마나 확실하게 알고 있었어?</div>
+        <div class="feedback-hint">고른 등급에 따라 다음 복습 날짜가 자동으로 잡혀.</div>
+        <div class="feedback-ratings">
+          <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="AGAIN">거의 기억 안 남</button>
+          <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="HARD">가물가물했음</button>
+          <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="GOOD">잘 기억남</button>
+          <button class="btn-outline" data-action="submitCompletionFeedback" data-rating="EASY">완벽했음</button>
         </div>
+        <div class="feedback-explain-label">방금 이해한 걸 네 언어로 설명해봐</div>
+        <div class="feedback-hint">여기서 막히면 아직 모르는 거야. 짧아도 되니까 남의 말 말고 네 말로. 나중에 이 설명 자체가 복습 자료가 돼.</div>
+        <textarea class="ai-textarea" id="feedbackNoteInput" placeholder="예: 급수가 수렴하는지는 항이 0으로 가는 속도로 판단하는데, 0으로 가도 느리면 발산할 수 있다 — 선택"></textarea>
+        <button class="section-link" data-action="skipCompletionFeedback">그냥 넘어가기</button>
       </div>
     </div>`;
   }
@@ -3994,7 +4076,7 @@ ${text}`}]
       case 'deletePermanent': deletePermanent(el.dataset.key, el.dataset.id); break;
       case 'incReps': incReps(el.dataset.key, el.dataset.id); break;
       case 'toggleRetry': toggleRetry(el.dataset.key, el.dataset.id); break;
-      case 'openCompletedPersonal': state.modal='completedPersonal'; render(); break;
+      case 'openCompletedPersonal': state.modal='completedPersonal'; renderOverlaysOnly(); break;
       case 'openCityInspect': openCityInspect(el.dataset.kind, el.dataset.key, el.dataset.corner, el.dataset.id); break;
       case 'completeRecall': state.modal=null; state.cityInspectTarget=null; completeRecall(el.dataset.id); break;
       case 'deleteRecall': state.modal=null; state.cityInspectTarget=null; deleteRecall(el.dataset.id); break;
@@ -4006,10 +4088,10 @@ ${text}`}]
       case 'restorePersonal': restorePersonalTask(el.dataset.id); break;
       case 'deletePersonalPermanent': deletePersonalPermanent(el.dataset.id); break;
       case 'quickAdd': state.quickAddKey = el.dataset.key; state.quickAddCorner = 'review'; state.modal = 'quickAdd'; render(); break;
-      case 'setQuickAddCorner': state.quickAddCorner = el.dataset.corner; render(); break;
-      case 'openSettings': settingsStatus=''; githubTokenStatus=''; state.modal='settings'; render(); break;
-      case 'openNotifications': state.modal='notifications'; render(); break;
-      case 'closeModal': state.modal=null; render(); break;
+      case 'setQuickAddCorner': state.quickAddCorner = el.dataset.corner; renderOverlaysOnly(); break;
+      case 'openSettings': settingsStatus=''; githubTokenStatus=''; state.modal='settings'; renderOverlaysOnly(); break;
+      case 'openNotifications': state.modal='notifications'; renderOverlaysOnly(); break;
+      case 'closeModal': state.modal=null; renderOverlaysOnly(); break;
       case 'exportData': exportData(); break;
       case 'importTrigger': document.getElementById('importFile').click(); break;
       case 'generateWeeklyReport': generateWeeklyReport(); break;

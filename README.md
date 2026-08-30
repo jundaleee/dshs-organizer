@@ -46,6 +46,9 @@
 - **데이터만 바뀐 리렌더(체크박스 클릭 등)의 스크롤 위치 보존**: 리렌더 직전에 `현재 활성 섹션 top 기준 상대 오프셋(window.scrollY - el.offsetTop)`을 재두고, 리렌더 후 같은 섹션의 새 오프셋에 그 상대값을 더해 `window.scrollTo`로 복원. 위쪽 섹션 높이가 바뀌어도(할 일 하나 체크해서 목록이 줄어드는 등) 보고 있던 위치가 안 튀게 하기 위함.
 - 도시 섹션만 폭을 넓게 쓰도록(`sec-city`) CSS에서 `.main-inner.chain-mode{max-width:none}` + 각 `.scroll-sec{max-width:720px;margin:0 auto}` (도시만 `max-width:1560px`) 구조로 처리 — 컨테이너 자체의 폭 제한을 풀고 섹션마다 다시 좁히는 방식.
 
+- **오버레이만 여닫을 땐 본문을 다시 안 그림**: 스크롤 체인 때문에 `render()` 한 번이 항상 일곱 섹션 전부를 새로 만든다(측정 ~34ms, 데이터 양과는 거의 무관 — archiveLog 0건 33.7ms / 3000건 35.0ms). 그래서 설정·알림창처럼 본문이 안 바뀌는 동작은 `renderOverlaysOnly()`로 분리했다(0.5ms). **본문 데이터가 바뀌는 액션에는 절대 쓰지 말 것** — 화면이 갱신되지 않는다.
+- **접근성**: 아이콘만 있는 버튼은 스크린리더에서 "버튼"으로만 읽히므로, 렌더 끝에서 `applyA11yLabels()`가 `title`을 `aria-label`로 옮기고 title이 없는 것들(`.modal-close`, 체크 버튼, 벨, 설정)엔 이름을 지어준다. 호출부 20곳을 고치는 대신 한 번에 훑는 방식이라, **새 아이콘 버튼을 추가할 땐 `title`만 달아두면 자동으로 라벨이 붙는다.** 클릭 대상은 대부분 진짜 `<button>`이라 키보드 조작은 원래부터 동작함(비버튼 클릭 요소는 사이드바 로고·시간표 칸 3종뿐).
+
 이 부분을 건드릴 땐 반드시 Playwright로 **실제 마우스 휠 스크롤(`page.mouse.wheel`)** 을 흉내내서 `window.scrollY`가 연속적으로 바뀌는지, DOM 노드가 스크롤 중에 교체되지 않는지(예: 섹션에 임의 속성을 심어두고 스크롤 후에도 남아있는지 확인)를 검증할 것 — 겉보기 스크린샷만으로는 "가짜 스크롤"을 구분 못 함.
 
 ## 화면 구성 (NAV_ITEMS)
@@ -69,6 +72,27 @@
 - **BETA 뱃지**: 도시 탭이 처음 나왔을 때 붙였던 `beta:true`/`.beta-pill` 전부 제거.
 - **테두리 스타일 UI**: `.city-graduating`처럼 색 테두리+틴트 배경으로 되어있던 요소를 앱 표준 글래스(`var(--glass)` + `backdrop-filter:blur(var(--blur))` + `var(--border)`)로 통일. "글씨 겉에 테두리 두르는 게 AI스럽다"는 사용자 피드백 반영 — 앞으로 새 UI를 추가할 때도 이 원칙 유지할 것(강조는 글래스 배경 차이/색상으로, 딱딱한 컬러 테두리로 하지 말 것).
 
+## 간격 반복 스케줄러 — "언제"는 알고리즘, "무엇"은 Claude
+
+학습 엔진의 핵심. **복습 시점 결정은 LLM에서 완전히 떼어냈다.**
+
+- `scheduleNextReview(item, rating)` — SM-2 계열. 각 복습 항목이 `ease`(기본 2.3, 1.3~2.8) · `interval`(일) · `srReps` · `dueAt` · `ratingHistory`를 들고 다닌다. 완료 시 자기평가 등급으로 다음 복습일을 계산:
+  - `AGAIN` → 0.5일, ease −0.20, 반복 횟수 리셋
+  - `HARD` → 간격 ×1.2, ease −0.15
+  - `GOOD` → 간격 ×ease (표준 곡선: 1 → 2.3 → 5.3 → 12.2 → 28일)
+  - `EASY` → 간격 ×ease×1.3, ease +0.15
+- `reviveDueRecall()` — 앱을 열 때 `dueAt`이 지난 항목을 `done=false`로 되돌려 **도시에 다시 등장**시킨다. `createdAt`도 그때로 갱신해서 도시의 경과일이 "돌아온 시점"부터 세어진다. 졸업 앨범은 teacher/personal 완료 항목만 다루므로 이 부활에 영향받지 않는다.
+- `maybeAutoGenerateRecall()` — 이제 **큐가 마를 때만**(`pendingRecall().length < RECALL_QUEUE_TARGET`, 기본 6) 생성한다. 예전엔 24시간마다 무조건 새 배치를 만들어서, 잘 아는 개념과 계속 틀리는 개념이 같은 빈도로 돌아왔다(= 사실상 고정 간격, 개인차 미반영).
+- 생성 프롬프트도 이 분업을 명시한다 — "복습 시점은 네가 정하지 않는다, 아직 아무도 다루지 않은 내용에만 집중해라".
+
+**이걸 건드릴 때 주의**: `ratingHistory`는 캘리브레이션 계산의 유일한 원천이므로 절대 잘라내지 말 것.
+
+## 캘리브레이션 — 자기평가를 그대로 믿지 않기
+
+항목이 반복해서 돌아오는 구조가 생긴 뒤에야 계산 가능해진 지표. `computeCalibration()`이 `ratingHistory`의 연속쌍을 훑어서, **GOOD/EASY로 평가한 직후 다음 노출에서 AGAIN/HARD로 떨어진 횟수**를 센다 = 과신(overconfidence). 과목별로도 집계하되 표본 3개 미만은 판단 보류. 아카이브 탭에 노출된다.
+
+완료 피드백의 자유 텍스트(`feedbackNote`)도 감상("더 남기고 싶은 말")이 아니라 **파인만식 자기설명 요구**("방금 이해한 걸 네 언어로 설명해봐")로 바뀌었다. 여기서 막히면 아직 모른다는 신호이고, 쌓인 설명 자체가 나중에 복습 자료가 된다.
+
 ## 망각의 시민 (spaced-recall AI 기능)
 
 완료한 과제/자율학습을 바탕으로 Claude가 간격반복 복습 항목("망각의 시민")을 자동 생성해서 도시에 등장시키는 기능.
@@ -80,7 +104,11 @@
 
 ## 완료 피드백 (Completion Feedback)
 
-과제/자율학습/망각의 시민을 완료하면(`completeItem`/`completePersonalTask`/`completeRecall`) **자동으로 모달이 뜸** (`openCompletionFeedback`) — 체크만으로는 "제대로 이해하고 끝냈는지 대충 끝냈는지" 구분이 안 되기 때문. 채팅 버블은 아니고 일반 모달(`state.modal='completionFeedback'`, `renderCompletionFeedbackModal()`).
+과제/자율학습/망각의 시민을 완료하면(`completeItem`/`completePersonalTask`/`completeRecall`) **자동으로 대화창이 뜸** (`openCompletionFeedback`) — 체크만으로는 "제대로 이해하고 끝냈는지 대충 끝냈는지" 구분이 안 되기 때문.
+
+**화면을 막지 않는 대화창(`.feedback-dock`)이다.** 오른쪽 아래에 떠 있고 뒤쪽은 그대로 조작할 수 있다. 완료할 때마다 모달이 흐름을 끊으면 결국 아무 생각 없이 닫아버리게 되기 때문. 그래서 `state.modal`에 얹지 않고 **`state.feedbackTargetId` 하나로만 생사가 결정된다** — 설정이나 알림창을 열어도 후기 대화창은 그대로 살아있어야 하므로. (모달 체인에 넣으면 다른 모달을 여는 순간 통째로 사라진다.)
+
+화면을 안 막는 만큼 답하는 도중 다른 걸 클릭해 리렌더가 날 수 있어서, `captureFeedbackDraft()`/`restoreFeedbackDraft()`가 쓰던 설명을 보존한다. 단 `data-target`을 비교해서 **그 사이 다른 항목을 완료했으면 초안을 버린다** — 남의 항목 설명이 딸려가면 안 되니까.
 
 - **Anki 스타일 4단계 자기평가**: `RECALL_RATINGS = {AGAIN:'거의 기억 안 남', HARD:'가물가물했음', GOOD:'잘 기억남', EASY:'완벽했음'}`
 - 선택지 아래 자유 텍스트(`feedbackNoteInput`, 선택)도 받음.
@@ -113,7 +141,13 @@
 
 **중요**: 3D 캔버스 호스트(`CITY3D.host`, `#city3dSlot`에 장착됨)는 `#app.innerHTML`이 갈아엎어질 때마다 `mountCity3D()`가 매번 새로 생긴 슬롯에 재장착함(호스트 자체는 재사용, DOM에서 옮기기만 함). 렌더 루프 시작/정지는 스크롤스파이가 도시 섹션이 보일 때만 관리함(위 "스크롤 내비게이션" 참고).
 
-**보류 중 (Phase 4, 미착수)**: 사용자가 "도시가 단순 시각화라 2~3년 보면 지루해질 것 같다, 교육학적으로 더 설계할 방법을 고민해달라"고 요청함. 논의만 하고 아직 방향을 정하지 못한 상태 — 다음에 이어받으면 이 부분에 대한 제안(자기평가 연동 성장 시스템, 누적 도시 성장, 마일스톤 이벤트, 처벌보다 성장 프레이밍 등)을 먼저 사용자와 확정하고 구현할 것.
+**성장 레이어 (Phase 4에서 구현)**: 도시가 손실 프레이밍(방치→붕괴)만 갖고 있으면 "안 하면 벌 받는 곳"이 된다. 그래서 `cityGrowth()`가 `archiveLog.length`(append-only라 절대 줄지 않음)로 성장 단계(12개당 1레벨, 최대 10)를 계산하고, 빈 구획의 **녹지 밀도(0.30→0.92)와 나무 크기가 그에 비례해 영구적으로 증가**한다. 며칠 쉬어도 이미 심긴 나무는 사라지지 않는다. `citySignature()`에 성장 레벨이 들어가 있어 레벨이 오르면 씬이 다시 지어진다. 도시 섹션 맨 위에는 `renderCityGrowthBar()`가 누적 총량과 다음 레벨까지 남은 개수를 보여준다.
+
+위험 단계의 문구도 전부 바꿨다 — '집이 무너짐/완전히 고장남' 같은 재산 피해 표현 대신 **'기억에서 거의 지워짐'**처럼 *기억이 흐려지는 중*이라는 실제 의미로 읽히게 했다. 연기·불은 벌이 아니라 망각 곡선의 시각화다. 3D 비주얼 자체는 주의를 끄는 신호로 유효하므로 유지.
+
+**아직 안 한 것 (Wilson/Tao 제안)**: 과목별 구역이 서로 단절돼 있어 "지식은 연결돼 있다"는 감각을 못 준다. 수학 구역과 물리 구역을 잇는 다리 같은 걸로 `CONNECTION` 태그와 맞물리게 하는 안이 남아 있음.
+
+**보류 중 (원래 Phase 4 논의, 일부만 착수)**: 사용자가 "도시가 단순 시각화라 2~3년 보면 지루해질 것 같다, 교육학적으로 더 설계할 방법을 고민해달라"고 요청함. 논의만 하고 아직 방향을 정하지 못한 상태 — 다음에 이어받으면 이 부분에 대한 제안(자기평가 연동 성장 시스템, 누적 도시 성장, 마일스톤 이벤트, 처벌보다 성장 프레이밍 등)을 먼저 사용자와 확정하고 구현할 것.
 
 ## 데이터 구조 (localStorage, `organizer-data-v2` 키)
 
@@ -142,7 +176,9 @@
   "recall": {
     "tasks": [ { "id": "", "text": "", "tag": "RECALL|APPLICATION|TRANSFER|ERROR_CORRECTION|CONNECTION",
                   "boxKey": null, "minutes": 0, "done": false, "createdAt": 0, "completedAt": 0,
-                  "recallRating": "", "feedbackNote": "" } ],
+                  "recallRating": "", "feedbackNote": "",
+                  "ease": 2.3, "interval": 0, "srReps": 0, "dueAt": 0,
+                  "ratingHistory": [ { "at": 0, "rating": "GOOD" } ] } ],
     "lastGeneratedAt": 0
   },
   "archiveLog": [ { "id": "", "ts": 0, "createdAt": 0, "subject": "", "subjectKey": "", "kind": "", "text": "",
