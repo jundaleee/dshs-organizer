@@ -82,7 +82,6 @@
   .nav-item:hover{background:var(--glass);color:var(--text);}
   .nav-item.active{background:var(--glass-strong);color:var(--text);font-weight:600;}
   .nav-item .label{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-  .beta-pill{font-size:8.5px;font-weight:700;letter-spacing:.03em;color:var(--teal);background:rgba(100,210,255,.16);border:1px solid rgba(100,210,255,.35);border-radius:5px;padding:1.5px 4px;margin-left:auto;flex-shrink:0;}
   .sidebar-foot{margin-top:auto;padding-top:14px;border-top:1px solid var(--border);}
 
   .bottom-nav{display:none;}
@@ -457,7 +456,7 @@
 
   /* ---- 도시 (City, beta) ---- */
   .recall-note{font-size:12px;color:var(--text-3);margin-bottom:10px;line-height:1.55;}
-  .city-graduating{font-size:12.5px;color:var(--teal);background:rgba(100,210,255,.1);border:1px solid rgba(100,210,255,.3);border-radius:var(--r-md);padding:9px 13px;margin-bottom:18px;}
+  .city-graduating{font-size:12.5px;color:var(--text-2);background:var(--glass);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));border:1px solid var(--border);border-radius:var(--r-md);padding:9px 13px;margin-bottom:18px;}
   /* 검은 유리 상자 안에 도시가 들어있는 느낌 */
   .city3d{position:relative;width:100%;height:100%;border-radius:var(--r-lg);overflow:hidden;
     border:1px solid var(--border);border-top-color:var(--border-hi);
@@ -472,7 +471,6 @@
   .home-city{position:sticky;top:24px;}
   .home-city-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
     margin-bottom:10px;font-size:13px;font-weight:600;color:var(--text-2);}
-  .home-city-head .beta-pill{margin-left:4px;}
   @media(max-width:1179px){ .home-split{display:block;} .home-city{display:none;} }
   .city3d-canvas canvas{display:block;width:100%;height:100%;touch-action:none;}
   .city3d-tip{position:absolute;z-index:4;max-width:250px;pointer-events:none;
@@ -821,7 +819,7 @@
     {view:'schedule', label:'시간표', icon:'schedule', color:'var(--purple)'},
     {view:'materials', label:'자료', icon:'materials', color:'var(--indigo)'},
     {view:'archive', label:'아카이브', icon:'archive', color:'var(--red)'},
-    {view:'city', label:'도시', icon:'city', color:'var(--teal)', beta:true}
+    {view:'city', label:'도시', icon:'city', color:'var(--teal)'}
   ];
 
   /* ============ 렌더 ============ */
@@ -878,7 +876,7 @@
   function renderSidebar(){
     const items = NAV_ITEMS.map(n=>`
       <button class="nav-item ${state.view===n.view?'active':''}" data-action="goView" data-view="${n.view}">
-        <span class="nav-icon" style="--nc:${n.color}">${icon(n.icon)}</span><span class="label">${n.label}</span>${n.beta?`<span class="beta-pill">BETA</span>`:''}
+        <span class="nav-icon" style="--nc:${n.color}">${icon(n.icon)}</span><span class="label">${n.label}</span>
       </button>`).join('');
     return `<div class="sidebar glass">
       <div class="sidebar-brand" data-action="goView" data-view="home"><div class="mark"></div><b>Sorganizer</b></div>
@@ -1252,7 +1250,7 @@
       <div class="home-main">${left}</div>
       <aside class="home-city">
         <div class="home-city-head">
-          <span>도시 <span class="beta-pill">BETA</span></span>
+          <span>도시</span>
           <button class="section-link" data-action="goView" data-view="city">크게 보기</button>
         </div>
         <div id="city3dSlot" class="city-slot-home"></div>
@@ -2610,7 +2608,7 @@ ${prevSummary}`}]
     const citizens = collectCityCitizens();
     const graduating = collectGraduatingThisWeek();
     return `<div class="fade-in">
-      <div class="page-head"><h1>도시 <span class="beta-pill" style="margin-left:6px;">BETA</span></h1><button class="iconbtn" data-action="goCityArchive">${icon('external')} 졸업 앨범</button></div>
+      <div class="page-head"><h1>도시</h1><button class="iconbtn" data-action="goCityArchive">${icon('external')} 졸업 앨범</button></div>
       <div class="empty" style="padding:0 0 14px;">수업 과제는 도로를 달리는 자동차, 자율학습은 집에 사는 시민이야. 방치하면 연기가 나고 결국 불이 붙어.</div>
       ${graduating.length>0?`<div class="city-graduating">🎓 이번 주 졸업 예정 ${graduating.length}명 — 다음 주 월요일에 졸업 앨범으로 넘어가</div>`:''}
       <div id="city3dSlot" class="city-slot-full"></div>
