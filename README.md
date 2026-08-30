@@ -35,8 +35,8 @@
 
 **중요한 배경**: 처음엔 "스크롤하면 다음 탭으로 넘어간다"를 휠 이벤트로 `state.view`를 통째로 바꿔치기하는 방식(가짜 스크롤, 실제로는 탭 전환을 흉내만 냄)으로 구현했다가 사용자에게 명시적으로 거부당함("너는 그냥 스크롤이 되는 것처럼 가장한 거지"). 지금 구현은 **진짜 네이티브 브라우저 스크롤**을 씀:
 
-- `SCROLL_CHAIN = ['tasks','assignments','schedule','materials','archive','city']` — 이 여섯 섹션은 `state.view`가 이 배열에 포함되는 순간(`chainModeActive`) 각각 `<section class="scroll-sec" id="sec-{view}">...</section>`로 **한 번에 이어 붙여서** `#app.innerHTML`에 들어감. 실제로 하나의 긴 페이지가 되고, 스크롤은 브라우저 네이티브 스크롤 그대로 — 콘텐츠를 갈아치우는 트릭이 전혀 없음.
-- **홈은 체인에 안 들어감**: `state.view==='home'`이면 완전히 별도로 `renderHome()`만 그림. 홈 ↔ 체인 전환은 항상 전체 리렌더.
+- `SCROLL_CHAIN = ['home','tasks','assignments','schedule','materials','archive','city']` — **홈을 포함한 일곱 섹션 전부**가 항상 `<section class="scroll-sec" id="sec-{view}">...</section>`로 **한 번에 이어 붙여서** `#app.innerHTML`에 들어감(`render()`는 이제 조건 분기 없이 매번 이 일곱 개를 전부 그림). 실제로 하나의 긴 페이지가 되고, 스크롤은 브라우저 네이티브 스크롤 그대로 — 콘텐츠를 갈아치우는 트릭이 전혀 없음.
+- **홈도 체인의 일부**(처음엔 홈만 따로 뒀다가, 사용자 요청으로 다시 합침): `NAV_ITEMS`의 모든 뷰가 정확히 `SCROLL_CHAIN`과 1:1 대응이라 `chainModeActive`는 사실상 항상 `true`. 예전엔 홈이 별도 화면이라 데스크톱 와이드 화면에서 우측에 살아있는 3D 도시 미리보기(`#city3dSlot.city-slot-home`)를 따로 그렸는데, **이게 진짜 버그를 냈었음**: `mountCity3D()` 호출 조건이 `chainModeActive`로 바뀌면서 `state.view==='home'`일 땐 그 조건이 거짓이라 미리보기가 영영 마운트되지 않아 "도시가 사라졌다"는 리포트로 이어짐. 지금은 홈이 체인에 포함되어 있고, 화면 아래로 조금만 내리면 어차피 진짜 도시 섹션이 나오므로 그 미리보기 자체를 없앴음(`isWideScreen()`, `.home-split`/`.home-city`/`.city-slot-home` 전부 제거). **교훈**: `#city3dSlot`처럼 `getElementById`로 찾는 id를 가진 슬롯을 두 군데 이상에서 동시에 그리면 안 됨 — 첫 번째로 찾은 것만 마운트되고 나머지는 빈 채로 남음.
 - **스크롤스파이**: IntersectionObserver 안 씀(다중 교차 판정이 모호해서). 대신 `updateActiveSectionFromScroll()`이 각 섹션의 `getBoundingClientRect().top`을 순서대로 훑어서, 뷰포트 위에서 `SCROLL_TRIGGER_LINE`(140px)을 넘어간 마지막 섹션을 "지금 보는 중"(`state.activeSection`)으로 판정. `window`의 `scroll` 이벤트(`{passive:true}`) + `requestAnimationFrame` 쓰로틀로 호출됨.
 - 사이드바/바텀내브의 `.nav-item.active`는 **전체 리렌더 없이** `updateNavActiveClasses()`가 DOM에서 직접 클래스만 토글. 스크롤 중 매 프레임마다 `render()`를 다시 부르면 무거워지니까 의도적으로 분리함.
 - **도시 3D 렌더 루프**: 체인 모드일 땐 `mountCity3D()`가 매 렌더마다 `#city3dSlot`에 3D 캔버스 호스트를 재장착하지만, `requestAnimationFrame` 루프(`startCityLoop`/`stopCityLoop`)는 `updateActiveSectionFromScroll()`이 `best==='city'`일 때만 켜고 그 외엔 끔 — 도시가 화면 밖에 있을 때 GPU를 계속 돌리지 않기 위함.
@@ -50,7 +50,7 @@
 
 홈 → 할 일 → 과제 → 시간표 → 자료 → 아카이브 → 도시 순. **선생님 탭은 이번 세션에 완전히 제거**(아래 참고).
 
-- **홈**: 과목별 박스(수학과·지구과학·생명과학·화학·물리학·정보과학과·문과) — 각 박스 안에 그 과목 복습·자율학습·개인 학습 할 일이 마감 임박도 순으로 보이고 바로 체크 가능. 디데이+스톱워치가 **하나의 글래스 카드**에 세로 구분선으로 나뉘어 있음(`.dday-sw-row`, 이번 세션에 병합 — city-of-brain에서 먼저 적용한 것과 동일 패턴). 데스크톱 와이드 화면(`isWideScreen()`, ≥1180px)에서는 우측에 3D 도시 미리보기가 같이 뜸.
+- **홈**: 과목별 박스(수학과·지구과학·생명과학·화학·물리학·정보과학과·문과) — 각 박스 안에 그 과목 복습·자율학습·개인 학습 할 일이 마감 임박도 순으로 보이고 바로 체크 가능. 디데이+스톱워치가 **하나의 글래스 카드**에 세로 구분선으로 나뉘어 있음(`.dday-sw-row`, 이번 세션에 병합 — city-of-brain에서 먼저 적용한 것과 동일 패턴). 스크롤 체인의 첫 섹션이라 아래로 계속 내리면 할 일→...→도시로 자연스럽게 이어짐(예전엔 우측에 3D 도시 미리보기가 따로 있었는데 제거함 — 위 "스크롤 내비게이션" 참고).
 - **할 일**: 수업 복습 · 자율 학습 · 개인 학습 통합 관리. 맨 위 "무엇이든 붙여넣기 → 자동 분류"(`classifyTasks()`)에 자유 텍스트를 넣으면 Claude가 review/self/personal로 분류해서 넣어줌.
 - **과제**: 마감일 기반 목록, 하루 가용 학습시간 대비 과부하 계산, Classroom 자동 동기화.
 - **시간표**: 주간 시간표(선생님 로테이션 반영).

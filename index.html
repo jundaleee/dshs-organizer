@@ -87,8 +87,7 @@
   .bottom-nav{display:none;}
   .main{flex:1;min-width:0;}
   .main-inner{max-width:720px;margin:0 auto;padding:40px 32px 110px;}
-  .main-inner.wide{max-width:1560px;}
-  /* 할일→과제→시간표→자료→아카이브→도시가 화면 전환 없이 하나로 이어지는 스크롤 화면.
+  /* 홈→할일→과제→시간표→자료→아카이브→도시가 화면 전환 없이 하나로 이어지는 스크롤 화면.
      각 섹션이 자기 폭을 갖도록 바깥 컨테이너의 max-width는 풀고, 섹션마다 다시 좁혀 중앙 정렬한다
      (도시 섹션만 더 넓게 튀어나올 수 있도록). */
   .main-inner.chain-mode{max-width:none;padding-left:0;padding-right:0;}
@@ -483,14 +482,8 @@
     -webkit-backdrop-filter:blur(var(--blur)) saturate(1.4);backdrop-filter:blur(var(--blur)) saturate(1.4);
     box-shadow:inset 0 1px 0 rgba(255,255,255,.06), 0 18px 44px rgba(0,0,0,.45);}
   .city3d-canvas{width:100%;height:100%;}
-  /* 도시가 들어가는 자리 — 탭에선 화면 가득, 홈 오른쪽에선 뷰포트 높이만큼 */
+  /* 도시가 들어가는 자리 — 스크롤 체인의 도시 섹션에서 화면 가득 */
   .city-slot-full{height:calc(100vh - 230px);min-height:420px;}
-  .city-slot-home{height:calc(100vh - 132px);min-height:420px;}
-  .home-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:26px;align-items:start;}
-  .home-city{position:sticky;top:24px;}
-  .home-city-head{display:flex;align-items:center;justify-content:space-between;gap:10px;
-    margin-bottom:10px;font-size:13px;font-weight:600;color:var(--text-2);}
-  @media(max-width:1179px){ .home-split{display:block;} .home-city{display:none;} }
   .city3d-canvas canvas{display:block;width:100%;height:100%;touch-action:none;}
   .city3d-tip{position:absolute;z-index:4;max-width:250px;pointer-events:none;
     background:rgba(20,22,28,.94);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
@@ -843,16 +836,17 @@
   ];
 
   /* ============ 렌더 ============ */
-  // 할일→과제→시간표→자료→아카이브→도시는 화면 전환 없이 한 장의 긴 페이지처럼 이어서 그린다.
-  // (홈은 별도 화면으로 유지) 실제 브라우저 스크롤만 쓰고, 지금 보고 있는 섹션은
-  // 스크롤 위치를 직접 계산해서 판단한다(가짜로 탭을 갈아치우지 않음).
-  const SCROLL_CHAIN = ['tasks','assignments','schedule','materials','archive','city'];
+  // 홈→할일→과제→시간표→자료→아카이브→도시 전체가 화면 전환 없이 한 장의 긴 페이지처럼
+  // 이어져서 그려진다(애플 홈페이지처럼). 실제 브라우저 스크롤만 쓰고, 지금 보고 있는
+  // 섹션은 스크롤 위치를 직접 계산해서 판단한다(가짜로 탭을 갈아치우지 않음).
+  const SCROLL_CHAIN = ['home','tasks','assignments','schedule','materials','archive','city'];
   const SCROLL_TRIGGER_LINE = 140; // 뷰포트 위에서 이 지점을 넘어간 섹션을 "지금 보는 중"으로 간주
   let lastRenderedView = null; // 같은 화면 안에서 다시 그릴 땐(체크박스 클릭 등) fade-in을 안 태우려고 추적
   let chainModeActive = false;
   let pendingScrollTarget = null;
   function renderChainSection(v){
     switch(v){
+      case 'home': return renderHome();
       case 'tasks': return renderTasksPage();
       case 'assignments': return renderAssignmentsPage();
       case 'schedule': return renderSchedulePage();
@@ -885,13 +879,7 @@
     lastRenderedView = state.view;
     let html = renderTopbarMini();
     if(!storageOK) html += `<div class="empty" style="color:var(--danger);">이 브라우저에서는 로컬 저장이 안 돼(시크릿 모드이거나 저장 공간이 꽉 찼을 수 있어). 작업 후 꼭 설정에서 내보내기로 백업해줘.</div>`;
-    if(chainModeActive){
-      html += SCROLL_CHAIN.map(v=>`<section class="scroll-sec${v==='city'?' sec-city':''}" id="sec-${v}">${renderChainSection(v)}</section>`).join('');
-    } else if(state.view==='home'){
-      html += renderHome();
-    }
-    // 홈의 2단 레이아웃일 때만 본문 폭 제한을 풀고, 도시 섹션은 자기 자신만 CSS로 넓게 튀어나온다
-    app.classList.toggle('wide', state.view==='home' && isWideScreen());
+    html += SCROLL_CHAIN.map(v=>`<section class="scroll-sec${v==='city'?' sec-city':''}" id="sec-${v}">${renderChainSection(v)}</section>`).join('');
     app.classList.toggle('chain-mode', chainModeActive);
     app.innerHTML = html;
     // 3D 도시 캔버스는 #app 바깥에 살아있으므로 갈아엎은 뒤 제자리에 다시 끼워 넣는다
@@ -1344,18 +1332,9 @@
         ${asgHtml}
       </div>`;
 
-    // 데스크탑에서만 오른쪽에 살아있는 도시를 띄운다 (좁은 화면에선 3D를 아예 안 받음)
-    if(!isWideScreen()) return `<div class="fade-in">${left}</div>`;
-    return `<div class="fade-in home-split">
-      <div class="home-main">${left}</div>
-      <aside class="home-city">
-        <div class="home-city-head">
-          <span>도시</span>
-          <button class="section-link" data-action="goView" data-view="city">크게 보기</button>
-        </div>
-        <div id="city3dSlot" class="city-slot-home"></div>
-      </aside>
-    </div>`;
+    // 홈도 스크롤 체인의 일부라, 조금만 내리면 바로 도시로 이어져 — 여기 따로
+    // 미리보기를 둘 필요가 없어짐(예전엔 화면 우측에 작은 3D 미리보기가 있었음)
+    return `<div class="fade-in">${left}</div>`;
   }
 
   const PRIORITY_LABELS = {high:'상', mid:'중', low:'하'};
@@ -1985,8 +1964,6 @@ ${prevSummary}`}]
     u.searchParams.set('v', CITY_ASSET_V);
     return u.href;
   }
-  // 홈 화면 2단 구성(할 일 + 살아있는 도시)은 가로가 충분할 때만
-  function isWideScreen(){ return window.innerWidth >= 1180; }
   function hexToRgbStr(hex){
     const h = (hex||'').replace('#','').trim();
     if(h.length!==6) return '198,204,216';
@@ -3891,16 +3868,6 @@ ${text}`}]
       }
       render();
     }
-  });
-
-  // 홈 2단 ↔ 1단 경계를 넘어갈 때만 다시 그림 (매 resize마다 그리면 낭비)
-  let lastWide = isWideScreen(), resizeTimer = null;
-  window.addEventListener('resize', function(){
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(()=>{
-      const w = isWideScreen();
-      if(w !== lastWide){ lastWide = w; if(state.view==='home') render(); }
-    }, 180);
   });
 
   document.getElementById('importFile').addEventListener('change', function(e){
