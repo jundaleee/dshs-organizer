@@ -1989,7 +1989,7 @@ ${prevSummary}`}]
       reportStatus = '리포트를 다운로드했어.';
       render();
     }catch(err){
-      reportStatus = `실패 — ${err.message || '알 수 없는 오류'}. API 키가 맞는지 확인해줘.`;
+      reportStatus = '실패 — ' + describeApiError(err);
       render();
     }
   }
@@ -3249,6 +3249,19 @@ ${prevSummary}`}]
       .filter(b => !b.type || b.type === 'text')
       .map(b => b.text || '').join('').trim();
   }
+  // fetch가 아예 서버에 못 닿은 경우("Failed to fetch" 류)와 서버가 에러를 돌려준 경우를 구분한다.
+  // 전자는 API 키 문제가 아니라 네트워크·차단 문제이므로 엉뚱한 안내를 하지 않는다.
+  function describeApiError(err){
+    const msg = (err && err.message) || '';
+    const blocked = (err && err.name === 'TypeError') || /failed to fetch|networkerror|load failed|network request failed/i.test(msg);
+    if(blocked){
+      return '요청이 api.anthropic.com에 닿지 못했어 — 인터넷 연결, 또는 광고·개인정보 차단 확장/회사망이 요청을 막고 있는지 확인해줘. (API 키 문제는 아냐)';
+    }
+    if(/x-api-key|authentication|invalid.*key|401|403/i.test(msg)){
+      return `API 키가 거부됐어 — 설정에서 키를 다시 확인해줘. (${msg})`;
+    }
+    return msg || '알 수 없는 오류';
+  }
   function parseModelJsonArray(raw){
     if(!raw) return null;
     const s = raw.trim().replace(/^```[a-z]*\s*/i, '').replace(/```\s*$/, '').trim();
@@ -3967,7 +3980,7 @@ ${doneRecallText}`}]
         : '지금은 복습이 급한 내용이 없대 — 그것도 정상이야.';
       persist(); render();
     }catch(err){
-      recallStatus = `실패 — ${err.message || '알 수 없는 오류'}. API 키가 맞는지 확인해줘.`;
+      recallStatus = '실패 — ' + describeApiError(err);
       render();
     }
   }
@@ -4065,7 +4078,7 @@ ${text}`}]
       taskClassifyStatus = `수업 과제 ${addedReview}개 · 자율학습 ${addedSelf+addedPersonal}개 추가함.`;
       persist(); render();
     }catch(err){
-      statusEl.textContent = `실패 — ${err.message || '알 수 없는 오류'}. API 키가 맞는지 확인해줘.`;
+      statusEl.textContent = '실패 — ' + describeApiError(err);
     }
   }
 
