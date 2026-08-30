@@ -422,6 +422,13 @@
   .completed-link:hover{color:var(--text);}
 
   /* ---- materials/notices ---- */
+  .mat-cols{display:flex;gap:28px;align-items:flex-start;}
+  .mat-col{flex:1 1 0;min-width:0;}
+  .mat-col + .mat-col{border-left:1px solid var(--border);padding-left:28px;}
+  @media (max-width:640px){
+    .mat-cols{flex-direction:column;gap:0;}
+    .mat-col + .mat-col{border-left:none;padding-left:0;border-top:1px solid var(--border);padding-top:8px;margin-top:8px;}
+  }
   .mat-row{display:flex;flex-direction:column;gap:2px;padding:11px 4px;border-bottom:1px solid var(--border);}
   .mat-row:last-child{border-bottom:none;}
   .mat-title{font-size:13.5px;}
@@ -609,6 +616,19 @@
 
   const REPETITION_SUBJECTS = new Set(['math|math','sci|phys']);
   function isRepetitionSubject(c,s){ return REPETITION_SUBJECTS.has(c+'|'+s); }
+
+  // 부서(카테고리) 라벨과 과목 라벨이 다를 때 같은 과목이 통계에서 둘로 갈라지는 것 방지.
+  // 예: 자율학습은 박스 라벨 '정보과학과', 수업 과제는 과목 라벨 '정보과학'으로 저장돼
+  // 아카이브 '과목별 현황'에서 별개 항목으로 잡혔음. 과목이 하나뿐인 부서는 부서 라벨을 과목 라벨로 통일.
+  const SUBJECT_CANON = (function(){
+    const m = {};
+    Object.keys(CATS).forEach(c=>{
+      const subs = Object.keys(CATS[c].subjects);
+      if(subs.length===1) m[CATS[c].label] = CATS[c].subjects[subs[0]].label;
+    });
+    return m;
+  })();
+  function canonSubject(s){ return SUBJECT_CANON[s] || s || '미분류'; }
 
   const TIMETABLE = {
     mon:[
@@ -1540,78 +1560,8 @@
     </div>`;
   }
   function renderTasksPage(){
-    let review = [], free = [];
-    TEACHER_LIST.forEach(x=>{
-      const td = state.data.teachers[x.key];
-      const rep = isRepetitionSubject(x.cat,x.subj);
-      td.review.forEach(item=> review.push({x,item,u:urgency(item,rep)}));
-      td.self.forEach(item=> free.push({kind:'teacher', x, item}));
-    });
-    review.sort((a,b)=>b.u.days-a.u.days);
-    (state.data.personal?.tasks||[]).forEach(item=> free.push({kind:'personal', item}));
-    free.sort((a,b)=>b.item.createdAt-a.item.createdAt);
-
-    const reviewHtml = review.length===0 ? `<div class="empty">수업 과제가 없어.</div>` : review.map(q=>{
-      const stale = q.u.days>=4;
-      if(isEditingTask('teacher', q.item.id, q.x.key, 'review')){
-        return taskEditRowHtml({text:q.item.text,
-          saveAttrs:`data-action="saveTaskEdit" data-kind="teacher" data-key="${q.x.key}" data-corner="review" data-id="${q.item.id}"`});
-      }
-      return `<div class="task-row ${stale?'stale':''}">
-        <button class="task-check" data-action="completeItem" data-corner="review" data-key="${q.x.key}" data-id="${q.item.id}">${icon('check')}</button>
-        <div class="task-body">
-          <div class="task-tag">${q.x.subjLabel} · ${q.x.teacher}</div>
-          <div class="task-text">${escapeHtml(q.item.text)}</div>
-          ${stale?`<div class="task-stale-badge">${q.u.days}일째 그대로 — 서둘러줘</div>`:''}
-        </div>
-        <div class="task-badge">${q.u.label.split(' · ')[0]}</div>
-        <button class="task-del" title="수정" data-action="editTask" data-kind="teacher" data-key="${q.x.key}" data-corner="review" data-id="${q.item.id}">${icon('pencil')}</button>
-        <button class="task-del" title="삭제" data-action="deleteItem" data-corner="review" data-key="${q.x.key}" data-id="${q.item.id}">${icon('trash')}</button>
-      </div>`;
-    }).join('');
-
-    function freeRowHtml(entry){
-      const it = entry.item;
-      const days = itemStaleDays(it);
-      const stale = days>=4;
-      if(entry.kind==='teacher' && isEditingTask('teacher', it.id, entry.x.key, 'self')){
-        return taskEditRowHtml({text:it.text,
-          saveAttrs:`data-action="saveTaskEdit" data-kind="teacher" data-key="${entry.x.key}" data-corner="self" data-id="${it.id}"`});
-      }
-      if(entry.kind==='personal' && isEditingTask('personal', it.id)){
-        return taskEditRowHtml({text:it.text, showBox:true, boxKey:it.boxKey,
-          saveAttrs:`data-action="saveTaskEdit" data-kind="personal" data-id="${it.id}"`});
-      }
-      let tag, checkAttrs, delAttrs, editAttrs;
-      if(entry.kind==='teacher'){
-        tag = `${entry.x.subjLabel} · ${entry.x.teacher}`;
-        checkAttrs = `data-action="completeItem" data-corner="self" data-key="${entry.x.key}" data-id="${it.id}"`;
-        delAttrs = `data-action="deleteItem" data-corner="self" data-key="${entry.x.key}" data-id="${it.id}"`;
-        editAttrs = `data-action="editTask" data-kind="teacher" data-key="${entry.x.key}" data-corner="self" data-id="${it.id}"`;
-      } else {
-        const box = BOX_KEYS.has(it.boxKey) ? BOXES.find(b=>b.key===it.boxKey) : null;
-        tag = box ? box.label : '';
-        checkAttrs = `data-action="completePersonal" data-id="${it.id}"`;
-        delAttrs = `data-action="deletePersonal" data-id="${it.id}"`;
-        editAttrs = `data-action="editTask" data-kind="personal" data-id="${it.id}"`;
-      }
-      return `<div class="task-row ${stale?'stale':''}">
-        <button class="task-check" ${checkAttrs}>${icon('check')}</button>
-        <div class="task-body">
-          ${tag?`<div class="task-tag">${escapeHtml(tag)}</div>`:''}
-          <div class="task-text">${escapeHtml(it.text)}</div>
-          ${stale?`<div class="task-stale-badge">${days}일째 그대로 — 서둘러줘</div>`:''}
-        </div>
-        <button class="task-del" title="수정" ${editAttrs}>${icon('pencil')}</button>
-        <button class="task-del" title="삭제" ${delAttrs}>${icon('trash')}</button>
-      </div>`;
-    }
-    const freeHtml = free.length===0 ? `<div class="empty">자율학습 항목이 없어.</div>` : free.map(freeRowHtml).join('');
     const boxOptionsHtml = BOXES.map(b=>`<option value="${b.key}">${b.label}</option>`).join('');
-    const openRecall = pendingRecall();
-    const recallHtml = openRecall.length===0
-      ? `<div class="empty">아직 망각의 시민이 없어.</div>`
-      : openRecall.map(recallRowHtml).join('');
+    const teacherOptionsHtml = TEACHER_LIST.map(x=>`<option value="${x.key}">${escapeHtml(x.subjLabel)} · ${escapeHtml(x.teacher)}</option>`).join('');
 
     return `<div class="fade-in">
       <div class="page-head"><h1>할 일</h1></div>
@@ -1628,7 +1578,15 @@
 
       <div class="section">
         <div class="section-head"><div class="section-title">수업 과제</div></div>
-        ${reviewHtml}
+        <div class="add-row">
+          <select class="add-input" id="reviewAddTeacher" style="flex:0 0 176px;">
+            <option value="">선생님 선택</option>
+            ${teacherOptionsHtml}
+          </select>
+          <input type="text" class="add-input" id="reviewAddInput" placeholder="추가할 내용 입력 후 Enter">
+          <button class="btn-outline" data-action="addReview">추가</button>
+        </div>
+        <div class="empty" style="padding:2px 0 0;">추가한 항목은 홈 화면의 과목 박스와 도시 탭에서 확인·완료할 수 있어.</div>
       </div>
       <div class="section">
         <div class="section-head"><div class="section-title">자율학습</div></div>
@@ -1640,16 +1598,7 @@
           <input type="text" class="add-input" id="personalAddInput" placeholder="추가할 내용 입력 후 Enter">
           <button class="btn-outline" data-action="addPersonal">추가</button>
         </div>
-        ${freeHtml}
-        <button class="completed-link" data-action="openCompletedPersonal">완료 목록 (${(state.data.personal?.completed||[]).length}) →</button>
-      </div>
-
-      <div class="section">
-        <div class="section-head"><div class="section-title">망각의 시민</div></div>
-        <div class="recall-note">끝낸 과제들을 보고, 기억이 흐려질 때쯤 가장 짧게 확인할 수 있는 복습을 하루에 한 번 자동으로 골라줘.
-          만들 게 없으면 안 만드는 것도 정상이야. 도시 탭에서는 이 항목들이 사람으로 걸어다녀.</div>
-        ${recallStatus ? `<div class="ai-status" style="margin-bottom:12px;">${recallStatus}</div>` : ''}
-        ${recallHtml}
+        <div class="empty" style="padding:2px 0 0;">추가한 항목은 홈 화면의 과목 박스와 도시 탭에서 확인·완료할 수 있어.</div>
       </div>
     </div>`;
   }
@@ -1745,13 +1694,15 @@
     return `<div class="fade-in">
       <div class="page-head"><h1>자료</h1><button class="iconbtn" data-action="syncClassroom">${icon('arrowRight')} Classroom 동기화</button></div>
       ${syncStatus?`<div class="empty" style="padding:0 0 14px;">${syncStatus}</div>`:syncHealthHtml()}
-      <div class="section">
-        <div class="section-head"><div class="section-title">자료</div></div>
-        ${materials.length===0?`<div class="empty">받은 자료가 없어.</div>`:materials.map(n=>materialRowHtml(n)).join('')}
-      </div>
-      <div class="section">
-        <div class="section-head"><div class="section-title">공지</div></div>
-        ${notices.length===0?`<div class="empty">받은 공지가 없어.</div>`:notices.map(n=>materialRowHtml(n)).join('')}
+      <div class="mat-cols">
+        <div class="mat-col">
+          <div class="section-head"><div class="section-title">자료</div></div>
+          ${materials.length===0?`<div class="empty">받은 자료가 없어.</div>`:materials.map(n=>materialRowHtml(n)).join('')}
+        </div>
+        <div class="mat-col">
+          <div class="section-head"><div class="section-title">공지</div></div>
+          ${notices.length===0?`<div class="empty">받은 공지가 없어.</div>`:notices.map(n=>materialRowHtml(n)).join('')}
+        </div>
       </div>
     </div>`;
   }
@@ -1764,7 +1715,7 @@
     const log = state.data.archiveLog || [];
     const bySubject = {};
     log.forEach(e=>{
-      const key = e.subject || '미분류';
+      const key = canonSubject(e.subject);
       if(!bySubject[key]) bySubject[key] = {subject:key, total:0, ratings:{AGAIN:0,HARD:0,GOOD:0,EASY:0}, unrated:0};
       const b = bySubject[key];
       b.total++;
@@ -1791,7 +1742,7 @@
       for(let i=0; i<h.length-1; i++){
         if(!CONFIDENT[h[i].rating]) continue;
         confidentWithFollowUp++;
-        const subj = t.subject || '미분류';
+        const subj = canonSubject(t.subject);
         bySubject[subj] = bySubject[subj] || {subject:subj, confident:0, slipped:0};
         bySubject[subj].confident++;
         if(FAILED[h[i+1].rating]){
@@ -1865,7 +1816,7 @@
     const recentHtml = recent.length===0 ? `<div class="empty">아직 완료 기록이 없어.</div>` : recent.map(e=>`
       <div class="arc-log-row">
         <span class="arc-log-date">${fmtDate(e.ts)}</span>
-        <span class="arc-log-subject">${escapeHtml(e.subject||'미분류')}</span>
+        <span class="arc-log-subject">${escapeHtml(canonSubject(e.subject))}</span>
         <span class="arc-log-text">${escapeHtml(e.text)}</span>
         <span class="arc-log-rating">${e.rating?escapeHtml(RECALL_RATINGS[e.rating]||''):''}</span>
       </div>`).join('');
@@ -1913,7 +1864,7 @@
     render();
 
     const KIND_LABEL = {review:'수업 과제', self:'자율학습', personal:'자율학습', recall:'망각의 시민(복습)'};
-    const logLine = e => `- [${fmtDate(e.ts)}] ${e.subject||'미분류'} / ${KIND_LABEL[e.kind]||e.kind}: ${e.text}`
+    const logLine = e => `- [${fmtDate(e.ts)}] ${canonSubject(e.subject)} / ${KIND_LABEL[e.kind]||e.kind}: ${e.text}`
       + (e.rating ? ` — 자기평가: ${RECALL_RATINGS[e.rating]}` : ' — 자기평가: 데이터 없음')
       + (e.attempts ? `, 시도횟수: ${e.attempts}` : '')
       + (e.note ? `, 메모: ${e.note}` : '');
@@ -3432,7 +3383,7 @@ ${prevSummary}`}]
     state.data.personal.completed.push({...it, completedAt});
     const box = BOX_KEYS.has(it.boxKey) ? BOXES.find(b=>b.key===it.boxKey) : null;
     logArchiveEvent({id, ts:completedAt, createdAt:it.createdAt||null,
-      subject: box?box.label:'미분류', subjectKey: box?box.key:null, kind:'personal', text:it.text});
+      subject: box?canonSubject(box.label):'미분류', subjectKey: box?box.key:null, kind:'personal', text:it.text});
     lastCompletion = {kind:'personal', id, text:it.text, snapshot:{...it}};
     persist(); openCompletionFeedback(id);
   }
@@ -3684,7 +3635,7 @@ ${prevSummary}`}]
     });
     (state.data.personal?.completed||[]).forEach(it=>{
       const box = BOX_KEYS.has(it.boxKey) ? BOXES.find(b=>b.key===it.boxKey) : null;
-      rows.push({subject: box?box.label:'미분류', boxKey: box?box.key:null,
+      rows.push({subject: box?canonSubject(box.label):'미분류', boxKey: box?box.key:null,
                  kind:'자율학습', text:it.text, at:it.completedAt, rating:it.recallRating, note:it.feedbackNote});
     });
     rows.sort((a,b)=>b.at-a.at);
@@ -4199,6 +4150,13 @@ ${text}`}]
         addPersonalTask(input.value, boxSel ? boxSel.value : null);
         break;
       }
+      case 'addReview': {
+        const input = document.getElementById('reviewAddInput');
+        const tSel = document.getElementById('reviewAddTeacher');
+        if(tSel && tSel.value && input && input.value.trim()){ addItem(tSel.value, 'review', input.value); }
+        else if(tSel && !tSel.value){ tSel.focus(); }
+        break;
+      }
       case 'completePersonal': completePersonalTask(el.dataset.id); break;
       case 'deletePersonal': deletePersonalTask(el.dataset.id); break;
       case 'saveApiKey': saveApiKey(); break;
@@ -4221,6 +4179,10 @@ ${text}`}]
     if(e.target.id==='personalAddInput'){
       const boxSel = document.getElementById('personalAddBox');
       addPersonalTask(e.target.value, boxSel ? boxSel.value : null);
+    } else if(e.target.id==='reviewAddInput'){
+      const tSel = document.getElementById('reviewAddTeacher');
+      if(tSel && tSel.value && e.target.value.trim()) addItem(tSel.value, 'review', e.target.value);
+      else if(tSel && !tSel.value) tSel.focus();
     } else if(e.target.classList.contains('add-input')){
       addItem(e.target.dataset.key, e.target.dataset.corner, e.target.value);
     }
