@@ -114,6 +114,8 @@
   }
   .feedback-hint{font-size:11.5px;color:var(--text-3);line-height:1.55;margin-bottom:10px;}
   .feedback-explain-label{font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:4px;}
+  .feedback-nudge{font-size:11.5px;line-height:1.5;color:var(--orange);background:rgba(255,159,10,.1);
+    border:1px solid rgba(255,159,10,.28);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:10px;}
   .notif-row{font-size:13px;line-height:1.6;padding:9px 0;border-bottom:1px solid var(--border);}
   .notif-row:last-child{border-bottom:none;}
   .iconbtn{background:var(--glass);border:1px solid var(--border);color:var(--text-2);font-size:12.5px;padding:7px 14px;border-radius:var(--r-pill);display:inline-flex;align-items:center;gap:6px;transition:all var(--dur) var(--ease);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));}
@@ -952,6 +954,7 @@
     else if(state.modal==='notifications') document.body.insertAdjacentHTML('beforeend', renderNotificationsModal());
     if(state.feedbackTargetId) document.body.insertAdjacentHTML('beforeend', renderCompletionFeedbackModal());
     restoreFeedbackDraft(feedbackDraft);
+    syncFeedbackSubmitState();
     const apiKeyInput = document.getElementById('apiKeyInput');
     if(apiKeyInput) apiKeyInput.value = getApiKey();
     const githubTokenInput = document.getElementById('githubTokenInput');
@@ -3581,6 +3584,9 @@ ${prevSummary}`}]
   function selectFeedbackRating(rating){
     state.feedbackSelectedRating = rating;
     renderOverlaysOnly();
+    syncFeedbackSubmitState();
+    const noteEl = document.getElementById('feedbackNoteInput');
+    if(noteEl && (rating==='GOOD' || rating==='EASY')) noteEl.focus();
   }
   function submitCompletionFeedback(){
     const id = state.feedbackTargetId;
@@ -3589,8 +3595,10 @@ ${prevSummary}`}]
     const it = findAnyCompletedItem(id);
     if(it){
       const noteEl = document.getElementById('feedbackNoteInput');
-      it.recallRating = rating;
       const note = noteEl ? noteEl.value.trim() : '';
+      // GOOD/EASY는 한 문장 설명이 있어야 제출된다 (버튼도 막혀 있지만 방어적으로 한 번 더)
+      if((rating==='GOOD' || rating==='EASY') && note.length < FEEDBACK_EXPLAIN_MIN){ syncFeedbackSubmitState(); return; }
+      it.recallRating = rating;
       if(note) it.feedbackNote = note;
       it.feedbackAt = Date.now();
       const log = (state.data.archiveLog||[]).find(e=>e.id===id);
@@ -3604,12 +3612,28 @@ ${prevSummary}`}]
     render();
   }
   function skipCompletionFeedback(){
-    // 그냥 넘어가도 복습 순환에서 영영 빠지면 안 되니 GOOD 기준으로 일단 잡아둔다
     const id = state.feedbackTargetId;
     const it = findAnyCompletedItem(id);
-    if(it && recallList().some(t=>t.id===id) && !it.dueAt){
-      scheduleNextReview(it, 'GOOD');
-      persist();
+    const picked = state.feedbackSelectedRating;
+    const noteEl = document.getElementById('feedbackNoteInput');
+    const note = noteEl ? noteEl.value.trim() : '';
+    if(it){
+      if(picked){
+        // 등급을 골라놓고 넘어가면 그 등급을 기록한다. 단 "안다(GOOD/EASY)"고 해놓고
+        // 설명을 못 썼으면 실제로 아는 게 아니므로 "가물가물했음(HARD)"으로 낮춰 기록한다 — 파인만.
+        const eff = ((picked==='GOOD'||picked==='EASY') && note.length < FEEDBACK_EXPLAIN_MIN) ? 'HARD' : picked;
+        it.recallRating = eff;
+        if(note) it.feedbackNote = note;
+        it.feedbackAt = Date.now();
+        const log = (state.data.archiveLog||[]).find(e=>e.id===id);
+        if(log){ log.rating = eff; if(note) log.note = note; }
+        if(recallList().some(t=>t.id===id)) scheduleNextReview(it, eff);
+        persist();
+      } else if(recallList().some(t=>t.id===id) && !it.dueAt){
+        // 등급도 안 고르고 넘어간 경우 — 복습 순환에서 빠지지 않게 GOOD 기준으로만 잡아둔다
+        scheduleNextReview(it, 'GOOD');
+        persist();
+      }
     }
     state.feedbackTargetId = null;
     state.feedbackSelectedRating = null;
@@ -3644,14 +3668,32 @@ ${prevSummary}`}]
   }
   // 화면을 가로막는 모달이 아니라 구석에 떠 있는 대화창 — 답하는 동안에도 다른 걸
   // 계속 할 수 있다. 완료할 때마다 흐름이 끊기면 결국 아무 생각 없이 닫게 되기 때문.
+  const FEEDBACK_EXPLAIN_MIN = 12;   // GOOD/EASY로 "안다"고 했으면 이만큼은 설명을 써야 제출됨
   function renderCompletionFeedbackModal(){
     const it = findAnyCompletedItem(state.feedbackTargetId);
     if(!it) return '';
     const RATINGS = [['AGAIN','거의 기억 안 남'],['HARD','가물가물했음'],['GOOD','잘 기억남'],['EASY','완벽했음']];
     const selected = state.feedbackSelectedRating;
+    const claimsKnown = selected==='GOOD' || selected==='EASY';   // 안다고 주장한 경우
     const ratingBtns = RATINGS.map(([key,label])=>
       `<button class="btn-outline ${selected===key?'is-selected':''}" data-action="selectFeedbackRating" data-rating="${key}">${label}</button>`
     ).join('');
+    // 파인만: "안다"는 느낌과 실제 이해는 다르다. GOOD/EASY를 골랐으면 한 문장 설명을 강제한다.
+    const explainLabel = claimsKnown
+      ? '그럼 한 문장으로 설명해봐 — 제출하려면 필요해'
+      : '방금 이해한 만큼만 네 언어로 (선택)';
+    const explainHint = claimsKnown
+      ? '여기서 막히면 "안다"가 아니라 "익숙하다"였던 거야. 남의 말 말고 네 말로. 이 설명은 그대로 복습 자료가 돼.'
+      : '가물가물했다고 했으니 지금 안 써도 돼. 쓰면 다음에 이 메모를 겨냥해서 복습을 만들어줄게.';
+    // 이 과목에서 예전에 "안다"고 했다가 다음에 무너진 비율이 높으면 그 자리에서 알려준다
+    let calibNudge = '';
+    if(claimsKnown && recallList().some(t=>t.id===state.feedbackTargetId)){
+      const cs = computeCalibration().subjects.find(s=>s.subject===canonSubject(it.subject));
+      if(cs && cs.rate>=0.34){
+        calibNudge = `<div class="feedback-nudge">이 과목은 예전에 "안다"고 한 것의 ${Math.round(cs.rate*100)}%가 다음 복습 때 무너졌어 — 설명이 정말 술술 나오는지 확인해봐.</div>`;
+      }
+    }
+    const skipLabel = claimsKnown ? '설명 없이 넘어가기 → "가물가물했음"으로 기록' : '그냥 넘어가기';
     return `<div class="feedback-dock" role="dialog" aria-label="학습 후기" data-target="${escapeHtml(state.feedbackTargetId||'')}">
       <div class="feedback-dock-head">
         <b>학습 후기</b>
@@ -3660,17 +3702,28 @@ ${prevSummary}`}]
       <div class="feedback-dock-body">
         <div class="city-inspect-text" style="margin-bottom:4px;">${escapeHtml(it.text)}</div>
         <div class="city-inspect-meta" style="margin-bottom:10px;">방금 끝낸 거, 얼마나 확실하게 알고 있었어?</div>
-        <div class="feedback-hint">등급을 고른다고 바로 제출되지 않아 — 아래에 설명까지 쓰고 제출을 눌러줘. 등급에 따라 다음 복습 날짜가 자동으로 잡혀.</div>
+        <div class="feedback-hint">등급을 고른다고 바로 제출되지 않아 — 등급에 따라 다음 복습 날짜가 자동으로 잡혀.</div>
         <div class="feedback-ratings">${ratingBtns}</div>
-        <div class="feedback-explain-label">방금 이해한 걸 네 언어로 설명해봐</div>
-        <div class="feedback-hint">여기서 막히면 아직 모르는 거야. 짧아도 되니까 남의 말 말고 네 말로. 나중에 이 설명 자체가 복습 자료가 돼.</div>
-        <textarea class="ai-textarea" id="feedbackNoteInput" placeholder="예: 급수가 수렴하는지는 항이 0으로 가는 속도로 판단하는데, 0으로 가도 느리면 발산할 수 있다 — 선택"></textarea>
+        ${calibNudge}
+        <div class="feedback-explain-label">${explainLabel}</div>
+        <div class="feedback-hint">${explainHint}</div>
+        <textarea class="ai-textarea" id="feedbackNoteInput" placeholder="예: 급수가 수렴하는지는 항이 0으로 가는 속도로 판단하는데, 0으로 가도 느리면 발산할 수 있다"></textarea>
         <div class="feedback-dock-actions">
-          <button class="section-link" data-action="skipCompletionFeedback">그냥 넘어가기</button>
-          <button class="btn" data-action="submitCompletionFeedback" ${selected?'':'disabled'}>제출</button>
+          <button class="section-link" data-action="skipCompletionFeedback">${skipLabel}</button>
+          <button class="btn" data-action="submitCompletionFeedback" ${selected && !claimsKnown ? '' : 'disabled'}>제출</button>
         </div>
       </div>
     </div>`;
+  }
+  // GOOD/EASY면 설명이 최소 길이를 넘어야 제출 버튼이 열린다 (키 입력마다 재렌더 없이 버튼만 토글)
+  function syncFeedbackSubmitState(){
+    const btn = document.querySelector('.feedback-dock [data-action="submitCompletionFeedback"]');
+    if(!btn) return;
+    const r = state.feedbackSelectedRating;
+    const noteEl = document.getElementById('feedbackNoteInput');
+    const claimsKnown = r==='GOOD' || r==='EASY';
+    const ok = r && (!claimsKnown || (noteEl && noteEl.value.trim().length >= FEEDBACK_EXPLAIN_MIN));
+    btn.disabled = !ok;
   }
   function recallColor(t){
     const box = (t.boxKey && BOX_KEYS.has(t.boxKey)) ? BOXES.find(b=>b.key===t.boxKey) : null;
@@ -4259,6 +4312,7 @@ ${text}`}]
 
   let debTimer = null;
   document.body.addEventListener('input', function(e){
+    if(e.target.id==='feedbackNoteInput'){ syncFeedbackSubmitState(); return; }
     if(e.target.id==='swTargetSelect'){
       const v = e.target.value;
       if(!v){ sw.target = null; }
