@@ -307,6 +307,11 @@
   .pomo-mode-toggle{align-self:flex-start;}
   .pomo-phase{font-size:12px;color:var(--text-3);}
   .pomo-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+  /* 연결된 할 일 — 무슨 할 일인지 왼쪽에 쓰고, 완료 버튼 하나만 오른쪽에 */
+  .sw-linked{display:flex;align-items:center;gap:10px;margin-top:2px;padding-top:8px;border-top:1px solid var(--border);}
+  .sw-linked-label{flex:1;min-width:0;font-size:12px;line-height:1.45;color:var(--text-2);
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .sw-linked-done{flex-shrink:0;}
 
   .section{margin-bottom:36px;}
   .section-head{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:12px;gap:10px;}
@@ -1401,7 +1406,10 @@
       <button class="rot-btn ${swMode==='stopwatch'?'active':''}" data-action="setSwMode" data-mode="stopwatch">스톱워치</button>
       <button class="rot-btn ${swMode==='pomodoro'?'active':''}" data-action="setSwMode" data-mode="pomodoro">뽀모도로</button>
     </div>`;
-    const completeBtn = targetLabel ? `<button class="btn" data-action="swCompleteLinked">"${escapeHtml(targetLabel)}" 완료 처리</button>` : '';
+    const linkedRow = targetLabel ? `<div class="sw-linked">
+      <span class="sw-linked-label">${escapeHtml(targetLabel)}</span>
+      <button class="btn sw-linked-done" data-action="swCompleteLinked">완료</button>
+    </div>` : '';
 
     if(swMode==='pomodoro'){
       const fullSec = pomo.phase==='study' ? POMO_STUDY_SEC : POMO_BREAK_SEC;
@@ -1419,8 +1427,8 @@
               ? `<button class="btn-outline" data-action="pomoPause">일시정지</button>`
               : `<button class="btn" data-action="pomoStart">${startLabel}</button>`}
             <button class="btn-outline" data-action="pomoReset">초기화</button>
-            ${completeBtn}
           </div>
+          ${linkedRow}
         </div>
       </div>`;
     }
@@ -1437,8 +1445,8 @@
             ? `<button class="btn-outline" data-action="swPause">일시정지</button>`
             : `<button class="btn" data-action="swStart">${sw.elapsedSec>0 ? '계속' : '시작'}</button>`}
           <button class="btn-outline" data-action="swReset">초기화</button>
-          ${completeBtn}
         </div>
+        ${linkedRow}
       </div>
     </div>`;
   }
