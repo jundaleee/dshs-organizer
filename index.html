@@ -17,6 +17,10 @@
 <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable.css" />
 <style>
   :root{
+    /* 이 앱엔 라이트 모드가 없이 항상 다크라서, 브라우저가 대신 그려주는 요소(select 팝업
+       목록, 날짜 picker, 스크롤바 등)도 다크로 맞춰야 함 — 안 그러면 페이지는 어두운데
+       select를 열었을 때 나오는 목록만 흰 배경으로 튀는 문제가 생김(실사용 중 발견). */
+    color-scheme: dark;
     --bg:#0B0B0E;
     --glass:rgba(255,255,255,.08); --glass-strong:rgba(255,255,255,.15); --glass-press:rgba(255,255,255,.2);
     --border:rgba(255,255,255,.13); --border-strong:rgba(255,255,255,.22); --border-hi:rgba(255,255,255,.36);
@@ -1697,26 +1701,23 @@
       </div>
 
       <div class="section">
-        <div class="section-head"><div class="section-title">수업 과제</div></div>
-        <div class="add-row">
-          <select class="add-input" id="reviewAddTeacher" style="flex:0 0 176px;">
-            <option value="">선생님 선택</option>
-            ${teacherOptionsHtml}
-          </select>
-          <input type="text" class="add-input" id="reviewAddInput" placeholder="추가할 내용 입력 후 Enter">
-          <button class="btn-outline" data-action="addReview">추가</button>
+        <div class="section-head"><div class="section-title">할 일 추가</div></div>
+        <div class="corner-tabs" style="margin-bottom:12px;">
+          <button class="corner-tab ${taskAddType==='review'?'active':''}" data-action="setTaskAddType" data-type="review">수업 과제</button>
+          <button class="corner-tab ${taskAddType==='personal'?'active':''}" data-action="setTaskAddType" data-type="personal">자율학습</button>
         </div>
-        <div class="empty" style="padding:2px 0 0;">추가한 항목은 홈 화면의 과목 박스와 도시 탭에서 확인·완료할 수 있어.</div>
-      </div>
-      <div class="section">
-        <div class="section-head"><div class="section-title">자율학습</div></div>
         <div class="add-row">
-          <select class="add-input" id="personalAddBox" style="flex:0 0 128px;">
-            <option value="">과목 미지정</option>
-            ${boxOptionsHtml}
-          </select>
-          <input type="text" class="add-input" id="personalAddInput" placeholder="추가할 내용 입력 후 Enter">
-          <button class="btn-outline" data-action="addPersonal">추가</button>
+          ${taskAddType==='review'
+            ? `<select class="add-input" id="taskAddPicker" style="flex:0 0 176px;">
+                 <option value="">선생님 선택</option>
+                 ${teacherOptionsHtml}
+               </select>`
+            : `<select class="add-input" id="taskAddPicker" style="flex:0 0 128px;">
+                 <option value="">과목 미지정</option>
+                 ${boxOptionsHtml}
+               </select>`}
+          <input type="text" class="add-input" id="taskAddInput" placeholder="추가할 내용 입력 후 Enter">
+          <button class="btn-outline" data-action="addTaskUnified">추가</button>
         </div>
         <div class="empty" style="padding:2px 0 0;">추가한 항목은 홈 화면의 과목 박스와 도시 탭에서 확인·완료할 수 있어.</div>
       </div>
@@ -3372,6 +3373,29 @@ ${prevSummary}`}]
     return out;
   }
 
+  /* ============ 할 일 탭 상단 추가 행 — 수업 과제/자율학습 통합 ============
+     원래 두 섹션이 따로 있었는데(선생님 선택 + 입력, 과목 선택 + 입력), 같은 자리를
+     차지하는 두 입력 방식이라 탭 하나로 어느 쪽인지 고르고 아래 행 하나만 쓰도록 합침.
+     실제로 추가되는 데이터 모델은 그대로 다르다 — review는 선생님에 묶인 teacher 항목,
+     personal은 선생님과 무관한 개인 할 일이라 addItem/addPersonalTask를 각각 그대로 호출. */
+  let taskAddType = 'review'; // 'review' | 'personal' — 저장 안 됨, 새로고침하면 기본값(수업 과제)으로
+  function setTaskAddType(type){
+    if(type!=='review' && type!=='personal') return;
+    taskAddType = type;
+    render();
+  }
+  function addTaskUnified(){
+    const input = document.getElementById('taskAddInput');
+    const picker = document.getElementById('taskAddPicker');
+    if(!input) return;
+    if(taskAddType==='review'){
+      if(picker && picker.value && input.value.trim()) addItem(picker.value, 'review', input.value);
+      else if(picker && !picker.value) picker.focus();
+    } else {
+      addPersonalTask(input.value, picker ? picker.value : null);
+    }
+  }
+
   /* ============ 액션: 코너 항목 ============ */
   function addItem(key, corner, text){
     text = text.trim(); if(!text) return;
@@ -4473,19 +4497,8 @@ ${text}`}]
       case 'pomoPause': pomoPause(); break;
       case 'pomoReset': pomoReset(); break;
       case 'classifyTasks': classifyTasks(); break;
-      case 'addPersonal': {
-        const input = document.getElementById('personalAddInput');
-        const boxSel = document.getElementById('personalAddBox');
-        addPersonalTask(input.value, boxSel ? boxSel.value : null);
-        break;
-      }
-      case 'addReview': {
-        const input = document.getElementById('reviewAddInput');
-        const tSel = document.getElementById('reviewAddTeacher');
-        if(tSel && tSel.value && input && input.value.trim()){ addItem(tSel.value, 'review', input.value); }
-        else if(tSel && !tSel.value){ tSel.focus(); }
-        break;
-      }
+      case 'setTaskAddType': setTaskAddType(el.dataset.type); break;
+      case 'addTaskUnified': addTaskUnified(); break;
       case 'completePersonal': completePersonalTask(el.dataset.id); break;
       case 'deletePersonal': deletePersonalTask(el.dataset.id); break;
       case 'saveApiKey': saveApiKey(); break;
@@ -4505,13 +4518,8 @@ ${text}`}]
       if(ed) saveTaskEdit(ed.kind, ed.key, ed.corner, ed.id);
       return;
     }
-    if(e.target.id==='personalAddInput'){
-      const boxSel = document.getElementById('personalAddBox');
-      addPersonalTask(e.target.value, boxSel ? boxSel.value : null);
-    } else if(e.target.id==='reviewAddInput'){
-      const tSel = document.getElementById('reviewAddTeacher');
-      if(tSel && tSel.value && e.target.value.trim()) addItem(tSel.value, 'review', e.target.value);
-      else if(tSel && !tSel.value) tSel.focus();
+    if(e.target.id==='taskAddInput'){
+      addTaskUnified();
     } else if(e.target.classList.contains('add-input')){
       addItem(e.target.dataset.key, e.target.dataset.corner, e.target.value);
     }
