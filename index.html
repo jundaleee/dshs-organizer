@@ -439,7 +439,6 @@
   .sync-health{font-size:12px;color:var(--text-3);padding:0 0 14px;}
   .sync-health.warn{color:var(--orange);font-weight:600;}
 
-  .balance-warn{font-size:12.5px;color:var(--orange);font-weight:600;line-height:1.55;background:var(--glass);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));border:1px solid var(--border);border-radius:var(--r-md);padding:11px 15px;margin-bottom:28px;}
 
   /* ---- D-day 역산 타임라인 ---- */
   .dday-legend{font-size:11.5px;color:var(--text-3);margin:0 14px 6px;display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
@@ -1342,33 +1341,6 @@
 
   // 과목별 학습 시간을 재는 기능이 없어서(체크 여부만 있음), "이번 주 완료 개수"를 시간 대신 프록시로 씀.
   // 정확도는 떨어지지만 "이번 주 이 과목 하나도 안 건드림" 정도는 충분히 잡아냄.
-  function weekBoxCompletionCounts(){
-    const weekStart = mondayOf(now).getTime();
-    const counts = {};
-    BOXES.forEach(b=>{ counts[b.key] = 0; });
-    TEACHER_LIST.forEach(x=>{
-      const box = BOXES.find(b=>b.cat===x.cat && (!b.subj || b.subj===x.subj));
-      if(!box) return;
-      const td = state.data.teachers[x.key];
-      td.completed.forEach(it=>{
-        if((it.corner==='review'||it.corner==='self') && it.completedAt>=weekStart) counts[box.key]++;
-      });
-    });
-    (state.data.personal?.completed||[]).forEach(it=>{
-      if(BOX_KEYS.has(it.boxKey) && it.completedAt>=weekStart) counts[it.boxKey]++;
-    });
-    return counts;
-  }
-  function renderBalanceWarning(){
-    const counts = weekBoxCompletionCounts();
-    const total = Object.values(counts).reduce((a,b)=>a+b,0);
-    if(total<4) return ''; // 활동이 너무 적으면(주 초반 등) 비교 자체가 의미 없음
-    const neglected = BOXES.filter(b=>counts[b.key]===0);
-    if(neglected.length===0) return '';
-    const hasLowTagged = state.data.assignments.some(a=>!a.done && a.priority==='low');
-    const extra = hasLowTagged ? ' 가성비 "하"로 태그해둔 과제가 있다면 그것 때문에 아예 손 놓은 건 아닌지 확인해봐.' : '';
-    return `<div class="balance-warn">이번 주 <b>${neglected.map(b=>escapeHtml(b.label)).join(', ')}</b> 완료한 게 하나도 없어 — 다른 과목엔 몰려있는데 여긴 비어있어.${extra}</div>`;
-  }
 
   /* ---- 스톱워치 / 뽀모도로: 항목에 연결해서 얼마나 붙잡고 있었는지 재는 용도 ----
      같은 카드 안에서 모드만 전환한다(항목 연결은 두 모드가 공유). 항목 연결은 드롭다운을
@@ -1584,7 +1556,10 @@
     const b = BOX_KEYS.has(key) && BOXES.find(x=>x.key===key);
     return b ? b.qc : 'var(--text-3)';
   }
-  function connectionRecalls(){ return pendingRecall().filter(t=>t.tag==='CONNECTION'); }
+  // 잇는 상대 과목이 실제로 있는 것만 — subjectB도 boxKeyB도 없으면 "↔ ?"가 되어 버리므로 제외
+  function connectionRecalls(){
+    return pendingRecall().filter(t=>t.tag==='CONNECTION' && ((t.subjectB && t.subjectB.trim()) || BOX_KEYS.has(t.boxKeyB)));
+  }
   // 홈은 과목을 완전히 분리된 박스로 보여준다 — 과목 간 연결을 스스로 볼 자리가 없다.
   // 서로 다른 과목을 잇는 복습 항목이 있으면 여기서 한 줄로 묶어 보여준다.
   function renderConnectionStrip(){
@@ -1649,8 +1624,6 @@
       <div class="box-grid">${boxHtml}</div>
 
       ${renderConnectionStrip()}
-
-      ${renderBalanceWarning()}
 
       <div class="section">
         <div class="section-head"><div class="section-title">임박한 과제</div><button class="section-link" data-action="goView" data-view="assignments">전체 보기</button></div>
