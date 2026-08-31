@@ -272,6 +272,24 @@
   .pomo-card.drag-over .pomo-drop-hint{opacity:1;}
   @keyframes pomoLinked{0%{box-shadow:0 0 0 0 rgba(48,209,88,.55);}100%{box-shadow:0 0 0 16px rgba(48,209,88,0);}}
   .pomo-card.linked-flash{animation:pomoLinked .55s ease;}
+
+  /* ---- 홈 할 일 카드를 길게 눌렀다 끌어서 지우기 ---- */
+  .task-trash{
+    position:fixed;right:22px;bottom:22px;width:60px;height:60px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;z-index:65;
+    background:rgba(20,22,28,.9);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.7);backdrop-filter:blur(var(--blur)) saturate(1.7);
+    border:1px solid var(--border-strong);color:var(--text-2);
+    opacity:0;transform:scale(.7);pointer-events:none;
+    box-shadow:0 12px 28px rgba(0,0,0,.4);
+    transition:opacity 200ms var(--ease),transform 200ms var(--ease),background 150ms var(--ease),border-color 150ms var(--ease),color 150ms var(--ease);
+  }
+  .task-trash svg{width:24px;height:24px;}
+  .task-trash.visible{opacity:1;transform:scale(1);pointer-events:auto;}
+  .task-trash.drag-over{background:var(--red);border-color:var(--red);color:#fff;transform:scale(1.15);}
+  @keyframes taskTrashPop{0%{transform:scale(1.15);}50%{transform:scale(.85);}100%{transform:scale(0);opacity:0;}}
+  .task-trash.deleted{animation:taskTrashPop 320ms var(--ease) forwards;}
+  .box-task-row.longpress-armed{outline:2px solid var(--red);outline-offset:2px;border-radius:10px;}
+  @media(max-width:639px){ .task-trash{right:16px;bottom:calc(80px + env(safe-area-inset-bottom));} }
   .pomo-ring{
     width:76px;height:76px;border-radius:50%;flex-shrink:0;
     border:3px solid var(--border);
@@ -286,7 +304,8 @@
   @keyframes swSpin{to{transform:rotate(360deg);}}
   .pomo-display{position:relative;z-index:1;font-size:14px;font-weight:700;font-variant-numeric:tabular-nums;}
   .pomo-body{flex:1;min-width:220px;display:flex;flex-direction:column;gap:8px;}
-  .pomo-select{width:100%;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-pill);color:var(--text);padding:7px 13px;font-size:12.5px;}
+  .pomo-mode-toggle{align-self:flex-start;}
+  .pomo-phase{font-size:12px;color:var(--text-3);}
   .pomo-row{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
 
   .section{margin-bottom:36px;}
@@ -608,6 +627,7 @@
   <main class="main"><div class="main-inner" id="app"></div></main>
 </div>
 <div id="bottomNavSlot"></div>
+<div class="task-trash" id="taskTrashZone" aria-hidden="true"></div>
 <input type="file" id="importFile" accept="application/json" style="display:none">
 
 <script>
@@ -911,7 +931,7 @@
     {view:'assignments', label:'과제', icon:'assignments', color:'var(--orange)'},
     {view:'schedule', label:'시간표', icon:'schedule', color:'var(--purple)'},
     {view:'materials', label:'자료', icon:'materials', color:'var(--indigo)'},
-    {view:'archive', label:'아카이브', icon:'archive', color:'var(--red)'},
+    {view:'archive', label:'아카이브', icon:'archive', color:'var(--pink)'},
     {view:'city', label:'도시', icon:'city', color:'var(--teal)'}
   ];
 
@@ -1279,8 +1299,47 @@
     return `<div class="balance-warn">이번 주 <b>${neglected.map(b=>escapeHtml(b.label)).join(', ')}</b> 완료한 게 하나도 없어 — 다른 과목엔 몰려있는데 여긴 비어있어.${extra}</div>`;
   }
 
-  /* ---- 스톱워치: 항목에 연결해서 얼마나 붙잡고 있었는지 재는 용도 ---- */
+  /* ---- 스톱워치 / 뽀모도로: 항목에 연결해서 얼마나 붙잡고 있었는지 재는 용도 ----
+     같은 카드 안에서 모드만 전환한다(항목 연결은 두 모드가 공유). 항목 연결은 드롭다운을
+     없애고 드래그로만 하도록 단순화함(어차피 잘 안 쓰이던 선택창이었음). */
+  let swMode = 'stopwatch'; // 'stopwatch' | 'pomodoro' — 새로고침하면 스톱워치로 리셋(원래도 안 저장되던 값)
   const sw = { running:false, elapsedSec:0, target:null, intervalId:null };
+  const POMO_STUDY_SEC = 25*60, POMO_BREAK_SEC = 5*60;
+  const pomo = { running:false, phase:'study', remainingSec:POMO_STUDY_SEC, intervalId:null };
+  function setSwMode(mode){
+    if(mode!=='stopwatch' && mode!=='pomodoro') return;
+    swMode = mode;
+    render();
+  }
+  function pomoTick(){
+    pomo.remainingSec--;
+    if(pomo.remainingSec<=0){
+      pomo.phase = pomo.phase==='study' ? 'break' : 'study';
+      pomo.remainingSec = pomo.phase==='study' ? POMO_STUDY_SEC : POMO_BREAK_SEC;
+      render(); // 공부↔휴식이 바뀌면 라벨 문구도 같이 바뀌어야 하니 이때만 통째로 다시 그림
+      return;
+    }
+    const dEl = document.getElementById('pomoDisplay');
+    if(dEl) dEl.textContent = swFormat(pomo.remainingSec);
+  }
+  function pomoStart(){
+    if(pomo.running) return;
+    pomo.running = true;
+    pomo.intervalId = setInterval(pomoTick, 1000);
+    render();
+  }
+  function pomoPause(){
+    clearInterval(pomo.intervalId);
+    pomo.running = false;
+    render();
+  }
+  function pomoReset(){
+    clearInterval(pomo.intervalId);
+    pomo.running = false;
+    pomo.phase = 'study';
+    pomo.remainingSec = POMO_STUDY_SEC;
+    render();
+  }
   function swTargetLabel(){
     if(!sw.target) return null;
     const t = sw.target;
@@ -1306,7 +1365,7 @@
     else if(t.type==='personal') completePersonalTask(t.id);
     else if(t.type==='teacher') completeItem(t.key, t.corner, t.id);
     sw.target = null;
-    swReset();
+    if(swMode==='pomodoro') pomoReset(); else swReset();
   }
   function swFormat(sec){
     sec = Math.max(0, sec);
@@ -1338,29 +1397,33 @@
   }
   function renderStopwatchCard(){
     const targetLabel = swTargetLabel();
+    const modeToggle = `<div class="rotation-actions pomo-mode-toggle">
+      <button class="rot-btn ${swMode==='stopwatch'?'active':''}" data-action="setSwMode" data-mode="stopwatch">스톱워치</button>
+      <button class="rot-btn ${swMode==='pomodoro'?'active':''}" data-action="setSwMode" data-mode="pomodoro">뽀모도로</button>
+    </div>`;
+    const completeBtn = targetLabel ? `<button class="btn" data-action="swCompleteLinked">"${escapeHtml(targetLabel)}" 완료 처리</button>` : '';
 
-    const pendingAssignments = state.data.assignments.filter(a=>!a.done).sort((a,b)=>a.dueDate.localeCompare(b.dueDate));
-    const t = sw.target;
-    const asgOptions = pendingAssignments.map(a=>{
-      const sel = t && t.type==='assignment' && t.id===a.id;
-      return `<option value="assignment:${a.id}" ${sel?'selected':''}>${escapeHtml(a.title)}</option>`;
-    }).join('');
-    const boxGroups = BOXES.map(box=>{
-      const items = boxTaskItems(box);
-      if(items.length===0) return '';
-      const opts = items.map(q=>{
-        let val, sel;
-        if(q.kind==='personal'){
-          val = `personal:${q.item.id}`;
-          sel = t && t.type==='personal' && t.id===q.item.id;
-        } else {
-          val = `teacher:${q.x.key}:${q.corner}:${q.item.id}`;
-          sel = t && t.type==='teacher' && t.key===q.x.key && t.corner===q.corner && t.id===q.item.id;
-        }
-        return `<option value="${val}" ${sel?'selected':''}>${escapeHtml(q.item.text)}</option>`;
-      }).join('');
-      return `<optgroup label="${escapeHtml(box.label)}">${opts}</optgroup>`;
-    }).join('');
+    if(swMode==='pomodoro'){
+      const fullSec = pomo.phase==='study' ? POMO_STUDY_SEC : POMO_BREAK_SEC;
+      const startLabel = pomo.remainingSec<fullSec ? '계속' : '시작';
+      return `<div class="pomo-card">
+        <div class="pomo-drop-hint">여기에 놓으면 연결돼</div>
+        <div class="pomo-ring ${pomo.running?'running':''}" id="pomoRing">
+          <div class="pomo-display" id="pomoDisplay">${swFormat(pomo.remainingSec)}</div>
+        </div>
+        <div class="pomo-body">
+          ${modeToggle}
+          <div class="pomo-phase">${pomo.phase==='study'?'공부 중':'휴식 중'} · 25분 공부 / 5분 휴식</div>
+          <div class="pomo-row">
+            ${pomo.running
+              ? `<button class="btn-outline" data-action="pomoPause">일시정지</button>`
+              : `<button class="btn" data-action="pomoStart">${startLabel}</button>`}
+            <button class="btn-outline" data-action="pomoReset">초기화</button>
+            ${completeBtn}
+          </div>
+        </div>
+      </div>`;
+    }
 
     return `<div class="pomo-card">
       <div class="pomo-drop-hint">여기에 놓으면 스톱워치에 연결돼</div>
@@ -1368,17 +1431,13 @@
         <div class="pomo-display" id="swDisplay">${swFormat(sw.elapsedSec)}</div>
       </div>
       <div class="pomo-body">
-        <select class="pomo-select" id="swTargetSelect">
-          <option value="">스톱워치 — 항목 선택 안 함</option>
-          ${asgOptions?`<optgroup label="과제">${asgOptions}</optgroup>`:''}
-          ${boxGroups}
-        </select>
+        ${modeToggle}
         <div class="pomo-row">
           ${sw.running
             ? `<button class="btn-outline" data-action="swPause">일시정지</button>`
             : `<button class="btn" data-action="swStart">${sw.elapsedSec>0 ? '계속' : '시작'}</button>`}
           <button class="btn-outline" data-action="swReset">초기화</button>
-          ${targetLabel ? `<button class="btn" data-action="swCompleteLinked">"${escapeHtml(targetLabel)}" 완료 처리</button>` : ''}
+          ${completeBtn}
         </div>
       </div>
     </div>`;
@@ -4221,7 +4280,43 @@ ${text}`}]
   document.body.addEventListener('pointerup', endBoxDrag);
   document.body.addEventListener('pointercancel', endBoxDrag);
 
-  /* ============ 할 일 항목을 스톱워치 카드로 드래그해서 연결하기 ============ */
+  /* ============ 할 일 항목 드래그 ============
+     두 가지 목적을 하나의 네이티브 드래그로 처리한다:
+     1) 그냥 드래그해서 스톱워치/뽀모도로 카드에 놓으면 연결(기존 기능)
+     2) 몇백 ms 이상 누르고 있으면(움직이기 전부터) 오른쪽 아래에 휴지통이 뜨고,
+        그 상태로 끌어다 놓으면 삭제(신규 기능)
+     휴지통 노출은 순수 포인터 타이머로 재고, 실제 드래그 자체는 그대로 네이티브
+     HTML5 dragstart/dragover/drop을 쓴다 — 빠르게 휙 끌면(타이머가 뜨기 전) 휴지통이
+     안 뜨니 기존 스톱워치 연결 동작은 그대로 유지됨. */
+  const TASK_LONGPRESS_MS = 550;
+  let taskLongPressTimer = null, taskLongPressRow = null, taskDragActive = false;
+  function showTaskTrash(row){
+    const trash = document.getElementById('taskTrashZone');
+    if(trash) trash.classList.add('visible');
+    if(row) row.classList.add('longpress-armed');
+  }
+  function hideTaskTrash(){
+    const trash = document.getElementById('taskTrashZone');
+    if(trash) trash.classList.remove('visible', 'drag-over');
+    document.querySelectorAll('.box-task-row.longpress-armed').forEach(r=>r.classList.remove('longpress-armed'));
+  }
+  document.body.addEventListener('pointerdown', function(e){
+    const row = e.target.closest('.box-task-row');
+    if(!row || e.target.closest('button')) return; // 체크 버튼 등은 길게 눌러도 삭제 UI를 안 띄움
+    taskLongPressRow = row;
+    taskLongPressTimer = setTimeout(()=>{
+      if(taskLongPressRow===row) showTaskTrash(row);
+    }, TASK_LONGPRESS_MS);
+  });
+  function clearTaskLongPress(){
+    clearTimeout(taskLongPressTimer);
+    taskLongPressTimer = null;
+    taskLongPressRow = null;
+    if(!taskDragActive) hideTaskTrash(); // 드래그 중이면 dragend가 정리하니 여기선 안 건드림
+  }
+  document.body.addEventListener('pointerup', clearTaskLongPress);
+  document.body.addEventListener('pointercancel', clearTaskLongPress);
+
   document.body.addEventListener('dragstart', function(e){
     const row = e.target.closest('.box-task-row');
     if(!row) return;
@@ -4229,36 +4324,50 @@ ${text}`}]
       ? {type:'personal', id:row.dataset.dragId}
       : {type:'teacher', key:row.dataset.dragKey, corner:row.dataset.dragCorner, id:row.dataset.dragId};
     e.dataTransfer.setData('application/json', JSON.stringify(payload));
-    e.dataTransfer.effectAllowed = 'copy';
+    e.dataTransfer.effectAllowed = 'copyMove';
     row.classList.add('dragging-task');
+    taskDragActive = true;
   });
   document.body.addEventListener('dragend', function(e){
     const row = e.target.closest('.box-task-row');
     if(row) row.classList.remove('dragging-task');
     document.querySelectorAll('.pomo-card.drag-over').forEach(c=>c.classList.remove('drag-over'));
+    taskDragActive = false;
+    hideTaskTrash();
   });
   document.body.addEventListener('dragover', function(e){
     const card = e.target.closest('.pomo-card');
-    if(!card) return;
+    const trash = e.target.closest('.task-trash.visible');
+    if(!card && !trash) return;
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-    card.classList.add('drag-over');
+    if(card){ e.dataTransfer.dropEffect='copy'; card.classList.add('drag-over'); }
+    else document.querySelectorAll('.pomo-card.drag-over').forEach(c=>c.classList.remove('drag-over'));
+    if(trash){ e.dataTransfer.dropEffect='move'; trash.classList.add('drag-over'); }
+    else { const t=document.getElementById('taskTrashZone'); if(t) t.classList.remove('drag-over'); }
   });
   document.body.addEventListener('drop', function(e){
     const card = e.target.closest('.pomo-card');
-    if(!card) return;
+    const trash = e.target.closest('.task-trash.visible');
+    if(!card && !trash) return;
     e.preventDefault();
-    card.classList.remove('drag-over');
+    if(card) card.classList.remove('drag-over');
     try{
       const data = JSON.parse(e.dataTransfer.getData('application/json'));
-      if(data && data.type){
-        sw.target = data;
-        render();
-        const newCard = document.querySelector('.pomo-card');
-        if(newCard){
-          newCard.classList.add('linked-flash');
-          newCard.addEventListener('animationend', ()=>newCard.classList.remove('linked-flash'), {once:true});
-        }
+      if(!data || !data.type) return;
+      if(trash){
+        if(data.type==='personal') deletePersonalTask(data.id);
+        else if(data.type==='teacher') deleteItem(data.key, data.corner, data.id);
+        trash.classList.remove('drag-over');
+        trash.classList.add('deleted');
+        trash.addEventListener('animationend', ()=>{ trash.classList.remove('deleted','visible'); }, {once:true});
+        return;
+      }
+      sw.target = data;
+      render();
+      const newCard = document.querySelector('.pomo-card');
+      if(newCard){
+        newCard.classList.add('linked-flash');
+        newCard.addEventListener('animationend', ()=>newCard.classList.remove('linked-flash'), {once:true});
       }
     }catch(err){}
   });
@@ -4351,6 +4460,10 @@ ${text}`}]
       case 'swPause': swPause(); break;
       case 'swReset': swReset(); break;
       case 'swCompleteLinked': swCompleteLinked(); break;
+      case 'setSwMode': setSwMode(el.dataset.mode); break;
+      case 'pomoStart': pomoStart(); break;
+      case 'pomoPause': pomoPause(); break;
+      case 'pomoReset': pomoReset(); break;
       case 'classifyTasks': classifyTasks(); break;
       case 'addPersonal': {
         const input = document.getElementById('personalAddInput');
@@ -4399,17 +4512,6 @@ ${text}`}]
   let debTimer = null;
   document.body.addEventListener('input', function(e){
     if(e.target.id==='feedbackNoteInput'){ syncFeedbackSubmitState(); return; }
-    if(e.target.id==='swTargetSelect'){
-      const v = e.target.value;
-      if(!v){ sw.target = null; }
-      else {
-        const parts = v.split(':');
-        if(parts[0]==='assignment'){ sw.target = {type:'assignment', id:parts[1]}; }
-        else if(parts[0]==='personal'){ sw.target = {type:'personal', id:parts[1]}; }
-        else if(parts[0]==='teacher'){ sw.target = {type:'teacher', key:parts[1], corner:parts[2], id:parts[3]}; }
-      }
-      render();
-    }
   });
 
   // 홈의 2단 ↔ 1단 경계(1180px)를 넘어갈 때만 다시 그림 — renderHome()이 이 값에 따라
@@ -4430,6 +4532,9 @@ ${text}`}]
 
   /* ============ 초기화 ============ */
   (function init(){
+    const trashZone = document.getElementById('taskTrashZone');
+    if(trashZone) trashZone.innerHTML = icon('trash');
+
     const saved = loadData();
     if(saved){
       const skeleton = buildSkeleton();
