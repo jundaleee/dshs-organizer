@@ -131,6 +131,54 @@
     border:1px solid rgba(255,159,10,.28);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:10px;}
   .notif-row{font-size:13px;line-height:1.6;padding:9px 0;border-bottom:1px solid var(--border);}
   .notif-row:last-child{border-bottom:none;}
+  /* 알림 — 모달이 아니라 벨 버튼 근처에서 살짝 스르륵 내려오는 팝오버 */
+  .notif-pop{position:fixed;top:16px;right:20px;width:320px;max-width:calc(100vw - 32px);z-index:75;
+    background:rgba(22,23,28,.95);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.6);backdrop-filter:blur(var(--blur)) saturate(1.6);
+    border:1px solid var(--border-strong);border-top-color:var(--border-hi);border-radius:var(--r-lg);
+    box-shadow:0 18px 44px rgba(0,0,0,.5);transform-origin:top right;
+    animation:notifPopIn 220ms cubic-bezier(.16,1,.3,1);overflow:hidden;}
+  @keyframes notifPopIn{from{opacity:0;transform:translateY(-8px) scale(.97);}to{opacity:1;transform:none;}}
+  .notif-pop--leaving{animation:notifPopOut 160ms cubic-bezier(.6,.04,.98,.34) forwards;pointer-events:none;}
+  @keyframes notifPopOut{from{opacity:1;transform:none;}to{opacity:0;transform:translateY(-8px) scale(.97);}}
+  .notif-pop-head{display:flex;align-items:center;justify-content:space-between;padding:11px 13px 8px;font-size:13px;font-weight:600;}
+  .notif-pop-body{padding:0 13px 12px;max-height:min(70vh,460px);overflow-y:auto;}
+  .notif-pop-sec{font-size:10.5px;font-weight:700;letter-spacing:.04em;color:var(--text-3);text-transform:uppercase;margin:10px 0 4px;}
+  .notif-report{display:flex;align-items:center;gap:8px;width:100%;text-align:left;padding:9px 8px;border-radius:var(--r-sm);
+    background:var(--glass);border:1px solid var(--border);margin-bottom:6px;font-size:12.5px;color:var(--text-2);}
+  .notif-report:hover{background:var(--glass-strong);color:var(--text);}
+  .notif-report .nr-when{margin-left:auto;font-size:10.5px;color:var(--text-3);flex-shrink:0;}
+  /* 보고서 뷰어 — 오른쪽에서 스르륵 */
+  .report-dock{position:fixed;top:0;right:0;bottom:0;width:min(560px,calc(100vw - 24px));z-index:78;
+    background:rgba(18,19,24,.97);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.5);backdrop-filter:blur(var(--blur)) saturate(1.5);
+    border-left:1px solid var(--border-strong);box-shadow:-24px 0 60px rgba(0,0,0,.5);
+    display:flex;flex-direction:column;animation:reportIn 320ms cubic-bezier(.16,1,.3,1);}
+  @keyframes reportIn{from{transform:translateX(100%);}to{transform:none;}}
+  .report-dock--leaving{animation:reportOut 260ms cubic-bezier(.6,.04,.98,.34) forwards;pointer-events:none;}
+  @keyframes reportOut{from{transform:none;}to{transform:translateX(100%);}}
+  .report-dock-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--border);}
+  .report-dock-head b{font-size:14px;flex:1;min-width:0;}
+  .report-dock-body{flex:1;overflow-y:auto;padding:16px 20px 40px;}
+  .md-body h2{font-size:17px;font-weight:700;margin:20px 0 8px;}
+  .md-body h3{font-size:14px;font-weight:600;color:var(--text-2);margin:16px 0 6px;}
+  .md-body h4{font-size:12.5px;font-weight:600;color:var(--text-3);margin:12px 0 4px;}
+  .md-body p{font-size:13px;line-height:1.65;color:var(--text-2);margin:0 0 10px;}
+  .md-body ul{margin:0 0 12px;padding-left:18px;}
+  .md-body li{font-size:13px;line-height:1.6;color:var(--text-2);margin-bottom:4px;}
+  .md-body code{background:var(--glass-strong);padding:1px 4px;border-radius:4px;font-size:12px;}
+  .md-body strong{color:var(--text);}
+  /* 보고서 생성 게이지 */
+  .report-gen{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);z-index:82;width:min(320px,calc(100vw - 32px));
+    background:rgba(22,23,28,.96);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));
+    border:1px solid var(--border-strong);border-radius:var(--r-md);padding:11px 14px;box-shadow:0 14px 40px rgba(0,0,0,.5);
+    animation:notifPopIn 200ms var(--ease);}
+  .report-gen-label{font-size:12px;color:var(--text-2);margin-bottom:7px;}
+  .report-gen-track{height:5px;border-radius:3px;background:var(--glass-strong);overflow:hidden;}
+  .report-gen-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--teal),var(--blue));transition:width .22s linear;}
+  .report-gen--done .report-gen-fill{background:var(--green);}
+  @media(prefers-reduced-motion:reduce){
+    .notif-pop,.report-dock,.report-gen{animation:none;}
+    .notif-pop--leaving,.report-dock--leaving{animation:none;opacity:0;}
+  }
   .iconbtn{background:var(--glass);border:1px solid var(--border);color:var(--text-2);font-size:12.5px;padding:7px 14px;border-radius:var(--r-pill);display:inline-flex;align-items:center;gap:6px;transition:all var(--dur) var(--ease);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));}
   .iconbtn:hover{color:var(--text);border-color:var(--border-strong);background:var(--glass-strong);}
 
@@ -806,7 +854,8 @@
       personal:{ tasks:[], completed:[] },
       ddays:[],
       recall:{ tasks:[], lastGeneratedAt:null },
-      archiveLog:[]
+      archiveLog:[],
+      reports:[]
     };
   }
 
@@ -878,6 +927,7 @@
     asgSortMode:'due',
     cityView:'main', cityInspectTarget:null, editingAssignment:null, editingTask:null,
     ddayAddOpen:false, feedbackTargetId:null, feedbackSelectedRating:null,
+    reportViewId:null,
     data:buildSkeleton()
   };
   function getTD(key){ return state.data.teachers[key]; }
@@ -984,13 +1034,14 @@
   }
   function renderOverlaysOnly(){
     const feedbackDraft = captureFeedbackDraft();
-    document.querySelectorAll('.modal-overlay, .feedback-dock').forEach(el=>el.remove());
+    document.querySelectorAll('.modal-overlay, .feedback-dock, .notif-pop, .report-dock').forEach(el=>el.remove());
     if(state.modal==='settings') document.body.insertAdjacentHTML('beforeend', renderSettingsModal());
     else if(state.modal==='completedPersonal') document.body.insertAdjacentHTML('beforeend', renderCompletedPersonalModal());
     else if(state.modal==='quickAdd') document.body.insertAdjacentHTML('beforeend', renderQuickAddModal());
     else if(state.modal==='cityInspect') document.body.insertAdjacentHTML('beforeend', renderCityInspectModal());
     else if(state.modal==='notifications') document.body.insertAdjacentHTML('beforeend', renderNotificationsModal());
     if(state.feedbackTargetId) document.body.insertAdjacentHTML('beforeend', renderCompletionFeedbackModal());
+    if(state.reportViewId) document.body.insertAdjacentHTML('beforeend', renderReportViewer());
     restoreFeedbackDraft(feedbackDraft);
     syncFeedbackSubmitState();
     const apiKeyInput = document.getElementById('apiKeyInput');
@@ -1047,13 +1098,14 @@
     // 쓰던 글이 날아가면 안 된다 — 지우기 전에 초안을 챙겨뒀다가 다시 채워 넣는다.
     // 단, 그 사이에 다른 항목을 완료해서 대상이 바뀌었으면 남의 설명이 딸려오면 안 되므로 버린다
     const feedbackDraft = captureFeedbackDraft();
-    document.querySelectorAll('.modal-overlay, .feedback-dock').forEach(el=>el.remove());
+    document.querySelectorAll('.modal-overlay, .feedback-dock, .notif-pop, .report-dock').forEach(el=>el.remove());
     if(state.modal==='settings') document.body.insertAdjacentHTML('beforeend', renderSettingsModal());
     else if(state.modal==='completedPersonal') document.body.insertAdjacentHTML('beforeend', renderCompletedPersonalModal());
     else if(state.modal==='quickAdd') document.body.insertAdjacentHTML('beforeend', renderQuickAddModal());
     else if(state.modal==='cityInspect') document.body.insertAdjacentHTML('beforeend', renderCityInspectModal());
     else if(state.modal==='notifications') document.body.insertAdjacentHTML('beforeend', renderNotificationsModal());
     if(state.feedbackTargetId) document.body.insertAdjacentHTML('beforeend', renderCompletionFeedbackModal());
+    if(state.reportViewId) document.body.insertAdjacentHTML('beforeend', renderReportViewer());
 
     restoreFeedbackDraft(feedbackDraft);
 
@@ -1185,32 +1237,36 @@
     return list;
   }
   function renderTopbarMini(){
-    const n = computeNotifications().length;
-    return `<div class="topbar-mini"><button class="iconbtn" data-action="openNotifications">${icon('bell')}${n>0?`<span class="notif-badge">${n}</span>`:''}</button></div>`;
+    const n = computeNotifications().length + (state.data.reports||[]).length;
+    return `<div class="topbar-mini"><button class="iconbtn" data-action="openNotifications">${icon('bell')}${n>0?`<span class="notif-badge">${n>9?'9+':n}</span>`:''}</button></div>`;
   }
   function renderNotificationsModal(){
     const notes = computeNotifications();
-    const notesHtml = notes.length===0 ? `<div class="empty">지금은 알림이 없어.</div>` : notes.map(n=>`<div class="notif-row">${escapeHtml(n)}</div>`).join('');
-    return `<div class="modal-overlay" data-action="closeModal">
-      <div class="modal" style="max-width:380px;">
-        <div class="modal-head"><h2>알림</h2><button class="modal-close" data-action="closeModal">${icon('close')}</button></div>
-        <div class="modal-body">
-          ${reportStatus?`<div class="empty" style="padding:0 0 10px;">${escapeHtml(reportStatus)}</div>`:''}
-          ${lastCompletion?`<div class="settings-group">
-            <h3>마지막 완료 취소</h3>
-            <div class="desc">"${escapeHtml(lastCompletion.text)}" 방금 끝낸 걸 잘못 눌렀으면 되돌릴 수 있어.</div>
-            <button class="btn-outline" data-action="undoLastCompletion">되돌리기</button>
-          </div>`:''}
-          <div class="settings-group">
-            <h3>이번 주 통지표</h3>
-            <div class="desc">이번 주 학습 리포트를 지금 바로 받아볼 수 있어.</div>
-            <button class="btn-outline" data-action="generateWeeklyReport">${icon('download')} 이번 주 리포트 받기</button>
-          </div>
-          <div class="settings-group">
-            <h3>다가오는 일정</h3>
-            ${notesHtml}
-          </div>
-        </div>
+    const reports = (state.data.reports||[]).slice(0, 5);   // 상위 5개만
+    const reportsHtml = reports.length===0
+      ? `<div class="empty" style="padding:6px 0;">아직 생성된 보고서가 없어.</div>`
+      : reports.map(r=>{
+          const d = new Date(r.createdAt);
+          return `<button class="notif-report" data-action="openReport" data-id="${r.id}">
+            ${icon(r.type==='weekly'?'city':'assignments')}
+            <span>${escapeHtml(r.label)}</span>
+            <span class="nr-when">${d.getMonth()+1}/${d.getDate()}</span>
+          </button>`;
+        }).join('');
+    const notesHtml = notes.length===0 ? `<div class="empty" style="padding:6px 0;">다가오는 일정 없음</div>`
+      : notes.map(n=>`<div class="notif-row">${escapeHtml(n)}</div>`).join('');
+    return `<div class="notif-pop" role="dialog" aria-label="알림">
+      <div class="notif-pop-head"><span>알림</span><button class="modal-close" data-action="closeModal" aria-label="닫기">${icon('close')}</button></div>
+      <div class="notif-pop-body">
+        ${reportStatus?`<div class="empty" style="padding:0 0 8px;">${escapeHtml(reportStatus)}</div>`:''}
+        ${lastCompletion?`<div class="notif-pop-sec">되돌리기</div>
+          <div class="empty" style="padding:0 0 6px;">"${escapeHtml(lastCompletion.text)}" 잘못 눌렀으면</div>
+          <button class="btn-outline" data-action="undoLastCompletion">마지막 완료 취소</button>`:''}
+        <div class="notif-pop-sec">학습 보고서</div>
+        ${reportsHtml}
+        <button class="btn-outline" data-action="generateWeeklyReport" style="margin-top:2px;">이번 주 아카이브 지금 만들기</button>
+        <div class="notif-pop-sec">다가오는 일정</div>
+        ${notesHtml}
       </div>
     </div>`;
   }
@@ -1945,21 +2001,137 @@
       </div>
     </div>`;
   }
+  /* ============ 학습 보고서 — 오늘의 학습기록 / 주간 아카이브 ============
+     생성된 보고서는 다운로드가 아니라 state.data.reports에 저장해두고, 알림에서 눌러
+     오른쪽에서 스르륵 나타나는 뷰어로 본다. 저장이 필요하면 뷰어 안에서 내려받는다. */
+  function weekKey(d){ return toISODate(mondayOf(d)); }
+  function weekLabel(d){
+    // 그 주가 걸친 달 중 목요일이 속한 달을 기준(ISO 관례), 그 달 1일이 속한 주를 1주로 센다
+    const mon = mondayOf(d);
+    const thu = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 3);
+    const firstMon = mondayOf(new Date(thu.getFullYear(), thu.getMonth(), 1));
+    const nth = Math.round((mon - firstMon) / (7*86400000)) + 1;
+    return `${thu.getMonth()+1}월 ${['첫째','둘째','셋째','넷째','다섯째','여섯째'][nth-1] || nth+'번'}주`;
+  }
+  function saveReport(type, label, content){
+    state.data.reports = state.data.reports || [];
+    const dateKey = type==='weekly' ? weekKey(now) : todayISO;
+    // 같은 날/같은 주의 같은 종류는 새 걸로 교체
+    state.data.reports = state.data.reports.filter(r=>!(r.type===type && r.dateKey===dateKey));
+    const rep = { id: genId(), type, label, content, createdAt: Date.now(), dateKey };
+    state.data.reports.unshift(rep);
+    if(state.data.reports.length > 40) state.data.reports.length = 40;
+    persist();
+    return rep;
+  }
+  function reportById(id){ return (state.data.reports||[]).find(r=>r.id===id) || null; }
+  // 아주 작은 마크다운 → HTML (먼저 이스케이프하고 제한된 인라인만 되살린다)
+  function mdToHtml(md){
+    const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const inline = s => esc(s)
+      .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
+      .replace(/(^|[^*])\*(?!\s)(.+?)\*(?!\*)/g,'$1<em>$2</em>')
+      .replace(/`(.+?)`/g,'<code>$1</code>');
+    let html = '', inList = false;
+    String(md).split('\n').forEach(raw=>{
+      const line = raw.replace(/\s+$/,'');
+      const h = line.match(/^(#{1,6})\s+(.*)$/);
+      if(h){
+        if(inList){ html+='</ul>'; inList=false; }
+        const lv = Math.min(h[1].length + 1, 6);
+        html += `<h${lv}>${inline(h[2])}</h${lv}>`;
+      } else if(/^\s*[-*]\s+/.test(line)){
+        if(!inList){ html+='<ul>'; inList=true; }
+        html += `<li>${inline(line.replace(/^\s*[-*]\s+/,''))}</li>`;
+      } else if(line.trim()===''){
+        if(inList){ html+='</ul>'; inList=false; }
+      } else {
+        if(inList){ html+='</ul>'; inList=false; }
+        html += `<p>${inline(line)}</p>`;
+      }
+    });
+    if(inList) html+='</ul>';
+    return html;
+  }
+
+  /* ---- 생성 게이지 (단일 fetch라 실제 %는 없으니 부드럽게 채워지는 추정치) ---- */
+  let reportGen = null;
+  function startReportGen(label){
+    finishReportGen(true);
+    reportGen = { pct: 6 };
+    document.body.insertAdjacentHTML('beforeend', `<div class="report-gen" id="reportGen">
+      <div class="report-gen-label">${escapeHtml(label)} 만드는 중…</div>
+      <div class="report-gen-track"><div class="report-gen-fill" id="reportGenFill" style="width:6%;"></div></div>
+    </div>`);
+    reportGen.timer = setInterval(()=>{
+      if(!reportGen) return;
+      reportGen.pct += Math.max(0.5, (90 - reportGen.pct) * 0.05);
+      if(reportGen.pct > 92) reportGen.pct = 92;
+      const f = document.getElementById('reportGenFill');
+      if(f) f.style.width = reportGen.pct.toFixed(1) + '%';
+    }, 220);
+  }
+  function finishReportGen(silent){
+    if(!reportGen) return;
+    clearInterval(reportGen.timer);
+    reportGen = null;
+    const el = document.getElementById('reportGen');
+    if(!el) return;
+    if(silent){ el.remove(); return; }
+    const f = el.querySelector('.report-gen-fill'); if(f) f.style.width = '100%';
+    el.classList.add('report-gen--done');
+    setTimeout(()=>{ el.classList.add('notif-pop--leaving'); setTimeout(()=>el.remove(), 200); }, 450);
+  }
+
+  /* ---- 보고서 뷰어 (오른쪽에서 스르륵) ---- */
+  function renderReportViewer(){
+    const r = reportById(state.reportViewId);
+    if(!r) return '';
+    const when = new Date(r.createdAt);
+    return `<div class="report-dock" role="dialog" aria-label="${escapeHtml(r.label)}">
+      <div class="report-dock-head">
+        <b>${escapeHtml(r.label)}</b>
+        <button class="iconbtn" data-action="saveReportFile" data-id="${r.id}">${icon('download')} 저장</button>
+        <button class="modal-close" data-action="closeReportViewer" aria-label="닫기">${icon('close')}</button>
+      </div>
+      <div class="report-dock-body">
+        <div class="md-body">${mdToHtml(r.content)}</div>
+        <p style="font-size:11px;color:var(--text-3);margin-top:24px;">생성: ${when.getMonth()+1}/${when.getDate()} ${String(when.getHours()).padStart(2,'0')}:${String(when.getMinutes()).padStart(2,'0')}</p>
+      </div>
+    </div>`;
+  }
+  function openReportViewer(id){ state.reportViewId = id; renderOverlaysOnly(); }
+  function closeReportViewer(){
+    const dock = document.querySelector('.report-dock');
+    const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const done = ()=>{ state.reportViewId = null; renderOverlaysOnly(); };
+    if(!dock || reduce){ done(); return; }
+    dock.classList.add('report-dock--leaving');
+    let fired = false;
+    const fin = ()=>{ if(fired) return; fired = true; done(); };
+    dock.addEventListener('animationend', fin, {once:true});
+    setTimeout(fin, 320);
+  }
+  function saveReportFile(id){
+    const r = reportById(id); if(!r) return;
+    downloadTextFile(`${r.label.replace(/[\s/\\:]+/g,'-')}.md`, r.content, 'text/markdown');
+  }
+
   // 원칙 20개를 그대로 시스템 지침으로 넣고, 실제 데이터(정오답 대신 자기평가 등급,
   // 반응시간 없음, reps가 있으면 시도횟수로 사용)에 맞춰 용어를 매핑하도록 명시한다.
   // 원자료에 없는 활동은 절대 지어내지 말고, 데이터 공백은 "데이터 없음"이라고 쓰게 한다.
-  async function generateWeeklyReport(){
+  async function generateWeeklyReport(auto){
     const apiKey = getApiKey();
-    if(!apiKey){ reportStatus = 'API 키가 필요해 — 설정에서 먼저 등록해줘.'; render(); return; }
+    if(!apiKey){ if(!auto){ reportStatus = 'API 키가 필요해 — 설정에서 먼저 등록해줘.'; render(); } return; }
     const weekStart = mondayOf(now).getTime();
     const thisWeek = weekLogEntries(weekStart);
     if(thisWeek.length===0){
-      reportStatus = '이번 주엔 아직 완료한 게 없어 — 리포트로 보여줄 데이터가 없어.';
-      render(); return;
+      if(!auto){ reportStatus = '이번 주엔 아직 완료한 게 없어 — 리포트로 보여줄 데이터가 없어.'; render(); }
+      return;
     }
     const prevWeeks = [1,2,3].map(n=>weekLogEntries(weekStart - n*7*86400000));
-    reportStatus = '이번 주 기록을 바탕으로 리포트를 쓰는 중...';
-    render();
+    reportStatus = '';
+    startReportGen(`${weekLabel(now)} 학습 아카이브`);
 
     const KIND_LABEL = {review:'수업 과제', self:'자율학습', personal:'자율학습', recall:'망각의 시민(복습)'};
     const logLine = e => `- [${fmtDate(e.ts)}] ${canonSubject(e.subject)} / ${KIND_LABEL[e.kind]||e.kind}: ${e.text}`
@@ -2049,16 +2221,103 @@ ${prevSummary}`}]
       const data = await res.json();
       const report = modelText(data);
       if(!report){
-        reportStatus = '모델이 빈 응답을 보냈어 — 잠시 뒤 다시 시도해줘.';
-        render(); return;
+        finishReportGen(true);
+        if(!auto){ reportStatus = '모델이 빈 응답을 보냈어 — 잠시 뒤 다시 시도해줘.'; render(); }
+        return;
       }
-      const fname = `주간리포트-${fmtDate(weekStart).replace('/','')}-${now.getFullYear()}.md`;
-      downloadTextFile(fname, report, 'text/markdown');
-      reportStatus = '리포트를 다운로드했어.';
+      finishReportGen();
+      const rep = saveReport('weekly', `${weekLabel(now)} 학습 아카이브`, report);
       render();
+      if(!auto) openReportViewer(rep.id);
     }catch(err){
+      finishReportGen(true);
       reportStatus = '실패 — ' + describeApiError(err);
       render();
+    }
+  }
+
+  /* ---- 오늘의 학습기록 (매일 저녁 자동 생성) ---- */
+  async function generateDailyLog(auto){
+    const apiKey = getApiKey();
+    if(!apiKey){ if(!auto){ reportStatus = 'API 키가 필요해 — 설정에서 먼저 등록해줘.'; render(); } return; }
+    const todays = (state.data.archiveLog||[]).filter(e=>e.ts >= todayMid).sort((a,b)=>a.ts-b.ts);
+    if(todays.length===0){
+      if(!auto){ reportStatus = '오늘은 아직 완료한 게 없어 — 학습기록으로 남길 내용이 없어.'; render(); }
+      return;
+    }
+    reportStatus = '';
+    const label = `${now.getMonth()+1}월 ${now.getDate()}일 학습내역`;
+    startReportGen(label);
+
+    const KIND_LABEL = {review:'수업 과제', self:'자율학습', personal:'자율학습', recall:'망각의 시민(복습)'};
+    const logLine = e => `- ${canonSubject(e.subject)} / ${KIND_LABEL[e.kind]||e.kind}: ${e.text}`
+      + (e.rating ? ` — 자기평가: ${RECALL_RATINGS[e.rating]}` : '')
+      + (e.note ? `\n  메모: ${e.note}` : '');
+    const logText = todays.map(logLine).join('\n');
+
+    try{
+      const res = await fetch('https://api.anthropic.com/v1/messages', {
+        method:'POST',
+        headers:{
+          'Content-Type':'application/json',
+          'x-api-key': apiKey,
+          'anthropic-version': '2023-06-01',
+          'anthropic-dangerous-direct-browser-access': 'true'
+        },
+        body: JSON.stringify({
+          model:'claude-sonnet-5',
+          max_tokens:1600,
+          messages:[{role:'user', content:
+`너는 학생이 오늘 하루 끝낸 학습 기록을 짧게 정리해주는 AI다. 평가하지 말고,
+오늘 무엇을 했고 어떤 신호가 보였는지만 담백하게 적는다. 아래 로그가 유일한 근거이고,
+없는 활동·수치를 지어내지 마라. 자기평가가 "가물가물했음/거의 기억 안 남"이면
+"실력 부족" 대신 "아직 안 붙음" 정도로 조심스럽게. 마크다운으로, 학생에게 말하듯:
+
+# ${now.getMonth()+1}월 ${now.getDate()}일 학습내역
+## 오늘 한 것 (과목별로 1~2줄)
+## 눈에 띈 것 (자기평가·메모에서 읽히는 신호 1~3개, 없으면 생략)
+## 내일 가볍게 이어갈 것 (1~2개, 구체적으로)
+
+오늘 완료 로그:
+${logText}`}]
+        })
+      });
+      if(!res.ok){
+        const errBody = await res.json().catch(()=>({}));
+        throw new Error((errBody.error && errBody.error.message) || `HTTP ${res.status}`);
+      }
+      const data = await res.json();
+      const text = modelText(data);
+      if(!text){ finishReportGen(true); if(!auto){ reportStatus='모델이 빈 응답을 보냈어 — 잠시 뒤 다시.'; render(); } return; }
+      finishReportGen();
+      const rep = saveReport('daily', label, text);
+      render();
+      if(!auto) openReportViewer(rep.id);
+    }catch(err){
+      finishReportGen(true);
+      reportStatus = '실패 — ' + describeApiError(err);
+      render();
+    }
+  }
+
+  // 정해진 시각이 지나면 그날치(또는 그 주치) 보고서를 한 번 자동 생성한다.
+  // 정적 웹앱이라 백그라운드 실행은 없다 — "그 시각 이후 앱을 처음 열 때" 만들어진다.
+  //   월~금 22:50 · 토 21:50 → 오늘의 학습기록
+  //   일 21:50 → 그 주 학습 아카이브(주간 리포트)
+  function maybeAutoGenerateReports(){
+    if(!getApiKey()) return;
+    const dow = now.getDay();                 // 0=일 … 6=토
+    const mins = now.getHours()*60 + now.getMinutes();
+    state.data.reports = state.data.reports || [];
+    if(dow === 0){
+      if(mins < 21*60+50) return;
+      if(state.data.reports.some(r=>r.type==='weekly' && r.dateKey===weekKey(now))) return;
+      generateWeeklyReport(true);
+    } else {
+      const cutoff = dow === 6 ? 21*60+50 : 22*60+50;   // 토요일만 21:50
+      if(mins < cutoff) return;
+      if(state.data.reports.some(r=>r.type==='daily' && r.dateKey===todayISO)) return;
+      generateDailyLog(true);
     }
   }
 
@@ -4467,14 +4726,22 @@ ${text}`}]
       case 'setQuickAddCorner': state.quickAddCorner = el.dataset.corner; renderOverlaysOnly(); break;
       case 'openSettings': settingsStatus=''; githubTokenStatus=''; state.modal='settings'; renderOverlaysOnly(); break;
       case 'openNotifications': state.modal='notifications'; renderOverlaysOnly(); break;
-      case 'closeModal':
-        // 도시 인스펙트는 옆쪽 도킹 패널이라 슝 슬라이드 아웃 후에 닫는다
+      case 'openReport': openReportViewer(el.dataset.id); break;
+      case 'closeReportViewer': closeReportViewer(); break;
+      case 'saveReportFile': saveReportFile(el.dataset.id); break;
+      case 'closeModal': {
+        // 옆쪽 도킹/팝오버는 슬라이드 아웃 후에 닫는다
+        const pop = document.querySelector('.notif-pop');
         if(state.modal==='cityInspect' && document.querySelector('.feedback-dock')){
           dismissFeedbackDock(()=>{ state.modal=null; state.cityInspectTarget=null; renderOverlaysOnly(); });
+        } else if(state.modal==='notifications' && pop){
+          pop.classList.add('notif-pop--leaving');
+          setTimeout(()=>{ state.modal=null; renderOverlaysOnly(); }, 150);
         } else {
           state.modal=null; renderOverlaysOnly();
         }
         break;
+      }
       case 'exportData': exportData(); break;
       case 'importTrigger': document.getElementById('importFile').click(); break;
       case 'generateWeeklyReport': generateWeeklyReport(); break;
@@ -4590,7 +4857,8 @@ ${text}`}]
           personal: saved.personal || { tasks:[], completed:[] },
           ddays: saved.ddays || [],
           recall: saved.recall || { tasks:[], lastGeneratedAt:null },
-          archiveLog: saved.archiveLog || []
+          archiveLog: saved.archiveLog || [],
+          reports: saved.reports || []
         };
       } else {
         state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[], recall:{tasks:[],lastGeneratedAt:null}, archiveLog:[] };
@@ -4601,6 +4869,7 @@ ${text}`}]
     render();
     syncClassroom(false);
     maybeAutoGenerateRecall();
+    maybeAutoGenerateReports();
   })();
 
 })();
