@@ -2952,7 +2952,7 @@ ${prevSummary}`}]
   }
 
   // 카메라를 처음 잡아둔 시점으로 부드럽게 되돌림 (돌리다 길을 잃었을 때)
-  const CITY_IDLE_RETURN_MS = 10000;
+  const CITY_IDLE_RETURN_MS = 4000;
   function resetCityView(dur){
     if(!CITY3D.camera || !CITY3D.homePos) return;
     CITY3D.tween = {
@@ -3095,14 +3095,13 @@ ${prevSummary}`}]
     const tag = entry.kind==='teacher'
       ? `${entry.x.subjLabel} · ${entry.x.teacher}`
       : (entry.item.boxKey && BOX_KEYS.has(entry.item.boxKey) ? BOXES.find(b=>b.key===entry.item.boxKey).label : '미분류');
-    return `<div class="modal-overlay" data-action="closeModal">
-      <div class="modal" style="max-width:360px;">
-        <div class="modal-head"><h2>${isCar?icon('car'):icon('house')} ${escapeHtml(tag)}</h2><button class="modal-close" data-action="closeModal">${icon('close')}</button></div>
-        <div class="modal-body">
-          <div class="city-inspect-text">${escapeHtml(entry.item.text)}</div>
-          <div class="city-inspect-meta">등록한 지 ${days}일째 · ${stageLabel}</div>
-          <button class="btn" data-action="cityCompleteFromInspect">지금 완료 처리</button>
-        </div>
+    // 화면을 덮는 모달이 아니라 후기 대화창과 같은 옆쪽 도킹 패널 (슝 슬라이드 그대로 물려받음)
+    return `<div class="feedback-dock" role="dialog" aria-label="${escapeHtml(tag)}">
+      <div class="feedback-dock-head"><b>${isCar?icon('car'):icon('house')} ${escapeHtml(tag)}</b><button class="modal-close" data-action="closeModal" aria-label="닫기">${icon('close')}</button></div>
+      <div class="feedback-dock-body">
+        <div class="city-inspect-text">${escapeHtml(entry.item.text)}</div>
+        <div class="city-inspect-meta">등록한 지 ${days}일째 · ${stageLabel}</div>
+        <div style="margin-top:12px;"><button class="btn" data-action="cityCompleteFromInspect">지금 완료 처리</button></div>
       </div>
     </div>`;
   }
@@ -3613,9 +3612,9 @@ ${prevSummary}`}]
     const entry = findCityItem(state.cityInspectTarget);
     if(!entry) return;
     const isCar = entry.kind==='teacher' && entry.corner==='review';
-    const modalBody = document.querySelector('.modal-body');
-    if(modalBody){
-      modalBody.innerHTML = `<div class="city-fix-flourish ${isCar?'repair':'fire'}">
+    const body = document.querySelector('.feedback-dock-body, .modal-body');
+    if(body){
+      body.innerHTML = `<div class="city-fix-flourish ${isCar?'repair':'fire'}">
         <span class="city-fix-icon">${icon('truck')}</span>
         <div>이 기억을 다시 또렷하게 붙잡고 있어...</div>
       </div>`;
@@ -3687,6 +3686,15 @@ ${prevSummary}`}]
   function dueRecallCount(){
     const t = Date.now();
     return recallList().filter(i=>i.done && i.dueAt && i.dueAt <= t).length;
+  }
+  // 수학은 망각의 시민을 만들지 않기로 했으니, 아직 안 끝낸 수학 복습 항목은 정리한다.
+  // (완료된 항목은 캘리브레이션 이력이라 그대로 둔다)
+  function pruneMathRecall(){
+    if(!state.data.recall || !state.data.recall.tasks) return;
+    const before = state.data.recall.tasks.length;
+    state.data.recall.tasks = state.data.recall.tasks.filter(t=>
+      t.done || !(t.boxKey === 'math' || canonSubject(t.subject) === '수학'));
+    if(state.data.recall.tasks.length !== before) persist();
   }
 
   /* ============ 완료 피드백 — 끝낸 것마다 얼마나 잘 기억났는지/어떻게 끝냈는지 물어봄 ============
@@ -3997,6 +4005,9 @@ ${prevSummary}`}]
   같은 주제를 다시 다루려면 반드시 다음 단계(회상→적용→전이)로 발전시켜라.
 - 복습이 필요 없다고 판단되면 만들지 않는 것도 정답이다. 억지로 개수를 채우지 마라.
 - 학생은 시간이 매우 부족하다. 최대 5개까지, 각각 3~10분 분량으로.
+- 수학(boxKey: math, subject: 수학)은 복습 과제(망각의 시민)를 절대 만들지 마라. 수학 완료 이력이
+  아무리 많아도, subject 나 boxKey 가 수학인 항목은 하나도 만들지 않는다. 수학은 오직 CONNECTION 의
+  상대 과목(subjectB/boxKeyB)으로만 등장할 수 있고, 주 과목(subject)이 되어선 안 된다.
 - CONNECTION(과목 잇기)은 조건이 있다: 잇는 두 개념이 **둘 다 아래 완료 이력에 이미 등장한 것**,
   즉 학생이 실제로 배운 범위 안이어야 하고, 학생이 지금 수준에서 그 연결을 실제로 써먹을 수 있어야 한다.
   아직 안 배운 개념을 미리 잇거나, 연결은 그럴듯하지만 문제 풀이에 쓸 수 없는 건 만들지 마라.
@@ -4050,6 +4061,9 @@ ${doneRecallText}`}]
       items.forEach(it=>{
         if(!it || !it.text) return;
         const tag = RECALL_TAGS[it.tag] ? it.tag : 'RECALL';
+        // 수학은 망각의 시민을 만들지 않는다 (모델이 규칙을 어겨도 여기서 한 번 더 막는다)
+        const bk = BOX_KEYS.has(it.boxKey) ? it.boxKey : null;
+        if(bk === 'math' || canonSubject((it.subject||'').trim()) === '수학') return;
         state.data.recall.tasks.push({
           id: genId(),
           subject: (it.subject||'').trim() || '복습',
@@ -4434,7 +4448,11 @@ ${text}`}]
       case 'openCompletedPersonal': state.modal='completedPersonal'; renderOverlaysOnly(); break;
       case 'openCityInspect': openCityInspect(el.dataset.kind, el.dataset.key, el.dataset.corner, el.dataset.id); break;
       case 'completeRecall': state.modal=null; state.cityInspectTarget=null; completeRecall(el.dataset.id); break;
-      case 'deleteRecall': state.modal=null; state.cityInspectTarget=null; deleteRecall(el.dataset.id); break;
+      case 'deleteRecall': {
+        const id = el.dataset.id;
+        dismissFeedbackDock(()=>{ state.modal=null; state.cityInspectTarget=null; deleteRecall(id); });
+        break;
+      }
       case 'selectFeedbackRating': selectFeedbackRating(el.dataset.rating); break;
       case 'submitCompletionFeedback': if(!el.disabled) submitCompletionFeedback(); break;
       case 'skipCompletionFeedback': skipCompletionFeedback(); break;
@@ -4449,7 +4467,14 @@ ${text}`}]
       case 'setQuickAddCorner': state.quickAddCorner = el.dataset.corner; renderOverlaysOnly(); break;
       case 'openSettings': settingsStatus=''; githubTokenStatus=''; state.modal='settings'; renderOverlaysOnly(); break;
       case 'openNotifications': state.modal='notifications'; renderOverlaysOnly(); break;
-      case 'closeModal': state.modal=null; renderOverlaysOnly(); break;
+      case 'closeModal':
+        // 도시 인스펙트는 옆쪽 도킹 패널이라 슝 슬라이드 아웃 후에 닫는다
+        if(state.modal==='cityInspect' && document.querySelector('.feedback-dock')){
+          dismissFeedbackDock(()=>{ state.modal=null; state.cityInspectTarget=null; renderOverlaysOnly(); });
+        } else {
+          state.modal=null; renderOverlaysOnly();
+        }
+        break;
       case 'exportData': exportData(); break;
       case 'importTrigger': document.getElementById('importFile').click(); break;
       case 'generateWeeklyReport': generateWeeklyReport(); break;
@@ -4571,6 +4596,7 @@ ${text}`}]
         state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[], recall:{tasks:[],lastGeneratedAt:null}, archiveLog:[] };
       }
     }
+    pruneMathRecall();   // 수학은 망각의 시민 대상에서 제외 — 남아있던 미완료 항목 정리
     reviveDueRecall();   // 예정일이 된 복습을 도시로 되돌린 뒤에 그려야 함
     render();
     syncClassroom(false);
