@@ -626,8 +626,6 @@
   .city3d-canvas{width:100%;height:100%;}
   /* 도시가 들어가는 자리 — 도시 섹션에선 화면 가득, 홈 미리보기에선 뷰포트 높이만큼 */
   .city-slot-full{height:calc(100vh - 230px);min-height:420px;}
-  .recall-bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
-    font-size:12.5px;color:var(--text-2);margin-bottom:10px;}
   /* 타워 디펜스 픽 UI */
   .td-status{font-size:12.5px;color:var(--text-2);background:var(--glass);border:1px solid var(--border);
     border-radius:var(--r-md);padding:10px 14px;margin-bottom:18px;-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));}
@@ -1206,6 +1204,8 @@
       // 홈 미리보기 ↔ 도시 섹션 사이를 넘나들 때만 캔버스를 다시 옮겨 끼운다(둘 다 슬롯을 가짐)
       if(best==='home' || best==='city' || prev==='home' || prev==='city') mountCity3D();
       if(best==='td' || prev==='td') mountTD3D();
+      // 도시/타워디펜스로 들어올 때마다 조용히 복습 생성 한 번 더 시도 (40분 간격이 과호출은 막음)
+      if(best==='city' || best==='td') maybeAutoGenerateRecall();
     }
     // 아직 3D 에셋을 안 받은 상태라면, 도시가 화면 근처까지 올라왔는지 계속 지켜보다가 그때 받는다
     if(CITY3D.phase==='idle') mountCity3D();
@@ -3330,17 +3330,14 @@ ${logText}`}]
     if(state.cityView==='archive') return renderGraduationArchive();
     const citizens = collectCityCitizens();
     const graduating = collectGraduatingThisWeek();
-    const pend = pendingRecall().length;
-    const gate = recallGateReason();
+    // 복습 생성은 백그라운드에서 알아서 돈다 — 도시엔 표시하지 않는다.
+    // 단 사용자가 고칠 수 있는 문제(키 없음 / 요청 차단)일 때만 조용히 한 줄.
+    const gateNote = (recallStatus && recallStatus.startsWith('실패')) ? recallStatus
+      : (!getApiKey() ? recallGateReason() : '');
     return `<div class="fade-in">
       <div class="page-head"><h1>도시</h1><button class="iconbtn" data-action="goCityArchive">${icon('external')} 졸업 앨범</button></div>
       ${renderCityGrowthBar()}
-      <div class="recall-bar">
-        <span>망각의 시민 <b>${pend}</b>명 걸어다니는 중</span>
-        <button class="btn-outline" data-action="forceGenerateRecall">${icon('sparkle')} 복습 새로 만들기</button>
-      </div>
-      ${recallStatus ? `<div class="empty" style="padding:0 0 12px;">${escapeHtml(recallStatus)}</div>`
-        : (gate ? `<div class="empty" style="padding:0 0 12px;">${escapeHtml(gate)}</div>` : '')}
+      ${gateNote ? `<div class="empty" style="padding:0 0 12px;">복습 생성: ${escapeHtml(gateNote)}</div>` : ''}
       <div class="city-legend">
         <span><i class="cl-dot cl-car"></i>자동차 = 수업 과제</span>
         <span><i class="cl-dot cl-house"></i>집 = 자율학습</span>
@@ -4709,16 +4706,16 @@ ${logText}`}]
     if(!recentlyActive(21)) return '최근 완료한 게 없어 — 뭐라도 하나 끝내면 복습을 만들어줄게.';
     return '';
   }
+  // 사용자가 모르는 사이 계속 부풀어야 한다 — 앱을 쓰는 동안 40분마다 한 번씩,
+  // 완료 직후에도, 도시/타워디펜스로 스크롤할 때도 조용히 시도한다. (모델이 최대 5개 +
+  // 중복 금지로 절제하므로 호출이 잦아도 시민이 폭증하진 않는다.)
+  const RECALL_AUTO_INTERVAL_MS = 40*60000;
+  let recallGenInFlight = false;
   function maybeAutoGenerateRecall(){
+    if(recallGenInFlight) return;
     if(recallGateReason()) return;
     const last = state.data.recall && state.data.recall.lastGeneratedAt;
-    if(last && (Date.now() - last) < 6*3600000) return;  // 자동 호출만 과호출 방지용 최소 간격
-    generateRecall();
-  }
-  // 사용자가 직접 누르는 "지금 만들기" — 6시간 게이트도, 큐 개수도 무시하고 무조건 시도
-  function forceGenerateRecall(){
-    const reason = recallGateReason();
-    if(reason){ recallStatus = reason; render(); return; }
+    if(last && (Date.now() - last) < RECALL_AUTO_INTERVAL_MS) return;
     generateRecall();
   }
 
@@ -4730,8 +4727,9 @@ ${logText}`}]
       recallStatus = '아직 완료한 과제가 없어 — 할 일을 몇 개 끝내면 복습 과제를 만들어줄게.';
       render(); return;
     }
-    recallStatus = '완료 이력을 보고 복습 과제를 고르는 중...';
-    render();
+    if(recallGenInFlight) return;
+    recallGenInFlight = true;
+    recallStatus = '';   // 백그라운드 동작이라 "생성 중" 표시는 안 남긴다
 
     const histText = history.map(historyLineText).join('\n');
     const openText = pendingRecall().map(t=>`- [${t.subject}] ${t.text}`).join('\n') || '(없음)';
@@ -4859,9 +4857,7 @@ ${reserveText}`}]
       const raw = modelText(data);
       const items = parseModelJsonArray(raw);
       if(items === null){
-        recallStatus = raw
-          ? `응답을 이해하지 못했어 — 모델이 이렇게 답했어: "${raw.slice(0,140)}"`
-          : '모델이 빈 응답을 보냈어 — 잠시 뒤 다시 시도해줘.';
+        recallStatus = '실패 — 모델 응답을 이해하지 못했어. 잠시 뒤 다시 시도돼.';
         render(); return;
       }
       const now = Date.now();
@@ -4908,13 +4904,13 @@ ${reserveText}`}]
         added++;
       });
       state.data.recall.lastGeneratedAt = now;
-      recallStatus = added>0
-        ? `망각의 시민 ${added}명이 도시에 도착했어.`
-        : '지금은 복습이 급한 내용이 없대 — 그것도 정상이야.';
+      recallStatus = '';   // 조용히 — 도시에 시민이 늘어난 것만으로 충분
       persist(); render();
     }catch(err){
       recallStatus = '실패 — ' + describeApiError(err);
       render();
+    }finally{
+      recallGenInFlight = false;
     }
   }
   function completeRecall(id){
@@ -5317,7 +5313,6 @@ ${text}`}]
       case 'exportData': exportData(); break;
       case 'importTrigger': document.getElementById('importFile').click(); break;
       case 'generateWeeklyReport': generateWeeklyReport(); break;
-      case 'forceGenerateRecall': forceGenerateRecall(); break;
       case 'exportArchiveLog': exportArchiveLog(); break;
       case 'addAssignment': addAssignment(); break;
       case 'addDday': addDday(); break;
