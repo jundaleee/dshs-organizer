@@ -1302,7 +1302,10 @@
           <button class="btn-outline" data-action="undoLastCompletion">마지막 완료 취소</button>`:''}
         <div class="notif-pop-sec">학습 보고서</div>
         ${reportsHtml}
-        <button class="btn-outline" data-action="generateWeeklyReport" style="margin-top:2px;">이번 주 아카이브 지금 만들기</button>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:2px;">
+          <button class="btn-outline" data-action="generateDailyLog">오늘 학습기록 만들기</button>
+          <button class="btn-outline" data-action="generateWeeklyReport">이번 주 아카이브 만들기</button>
+        </div>
         <div class="notif-pop-sec">다가오는 일정</div>
         ${notesHtml}
       </div>
@@ -2016,6 +2019,15 @@
   /* ============ 학습 보고서 — 오늘의 학습기록 / 주간 아카이브 ============
      생성된 보고서는 다운로드가 아니라 state.data.reports에 저장해두고, 알림에서 눌러
      오른쪽에서 스르륵 나타나는 뷰어로 본다. 저장이 필요하면 뷰어 안에서 내려받는다. */
+  // 공부날 경계: 새벽 5시. 그 전이면 아직 '어제'가 이어지는 중으로 친다 (12시 넘었다고
+  // 다음날로 치지 않음). 새벽까지 공부한 세션이 어제 보고서에 잡히게 하려는 것.
+  const STUDY_DAY_ROLLOVER_H = 5;
+  function studyDayInfo(){
+    const d = new Date();
+    let start = new Date(d.getFullYear(), d.getMonth(), d.getDate(), STUDY_DAY_ROLLOVER_H, 0, 0, 0);
+    if(d.getHours() < STUDY_DAY_ROLLOVER_H) start = new Date(start.getTime() - 86400000);
+    return { startMs: start.getTime(), date: start, key: toISODate(start), m: start.getMonth()+1, dd: start.getDate() };
+  }
   function weekKey(d){ return toISODate(mondayOf(d)); }
   function weekLabel(d){
     // 그 주가 걸친 달 중 목요일이 속한 달을 기준(ISO 관례), 그 달 1일이 속한 주를 1주로 센다
@@ -2025,9 +2037,9 @@
     const nth = Math.round((mon - firstMon) / (7*86400000)) + 1;
     return `${thu.getMonth()+1}월 ${['첫째','둘째','셋째','넷째','다섯째','여섯째'][nth-1] || nth+'번'}주`;
   }
-  function saveReport(type, label, content){
+  function saveReport(type, label, content, explicitKey){
     state.data.reports = state.data.reports || [];
-    const dateKey = type==='weekly' ? weekKey(now) : todayISO;
+    const dateKey = explicitKey || (type==='weekly' ? weekKey(now) : todayISO);
     // 같은 날/같은 주의 같은 종류는 새 걸로 교체
     state.data.reports = state.data.reports.filter(r=>!(r.type===type && r.dateKey===dateKey));
     const rep = { id: genId(), type, label, content, createdAt: Date.now(), dateKey };
@@ -2135,7 +2147,9 @@
   async function generateWeeklyReport(auto){
     const apiKey = getApiKey();
     if(!apiKey){ if(!auto){ reportStatus = 'API 키가 필요해 — 설정에서 먼저 등록해줘.'; render(); } return; }
-    const weekStart = mondayOf(now).getTime();
+    // 새벽까지 이어진 세션도 그 주로 치도록 공부날 기준 날짜를 쓴다
+    const sd = new Date(studyDayInfo().startMs);
+    const weekStart = mondayOf(sd).getTime();
     const thisWeek = weekLogEntries(weekStart);
     if(thisWeek.length===0){
       if(!auto){ reportStatus = '이번 주엔 아직 완료한 게 없어 — 리포트로 보여줄 데이터가 없어.'; render(); }
@@ -2143,7 +2157,7 @@
     }
     const prevWeeks = [1,2,3].map(n=>weekLogEntries(weekStart - n*7*86400000));
     reportStatus = '';
-    startReportGen(`${weekLabel(now)} 학습 아카이브`);
+    startReportGen(`${weekLabel(sd)} 학습 아카이브`);
 
     const KIND_LABEL = {review:'수업 과제', self:'자율학습', personal:'자율학습', recall:'망각의 시민(복습)'};
     const logLine = e => `- [${fmtDate(e.ts)}] ${canonSubject(e.subject)} / ${KIND_LABEL[e.kind]||e.kind}: ${e.text}`
@@ -2238,7 +2252,7 @@ ${prevSummary}`}]
         return;
       }
       finishReportGen();
-      const rep = saveReport('weekly', `${weekLabel(now)} 학습 아카이브`, report);
+      const rep = saveReport('weekly', `${weekLabel(sd)} 학습 아카이브`, report, weekKey(sd));
       render();
       if(!auto) openReportViewer(rep.id);
     }catch(err){
@@ -2252,13 +2266,14 @@ ${prevSummary}`}]
   async function generateDailyLog(auto){
     const apiKey = getApiKey();
     if(!apiKey){ if(!auto){ reportStatus = 'API 키가 필요해 — 설정에서 먼저 등록해줘.'; render(); } return; }
-    const todays = (state.data.archiveLog||[]).filter(e=>e.ts >= todayMid).sort((a,b)=>a.ts-b.ts);
+    const sd = studyDayInfo();
+    const todays = (state.data.archiveLog||[]).filter(e=>e.ts >= sd.startMs).sort((a,b)=>a.ts-b.ts);
     if(todays.length===0){
-      if(!auto){ reportStatus = '오늘은 아직 완료한 게 없어 — 학습기록으로 남길 내용이 없어.'; render(); }
+      if(!auto){ reportStatus = '이 공부날에 아직 완료한 게 없어 — 학습기록으로 남길 내용이 없어.'; render(); }
       return;
     }
     reportStatus = '';
-    const label = `${now.getMonth()+1}월 ${now.getDate()}일 학습내역`;
+    const label = `${sd.m}월 ${sd.dd}일 학습내역`;
     startReportGen(label);
 
     const KIND_LABEL = {review:'수업 과제', self:'자율학습', personal:'자율학습', recall:'망각의 시민(복습)'};
@@ -2285,7 +2300,7 @@ ${prevSummary}`}]
 없는 활동·수치를 지어내지 마라. 자기평가가 "가물가물했음/거의 기억 안 남"이면
 "실력 부족" 대신 "아직 안 붙음" 정도로 조심스럽게. 마크다운으로, 학생에게 말하듯:
 
-# ${now.getMonth()+1}월 ${now.getDate()}일 학습내역
+# ${sd.m}월 ${sd.dd}일 학습내역
 ## 오늘 한 것 (과목별로 1~2줄)
 ## 눈에 띈 것 (자기평가·메모에서 읽히는 신호 1~3개, 없으면 생략)
 
@@ -2320,11 +2335,11 @@ ${logText}`}]
           }
         }catch(e){}
       }
-      const rep = saveReport('daily', label, record);
+      const rep = saveReport('daily', label, record, sd.key);
       if(carry.length){
         state.data.recallReserve = state.data.recallReserve || [];
         carry.forEach(t=>state.data.recallReserve.unshift({
-          id: genId(), text: t, fromDate: todayISO, createdAt: Date.now(),
+          id: genId(), text: t, fromDate: sd.key, createdAt: Date.now(),
           status: 'reserve', usedByRecallId: null
         }));
         if(state.data.recallReserve.length > 80) state.data.recallReserve.length = 80;
@@ -2339,26 +2354,9 @@ ${logText}`}]
     }
   }
 
-  // 정해진 시각이 지나면 그날치(또는 그 주치) 보고서를 한 번 자동 생성한다.
-  // 정적 웹앱이라 백그라운드 실행은 없다 — "그 시각 이후 앱을 처음 열 때" 만들어진다.
-  //   월~금 22:50 · 토 21:50 → 오늘의 학습기록
-  //   일 21:50 → 그 주 학습 아카이브(주간 리포트)
-  function maybeAutoGenerateReports(){
-    if(!getApiKey()) return;
-    const dow = now.getDay();                 // 0=일 … 6=토
-    const mins = now.getHours()*60 + now.getMinutes();
-    state.data.reports = state.data.reports || [];
-    if(dow === 0){
-      if(mins < 21*60+50) return;
-      if(state.data.reports.some(r=>r.type==='weekly' && r.dateKey===weekKey(now))) return;
-      generateWeeklyReport(true);
-    } else {
-      const cutoff = dow === 6 ? 21*60+50 : 22*60+50;   // 토요일만 21:50
-      if(mins < cutoff) return;
-      if(state.data.reports.some(r=>r.type==='daily' && r.dateKey===todayISO)) return;
-      generateDailyLog(true);
-    }
-  }
+  // 보고서는 시각 스케줄이 아니라 사용자가 직접 버튼으로 만든다 (새벽까지 공부하는 날도
+  // 있어서 22:50 같은 고정 컷오프가 안 맞음). "오늘 학습기록 만들기" / "이번 주 아카이브
+  // 지금 만들기" 둘 다 알림 팝오버에 있다.
 
   /* ---- 도시 (City, beta) ----
      새 데이터를 저장하지 않음 — 수업 과제(teachers[key].review)와 자율학습(teachers[key].self + personal.tasks)을
@@ -5319,6 +5317,7 @@ ${text}`}]
       case 'exportData': exportData(); break;
       case 'importTrigger': document.getElementById('importFile').click(); break;
       case 'generateWeeklyReport': generateWeeklyReport(); break;
+      case 'generateDailyLog': generateDailyLog(); break;
       case 'exportArchiveLog': exportArchiveLog(); break;
       case 'addAssignment': addAssignment(); break;
       case 'addDday': addDday(); break;
@@ -5446,7 +5445,6 @@ ${text}`}]
     render();
     syncClassroom(false);
     maybeAutoGenerateRecall();
-    maybeAutoGenerateReports();
   })();
 
 })();
