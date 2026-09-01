@@ -258,8 +258,9 @@
   .box-label{font-size:16px;font-weight:700;letter-spacing:-.01em;line-height:1.25;}
   .box-meta{font-size:11px;color:var(--text-3);margin-top:2px;}
   .box-tasks{position:relative;z-index:1;display:flex;flex-direction:column;gap:8px;flex:1;min-width:0;}
-  .box-task-row{display:flex;align-items:flex-start;gap:9px;min-width:0;cursor:grab;border-radius:7px;transition:opacity var(--dur) var(--ease);}
-  .box-task-row.dragging-task{opacity:.35;}
+  .box-task-row{display:flex;align-items:flex-start;gap:9px;min-width:0;cursor:grab;border-radius:9px;
+    transition:transform 260ms cubic-bezier(.34,1.56,.64,1),box-shadow 200ms var(--ease),background 200ms var(--ease),opacity var(--dur) var(--ease);}
+  .box-task-row.dragging-task{opacity:.4;}
   .box-task-check{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--border-strong);flex-shrink:0;margin-top:1px;background:var(--glass);display:flex;align-items:center;justify-content:center;padding:0;transition:border-color var(--dur) var(--ease);}
   .box-task-check svg{width:11px;height:11px;opacity:0;transform:scale(.4);}
   .box-task-check:hover{border-color:var(--qc,var(--blue));}
@@ -344,10 +345,15 @@
   }
   .task-trash svg{width:24px;height:24px;}
   .task-trash.visible{opacity:1;transform:scale(1);pointer-events:auto;}
-  .task-trash.drag-over{background:var(--red);border-color:var(--red);color:#fff;transform:scale(1.15);}
-  @keyframes taskTrashPop{0%{transform:scale(1.15);}50%{transform:scale(.85);}100%{transform:scale(0);opacity:0;}}
+  .task-trash.drag-over{background:var(--glass-press);border-color:var(--border-hi);color:var(--text);transform:scale(1.18);}
+  @keyframes taskTrashPop{0%{transform:scale(1.18);}50%{transform:scale(.85);}100%{transform:scale(0);opacity:0;}}
   .task-trash.deleted{animation:taskTrashPop 320ms var(--ease) forwards;}
-  .box-task-row.longpress-armed{outline:2px solid var(--red);outline-offset:2px;border-radius:10px;}
+  /* 길게 누르면 카드가 붕 떠오른다 (스프링 이징으로 살짝 튕기며) */
+  .box-task-row.longpress-armed{transform:translateY(-7px) scale(1.045);z-index:20;position:relative;
+    background:var(--glass-strong);box-shadow:0 16px 34px rgba(0,0,0,.5);}
+  /* 떠오른 항목이 카드 밖으로 나올 수 있게 (그 사이엔 배경 글로우 잠깐 끔) */
+  .box-cell:has(.box-task-row.longpress-armed){overflow:visible;}
+  .box-cell:has(.box-task-row.longpress-armed)::after{opacity:0;}
   @media(max-width:639px){ .task-trash{right:16px;bottom:calc(80px + env(safe-area-inset-bottom));} }
   .pomo-ring{
     width:76px;height:76px;border-radius:50%;flex-shrink:0;
