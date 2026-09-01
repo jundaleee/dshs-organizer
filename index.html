@@ -626,6 +626,19 @@
   .city3d-canvas{width:100%;height:100%;}
   /* 도시가 들어가는 자리 — 도시 섹션에선 화면 가득, 홈 미리보기에선 뷰포트 높이만큼 */
   .city-slot-full{height:calc(100vh - 230px);min-height:420px;}
+  /* 타워 디펜스 픽 UI */
+  .td-status{font-size:12.5px;color:var(--text-2);background:var(--glass);border:1px solid var(--border);
+    border-radius:var(--r-md);padding:10px 14px;margin-bottom:18px;-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));}
+  .td-pick,.td-cand{display:flex;align-items:center;gap:9px;width:100%;text-align:left;font-size:12.5px;
+    background:var(--glass);border:1px solid var(--border);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:6px;color:var(--text-2);}
+  .td-cand:hover{background:var(--glass-strong);color:var(--text);}
+  .td-pick.is-secured{opacity:.6;}
+  .td-pick-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .td-pick-body,.td-cand-body{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .td-pick-state{font-size:11px;color:var(--text-3);flex-shrink:0;}
+  .td-pick-x{flex-shrink:0;background:none;border:none;color:var(--text-3);padding:2px;display:inline-flex;}
+  .td-pick-x:hover{color:var(--red);}
+  .td-cand-plus{flex-shrink:0;font-size:15px;color:var(--text-3);width:16px;text-align:center;}
   .city-slot-home{height:calc(100vh - 132px);min-height:420px;}
   .home-split{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr);gap:26px;align-items:start;}
   .home-city{position:sticky;top:24px;}
@@ -863,7 +876,8 @@
       archiveLog:[],
       reports:[],
       recallRequests:[],
-      recallReserve:[]
+      recallReserve:[],
+      tdPicks:[]
     };
   }
 
@@ -999,14 +1013,15 @@
     {view:'schedule', label:'시간표', icon:'schedule', color:'var(--purple)'},
     {view:'materials', label:'자료', icon:'materials', color:'var(--indigo)'},
     {view:'archive', label:'아카이브', icon:'archive', color:'var(--pink)'},
-    {view:'city', label:'도시', icon:'city', color:'var(--teal)'}
+    {view:'city', label:'도시', icon:'city', color:'var(--teal)'},
+    {view:'td', label:'타워 디펜스', icon:'assignments', color:'var(--red)'}
   ];
 
   /* ============ 렌더 ============ */
   // 홈→할일→과제→시간표→자료→아카이브→도시 전체가 화면 전환 없이 한 장의 긴 페이지처럼
   // 이어져서 그려진다(애플 홈페이지처럼). 실제 브라우저 스크롤만 쓰고, 지금 보고 있는
   // 섹션은 스크롤 위치를 직접 계산해서 판단한다(가짜로 탭을 갈아치우지 않음).
-  const SCROLL_CHAIN = ['home','tasks','assignments','schedule','materials','archive','city'];
+  const SCROLL_CHAIN = ['home','tasks','assignments','schedule','materials','archive','city','td'];
   const SCROLL_TRIGGER_LINE = 140; // 뷰포트 위에서 이 지점을 넘어간 섹션을 "지금 보는 중"으로 간주
   let lastRenderedView = null; // 같은 화면 안에서 다시 그릴 땐(체크박스 클릭 등) fade-in을 안 태우려고 추적
   let chainModeActive = false;
@@ -1020,6 +1035,7 @@
       case 'materials': return renderMaterialsPage();
       case 'archive': return renderArchivePage();
       case 'city': return renderCityPage();
+      case 'td': return renderTDPage();
       default: return '';
     }
   }
@@ -1187,10 +1203,14 @@
       updateNavActiveClasses();
       // 홈 미리보기 ↔ 도시 섹션 사이를 넘나들 때만 캔버스를 다시 옮겨 끼운다(둘 다 슬롯을 가짐)
       if(best==='home' || best==='city' || prev==='home' || prev==='city') mountCity3D();
+      if(best==='td' || prev==='td') mountTD3D();
     }
     // 아직 3D 에셋을 안 받은 상태라면, 도시가 화면 근처까지 올라왔는지 계속 지켜보다가 그때 받는다
     if(CITY3D.phase==='idle') mountCity3D();
-    if(best==='city' || best==='home') startCityLoop(); else stopCityLoop();
+    if((best==='city' || best==='home')) startCityLoop(); else stopCityLoop();
+    const tdSlot = document.getElementById('td3dSlot');
+    if(TD3D.phase==='idle' && tdSlot && slotNearViewport(tdSlot)) mountTD3D();
+    if(best==='td'){ mountTD3D(); startTDLoop(); } else stopTDLoop();
   }
   function updateNavActiveClasses(){
     const activeKey = chainModeActive ? state.activeSection : state.view;
@@ -3321,6 +3341,473 @@ ${logText}`}]
       ${citizens.length===0?`<div class="empty">아직 시민이 없어 — 할 일 탭에서 수업 과제나 자율학습을 추가하면 도시에 나타나.</div>`:''}
     </div>`;
   }
+  /* ============ 타워 디펜스 (그날그날 사수할 것을 고르면 그것만 방어선에 나타남) ============
+     도시는 "지금까지 쌓아온 것" 전체, 타워 디펜스는 "오늘 지켜낼 것"만. 완전히 별도의
+     3D 시스템(TD3D) — 도시 모드는 건드리지 않는다. Kenney Tower Defense Kit(CC0). */
+  const TD_TILE = 4;
+  const TD_MODELS = ['tile','tile-straight','tile-spawn','tile-end','tower-round-base',
+    'tower-round-bottom-a','tower-round-middle-a','tower-round-top-a','tower-round-roof-a',
+    'tower-round-build-c','weapon-turret','enemy-ufo-a','detail-tree','detail-rocks','detail-crystal'];
+  const TD3D = {
+    THREE:null, host:null, canvasWrap:null, tip:null, statusEl:null,
+    renderer:null, scene:null, camera:null, controls:null, raycaster:null, pointer:null,
+    proto:{}, group:null, owned:[], ufos:[], crystals:[],
+    running:false, raf:0, last:0, sig:'', phase:'idle', err:'',
+    homePos:null, homeTarget:null, tween:null, atHome:true, lastInteract:0, downAt:null
+  };
+  function tdAssetUrl(p){ return new URL(p, document.baseURI).href; }   // 텍스처 상대경로 해석 위해 쿼리 안 붙임
+  function setTDStatus(msg){
+    if(!TD3D.statusEl) return;
+    TD3D.statusEl.textContent = msg || '';
+    TD3D.statusEl.style.display = msg ? '' : 'none';
+  }
+
+  /* ---- 데이터: 오늘의 픽 ---- */
+  function tdEndOfDayMs(){ return todayMid + 86400000; }
+  function tdPicksForToday(){ return (state.data.tdPicks||[]).filter(p=>p.date===todayISO); }
+  function tdResolveItem(p){
+    if(p.kind==='recall'){
+      const t = recallList().find(x=>x.id===p.itemId);
+      return t ? {text:t.text, subject:t.subject, boxKey:t.boxKey||null, done:!!t.done, tag:t.tag, fromRequest:t.fromRequest||null, srReps:t.srReps||0} : null;
+    }
+    if(p.kind==='teacher'){
+      const td = state.data.teachers[p.key]; if(!td) return null;
+      const x = TEACHER_LIST.find(t=>t.key===p.key);
+      const live = (td[p.corner]||[]).find(i=>i.id===p.itemId);
+      if(live) return {text:live.text, subject:x?x.subjLabel:'', boxKey:(boxForTeacher(x)||{}).key||null, done:false};
+      const dn = (td.completed||[]).find(i=>i.id===p.itemId);
+      if(dn) return {text:dn.text, subject:x?x.subjLabel:'', boxKey:(boxForTeacher(x)||{}).key||null, done:true};
+      return null;
+    }
+    const live = (state.data.personal?.tasks||[]).find(i=>i.id===p.itemId);
+    const b = k => (BOX_KEYS.has(k) ? BOXES.find(x=>x.key===k) : null);
+    if(live){ const bx=b(live.boxKey); return {text:live.text, subject:bx?bx.label:'미분류', boxKey:live.boxKey||null, done:false}; }
+    const dn = (state.data.personal?.completed||[]).find(i=>i.id===p.itemId);
+    if(dn){ const bx=b(dn.boxKey); return {text:dn.text, subject:bx?bx.label:'미분류', boxKey:dn.boxKey||null, done:true}; }
+    return null;
+  }
+  function tdSubjectHex(boxKey){
+    const b = BOX_KEYS.has(boxKey) ? BOXES.find(x=>x.key===boxKey) : null;
+    return cssVarHex(b ? b.qc : 'var(--text-3)');
+  }
+  // 오늘 방어선에 넣을 수 있는 후보 — 아직 안 끝낸 망각의 시민 + 수업 과제 + 자율학습 (이미 고른 건 제외)
+  function tdCandidates(){
+    const pickedIds = new Set(tdPicksForToday().map(p=>p.kind+':'+p.itemId));
+    const out = [];
+    pendingRecall().forEach(t=>{
+      if(pickedIds.has('recall:'+t.id)) return;
+      out.push({kind:'recall', itemId:t.id, text:t.text, subject:t.subject, boxKey:t.boxKey||null});
+    });
+    collectCityCitizens().forEach(cz=>{
+      const kind = cz.kind==='teacher' ? 'teacher' : 'personal';
+      if(pickedIds.has(kind+':'+cz.item.id)) return;
+      const subj = cz.kind==='teacher' ? cz.x.subjLabel
+        : (cz.item.boxKey && BOX_KEYS.has(cz.item.boxKey) ? BOXES.find(b=>b.key===cz.item.boxKey).label : '미분류');
+      out.push({kind, key: cz.kind==='teacher'?cz.x.key:null, corner: cz.corner||null,
+                itemId: cz.item.id, text: cz.item.text, subject: subj,
+                boxKey: cz.kind==='teacher' ? (boxForTeacher(cz.x)||{}).key||null : (cz.item.boxKey||null),
+                days: cz.days});
+    });
+    return out;
+  }
+  function addTdPick(c){
+    state.data.tdPicks = state.data.tdPicks || [];
+    if(tdPicksForToday().some(p=>p.kind===c.kind && p.itemId===c.itemId)) return;
+    state.data.tdPicks.unshift({
+      id: genId(), date: todayISO, kind: c.kind, key: c.key||null, corner: c.corner||null,
+      itemId: c.itemId, addedAt: Date.now()
+    });
+    if(state.data.tdPicks.length > 200) state.data.tdPicks.length = 200;
+    persist(); render();
+  }
+  function removeTdPick(id){
+    state.data.tdPicks = (state.data.tdPicks||[]).filter(p=>p.id!==id);
+    persist(); render();
+  }
+  // 어제 못 지킨 것들을 오늘 방어선으로 이어받기
+  function carryTdPicks(){
+    const y = toISODate(new Date(todayMid - 86400000));
+    const todaySet = new Set(tdPicksForToday().map(p=>p.kind+':'+p.itemId));
+    let n = 0;
+    (state.data.tdPicks||[]).filter(p=>p.date===y).forEach(p=>{
+      const r = tdResolveItem(p);
+      if(!r || r.done) return;
+      if(todaySet.has(p.kind+':'+p.itemId)) return;
+      state.data.tdPicks.unshift({id:genId(), date:todayISO, kind:p.kind, key:p.key, corner:p.corner, itemId:p.itemId, addedAt:Date.now(), carried:true});
+      n++;
+    });
+    if(n) { persist(); render(); }
+  }
+
+  /* ---- 3D ---- */
+  async function ensureTD3D(){
+    if(TD3D.phase==='loading' || TD3D.phase==='ready') return;
+    TD3D.phase = 'loading';
+    setTDStatus('타워 디펜스를 불러오는 중...');
+    try{
+      const THREE = TD3D.THREE = await import(cityAssetUrl('assets/vendor/three-city.min.js'));
+      const loader = new THREE.GLTFLoader();
+      await Promise.all(TD_MODELS.map(async name=>{
+        try{
+          const g = await loader.loadAsync(tdAssetUrl('assets/td/'+name+'.glb'));
+          TD3D.proto[name] = g.scene.children[0] || g.scene;
+        }catch(e){ /* 하나 빠져도 나머지로 진행 */ }
+      }));
+      initTDRenderer();
+      TD3D.phase = 'ready';
+      setTDStatus('');
+      buildTDScene();
+      startTDLoop();
+    }catch(e){
+      TD3D.phase = 'error';
+      TD3D.err = (e && e.message) ? e.message : String(e);
+      setTDStatus('타워 디펜스를 불러오지 못했어 — ' + TD3D.err);
+    }
+  }
+  function initTDRenderer(){
+    const T = TD3D.THREE, wrap = TD3D.canvasWrap;
+    const renderer = new T.WebGLRenderer({antialias:true, alpha:true, powerPreference:'low-power'});
+    renderer.setPixelRatio(Math.min(2, window.devicePixelRatio||1));
+    renderer.outputColorSpace = T.SRGBColorSpace;
+    renderer.setClearColor(0x000000, 0);
+    wrap.appendChild(renderer.domElement);
+    const scene = new T.Scene();
+    scene.fog = new T.Fog(0x0b1220, 60, 190);
+    const camera = new T.PerspectiveCamera(44, 1, 0.5, 500);
+    scene.add(new T.HemisphereLight(0xcfe3ff, 0x2a2f26, 2.0));
+    const sun = new T.DirectionalLight(0xfff2df, 2.2); sun.position.set(18, 34, 20); scene.add(sun);
+    const rim = new T.DirectionalLight(0x88aaff, 0.5); rim.position.set(-20, 14, -22); scene.add(rim);
+    const controls = new T.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = false;
+    controls.minDistance = 14; controls.maxDistance = 140;
+    controls.minPolarAngle = 0.18; controls.maxPolarAngle = 1.4;
+    Object.assign(TD3D, {renderer, scene, camera, controls, raycaster:new T.Raycaster(), pointer:new T.Vector2()});
+    bindTDPointer(renderer.domElement);
+    new ResizeObserver(()=>resizeTD3D()).observe(wrap);
+    resizeTD3D();
+  }
+  function resizeTD3D(){
+    const wrap = TD3D.canvasWrap;
+    if(!wrap || !TD3D.renderer) return;
+    const w = wrap.clientWidth || 1, h = wrap.clientHeight || 1;
+    TD3D.renderer.setSize(w, h, false);
+    TD3D.camera.aspect = w/h; TD3D.camera.updateProjectionMatrix();
+  }
+  function disposeTDGroup(){
+    if(TD3D.group){
+      TD3D.scene.remove(TD3D.group);
+      TD3D.group.traverse(o=>{ if(o.isMesh && o.geometry && o.geometry.userData.own) o.geometry.dispose(); });
+    }
+    TD3D.owned.forEach(x=>{ try{ x.dispose(); }catch(e){} });
+    TD3D.owned = []; TD3D.group = null;
+  }
+  function tdSignature(){
+    return tdPicksForToday().map(p=>{
+      const r = tdResolveItem(p);
+      return p.id + ':' + (r ? (r.done?'1':'0') : 'x');
+    }).join('|') + '#' + cityGrowth().total;
+  }
+  function buildTDScene(){
+    const T = TD3D.THREE;
+    if(!T || !TD3D.scene) return;
+    disposeTDGroup();
+    const g = new T.Group(); TD3D.group = g; TD3D.scene.add(g);
+    TD3D.ufos = []; TD3D.crystals = [];
+
+    function tdSpawn(name){ const p = TD3D.proto[name]; return p ? p.clone(true) : null; }
+    function fitBy(o, target, axis){
+      let box = new T.Box3().setFromObject(o); const s = new T.Vector3(); box.getSize(s);
+      const base = axis==='h' ? s.y : axis==='m' ? Math.max(s.x,s.y,s.z) : Math.max(s.x,s.z);
+      o.scale.multiplyScalar(target/(base||1));
+      box = new T.Box3().setFromObject(o); const c = new T.Vector3(); box.getCenter(c);
+      o.position.x -= c.x; o.position.z -= c.z; o.position.y -= box.min.y;
+      return o;
+    }
+    const fit  = (o,w)=>fitBy(o,w,'w');
+    const fitH = (o,h)=>fitBy(o,h,'h');
+    function recolor(o, hex, strength){
+      o.traverse(n=>{
+        if(!n.isMesh || !n.material) return;
+        const arr = Array.isArray(n.material)?n.material:[n.material];
+        const out = arr.map(m=>{ const cm=m.clone(); TD3D.owned.push(cm); cm.color.lerp(new T.Color(hex), strength==null?0.4:strength); return cm; });
+        n.material = Array.isArray(n.material)?out:out[0];
+      });
+    }
+    function fade(o, op, grey){
+      o.traverse(n=>{
+        if(!n.isMesh || !n.material) return;
+        const arr = Array.isArray(n.material)?n.material:[n.material];
+        const out = arr.map(m=>{ const cm=m.clone(); TD3D.owned.push(cm); cm.color.lerp(new T.Color(0x7f858f), grey); cm.transparent=true; cm.opacity=op; cm.depthWrite=false; return cm; });
+        n.material = Array.isArray(n.material)?out:out[0];
+      });
+    }
+    function markPick(obj, data){ obj.traverse(n=>{ n.userData.tdp = data; }); obj.userData.tdp = data; }
+
+    const picks = tdPicksForToday().map(p=>({p, r:tdResolveItem(p)})).filter(x=>x.r);
+    const laneHalf = Math.max(18, picks.length*4 + 12);
+    const groundW = 30, groundL = laneHalf*2 + 10;
+
+    // 지면 + 레인
+    const groundMat = new T.MeshStandardMaterial({color:0x5f6f3e, roughness:1});
+    const laneMat = new T.MeshStandardMaterial({color:0x3a4152, roughness:1});
+    TD3D.owned.push(groundMat, laneMat);
+    const slabGeo = new T.BoxGeometry(groundW, 1, groundL); slabGeo.userData.own = true;
+    const slab = new T.Mesh(slabGeo, groundMat); slab.position.y = -0.5; g.add(slab);
+    const laneGeo = new T.PlaneGeometry(TD_TILE*1.3, groundL - 2); laneGeo.userData.own = true;
+    const lane = new T.Mesh(laneGeo, laneMat); lane.rotation.x = -Math.PI/2; lane.position.y = 0.03; g.add(lane);
+
+    // 스폰 / 본진 타일
+    const st = tdSpawn('tile-spawn'); if(st){ fit(st, TD_TILE*1.2); st.position.set(0, 0, -laneHalf); g.add(st); }
+    const et = tdSpawn('tile-end');   if(et){ fit(et, TD_TILE*1.2); et.position.set(0, 0, laneHalf - 1); g.add(et); }
+
+    // 픽마다: 옆에 타워(과목색), 본진 앞에 크리스탈, 아직 안 끝냈으면 UFO 한 기
+    const stats = computeArchiveStats();
+    const subjCount = s => { const row = stats.subjects.find(x=>x.subject===canonSubject(s)); return row ? row.total : 0; };
+
+    picks.forEach((entry, i)=>{
+      const {p, r} = entry;
+      const hex = tdSubjectHex(r.boxKey);
+      const side = (i % 2) ? 1 : -1;
+      const tz = laneHalf - 7 - i*4.4;
+      const tx = side * (TD_TILE*1.55);
+
+      // 타워 — 과목 완료 누적 또는 복습 반복 횟수로 단계
+      const tier = Math.min(4, Math.max(0, Math.floor((p.kind==='recall' ? (r.srReps||0)*1.5 : subjCount(r.subject)) / 4)));
+      const holder = new T.Group();
+      holder.position.set(tx, 0, tz);
+      g.add(holder);
+      let y = 0;
+      const stack = ['tower-round-base'];
+      if(tier>=1) stack.push('tower-round-bottom-a');
+      if(tier>=2) stack.push('tower-round-middle-a');
+      if(tier>=3) stack.push('tower-round-top-a');
+      if(tier>=4) stack.push('tower-round-roof-a');
+      if(tier===0) stack.push('tower-round-build-c');
+      stack.forEach(name=>{
+        const m = tdSpawn(name); if(!m) return;
+        fit(m, TD_TILE*0.82);
+        const bb = new T.Box3().setFromObject(m); const sz = new T.Vector3(); bb.getSize(sz);
+        m.position.y = y; recolor(m, hex, 0.26);
+        holder.add(m); y += sz.y * 0.92;
+      });
+      const w = tdSpawn('weapon-turret');
+      if(w){ fit(w, TD_TILE*0.5); w.position.y = y; w.rotation.y = -side*Math.PI/2; recolor(w, hex, 0.5); holder.add(w); }
+      markPick(holder, entry);
+
+      // 본진 크리스탈 (끝냈으면 밝게, 아니면 흐리게)
+      const cr = tdSpawn('detail-crystal');
+      if(cr){
+        fitH(cr, 2.4);
+        cr.position.set(-TD_TILE*2 + i*1.7, 0, laneHalf - 2.4);
+        if(r.done) recolor(cr, hex, 0.7); else fade(cr, 0.5, 0.6);
+        markPick(cr, entry);
+        g.add(cr);
+        TD3D.crystals.push({obj:cr, done:r.done, phase:Math.random()*6.28});
+      }
+
+      // UFO — 안 끝낸 픽만. 스폰에서 타워 쪽으로. 초기 위치 = 오늘 얼마나 지났나.
+      if(!r.done){
+        const u = tdSpawn('enemy-ufo-a');
+        if(u){
+          fit(u, TD_TILE*0.8);
+          recolor(u, hex, 0.35);
+          const uh = new T.Group(); uh.add(u); g.add(uh);
+          const a = new T.Vector3(0, 2.4, -laneHalf + 2);
+          const b = new T.Vector3(tx*0.55, 2.4, tz + 2);
+          const startedAt = p.addedAt || todayMid;
+          let t0 = (Date.now() - startedAt) / Math.max(1, tdEndOfDayMs() - startedAt);
+          t0 = Math.max(0.04, Math.min(0.96, t0));
+          uh.position.copy(a).lerp(b, t0);
+          if(r.fromRequest){
+            const ring = tdSpawn('detail-crystal');   // 요청 반영 표식 대용
+            if(ring){ fitH(ring, 1.1); ring.position.y = 2.2; recolor(ring, '#64d2ff', 0.8); uh.add(ring); }
+          }
+          markPick(uh, entry);
+          TD3D.ufos.push({obj:uh, a, b, t:t0, bob:Math.random()*6.28, speed:0.006 + (i%3)/900});
+        }
+      }
+    });
+
+    if(picks.length===0){
+      const et2 = tdSpawn('tile-end'); // 텅 빈 방어선 — 본진만
+    }
+
+    // 카메라: 본진 뒤에서 스폰 쪽을 바라봄
+    TD3D.controls.maxDistance = groundL*1.4;
+    const dist = laneHalf*1.35 + 18;
+    TD3D.homePos = new T.Vector3(0, laneHalf*0.62 + 8, laneHalf + 20);
+    TD3D.homeTarget = new T.Vector3(0, 1.5, 2);
+    TD3D.camera.position.copy(TD3D.homePos);
+    TD3D.controls.target.copy(TD3D.homeTarget);
+    TD3D.controls.update();
+    TD3D.scene.fog.near = laneHalf*0.9;
+    TD3D.scene.fog.far = laneHalf*3.4;
+    TD3D.atHome = true; TD3D.lastInteract = 0;
+    TD3D.sig = tdSignature();
+  }
+  function tdFrame(){
+    TD3D.raf = requestAnimationFrame(tdFrame);
+    const now = performance.now();
+    const dt = Math.min(0.05, (now - TD3D.last)/1000 || 0.016);
+    TD3D.last = now;
+    const t = now/1000;
+    TD3D.ufos.forEach(u=>{
+      u.t = Math.min(1, u.t + u.speed*dt);
+      u.obj.position.copy(u.a).lerp(u.b, u.t);
+      u.obj.position.y += Math.sin(t*2 + u.bob)*0.18;
+      u.obj.rotation.y += dt*0.6;
+    });
+    TD3D.crystals.forEach(c=>{
+      c.obj.rotation.y = t*0.8;
+      c.obj.position.y = (c.done ? 0.2 : 0) + Math.abs(Math.sin(t*1.6 + c.phase))*(c.done?0.18:0.05);
+    });
+    if(!TD3D.tween && !TD3D.atHome && TD3D.lastInteract && now - TD3D.lastInteract > CITY_IDLE_RETURN_MS){
+      resetTDView(1.1);
+    }
+    const tw = TD3D.tween;
+    if(tw){
+      tw.t = Math.min(1, tw.t + dt/tw.dur);
+      const e = tw.t<0.5 ? 2*tw.t*tw.t : 1-Math.pow(-2*tw.t+2,2)/2;
+      TD3D.camera.position.lerpVectors(tw.fromPos, tw.toPos, e);
+      TD3D.controls.target.lerpVectors(tw.fromTgt, tw.toTgt, e);
+      if(tw.t>=1) TD3D.tween = null;
+    }
+    TD3D.controls.update();
+    TD3D.renderer.render(TD3D.scene, TD3D.camera);
+  }
+  function startTDLoop(){
+    if(TD3D.running || TD3D.phase!=='ready') return;
+    TD3D.running = true; TD3D.last = performance.now();
+    TD3D.raf = requestAnimationFrame(tdFrame);
+  }
+  function stopTDLoop(){
+    TD3D.running = false;
+    if(TD3D.raf) cancelAnimationFrame(TD3D.raf);
+    TD3D.raf = 0;
+    if(TD3D.tip) TD3D.tip.style.display = 'none';
+  }
+  function resetTDView(dur){
+    if(!TD3D.camera || !TD3D.homePos) return;
+    TD3D.tween = {
+      fromPos: TD3D.camera.position.clone(), toPos: TD3D.homePos.clone(),
+      fromTgt: TD3D.controls.target.clone(), toTgt: TD3D.homeTarget.clone(),
+      t:0, dur: dur || 0.55
+    };
+    TD3D.atHome = true;
+  }
+  function tdMark(){ TD3D.lastInteract = performance.now(); TD3D.atHome = false; TD3D.tween = null; }
+  function tdUnderPointer(ev){
+    if(!TD3D.renderer) return null;
+    const r = TD3D.renderer.domElement.getBoundingClientRect();
+    TD3D.pointer.x = ((ev.clientX - r.left)/r.width)*2 - 1;
+    TD3D.pointer.y = -((ev.clientY - r.top)/r.height)*2 + 1;
+    TD3D.raycaster.setFromCamera(TD3D.pointer, TD3D.camera);
+    const hits = TD3D.raycaster.intersectObjects(TD3D.group ? TD3D.group.children : [], true);
+    for(const h of hits){ let o = h.object; while(o){ if(o.userData && o.userData.tdp) return o.userData.tdp; o = o.parent; } }
+    return null;
+  }
+  function bindTDPointer(el){
+    el.addEventListener('pointermove', ev=>{
+      if(TD3D.downAt) return;
+      const e = tdUnderPointer(ev);
+      el.style.cursor = e ? 'pointer' : 'grab';
+      if(e && TD3D.tip){
+        TD3D.tip.innerHTML = `<div class="ct-tag">${escapeHtml(e.r.subject||'')}</div><div class="ct-text">${escapeHtml(e.r.text)}</div>`
+          + `<div class="ct-meta">${e.r.done ? '사수 완료' : '교전 중 — 완료하면 격퇴'}</div>`;
+        const host = TD3D.host.getBoundingClientRect();
+        TD3D.tip.style.display = 'block';
+        TD3D.tip.style.left = Math.max(6, Math.min(ev.clientX - host.left + 14, host.width - TD3D.tip.offsetWidth - 6)) + 'px';
+        TD3D.tip.style.top  = Math.max(6, Math.min(ev.clientY - host.top + 14, host.height - TD3D.tip.offsetHeight - 6)) + 'px';
+      } else if(TD3D.tip){ TD3D.tip.style.display = 'none'; }
+    });
+    el.addEventListener('pointerleave', ()=>{ if(TD3D.tip) TD3D.tip.style.display='none'; });
+    el.addEventListener('pointerdown', ev=>{ TD3D.downAt = {x:ev.clientX, y:ev.clientY}; tdMark(); if(TD3D.tip) TD3D.tip.style.display='none'; });
+    el.addEventListener('wheel', tdMark, {passive:true});
+    el.addEventListener('pointerup', ev=>{
+      const d = TD3D.downAt; TD3D.downAt = null; TD3D.lastInteract = performance.now();
+      if(!d || Math.abs(ev.clientX-d.x) > 4 || Math.abs(ev.clientY-d.y) > 4) return;
+      const e = tdUnderPointer(ev); if(!e) return;
+      const p = e.p;
+      if(p.kind==='recall'){ state.cityInspectTarget = {kind:'recall', id:p.itemId}; state.modal='cityInspect'; render(); return; }
+      openCityInspect(p.kind, p.key||null, p.corner||null, p.itemId);
+    });
+  }
+  function makeTDHost(){
+    const host = document.createElement('div');
+    host.className = 'city3d';
+    host.innerHTML = `<div class="city3d-canvas"></div>
+      <div class="city3d-tip"></div>
+      <div class="city3d-status"></div>
+      <button class="city3d-reset" type="button">기본 시점</button>
+      <div class="city3d-hint">고른 것만 이 방어선에 나타나 · 드래그 회전 · 휠 확대 · 클릭하면 완료 창</div>`;
+    host.querySelector('.city3d-reset').addEventListener('click', ()=>resetTDView());
+    TD3D.host = host;
+    TD3D.canvasWrap = host.querySelector('.city3d-canvas');
+    TD3D.tip = host.querySelector('.city3d-tip');
+    TD3D.statusEl = host.querySelector('.city3d-status');
+    TD3D.tip.style.display = 'none';
+    return host;
+  }
+  function mountTD3D(){
+    const slot = document.getElementById('td3dSlot');
+    if(!slot){ stopTDLoop(); return; }
+    if(!TD3D.host) makeTDHost();
+    if(TD3D.host.parentElement !== slot) slot.appendChild(TD3D.host);
+    if(TD3D.phase==='idle' || TD3D.phase==='error'){
+      if(slotNearViewport(slot)) ensureTD3D();
+      return;
+    }
+    if(TD3D.phase!=='ready') return;
+    if(tdSignature() !== TD3D.sig) buildTDScene();
+    resizeTD3D();
+    startTDLoop();
+  }
+
+  function renderTDPage(){
+    const picks = tdPicksForToday().map(p=>({p, r:tdResolveItem(p)})).filter(x=>x.r);
+    const secured = picks.filter(x=>x.r.done).length;
+    const engaging = picks.length - secured;
+    const y = toISODate(new Date(todayMid - 86400000));
+    const yLeft = (state.data.tdPicks||[]).filter(p=>p.date===y).map(p=>({p,r:tdResolveItem(p)})).filter(x=>x.r && !x.r.done && !tdPicksForToday().some(q=>q.kind===x.p.kind && q.itemId===x.p.itemId)).length;
+
+    const pickRows = picks.length===0
+      ? `<div class="empty" style="padding:6px 0;">아직 오늘 사수할 항목이 없어. 아래에서 골라줘.</div>`
+      : picks.map(({p, r})=>`<div class="td-pick ${r.done?'is-secured':''}">
+          <span class="td-pick-dot" style="background:${tdSubjectHex(r.boxKey)};"></span>
+          <span class="td-pick-body"><b>${escapeHtml(r.subject||'')}</b> ${escapeHtml(r.text)}</span>
+          <span class="td-pick-state">${r.done ? '사수' : '교전 중'}</span>
+          <button class="td-pick-x" data-action="removeTdPick" data-id="${p.id}" title="방어선에서 빼기">${icon('close')}</button>
+        </div>`).join('');
+
+    const cands = tdCandidates().slice(0, 14);
+    const candRows = cands.length===0
+      ? `<div class="empty" style="padding:6px 0;">고를 수 있는 항목이 없어 — 할 일/망각의 시민이 있어야 해.</div>`
+      : cands.map(c=>`<button class="td-cand" data-action="addTdPick" data-kind="${c.kind}" data-key="${c.key||''}" data-corner="${c.corner||''}" data-item="${c.itemId}">
+          <span class="td-pick-dot" style="background:${tdSubjectHex(c.boxKey)};"></span>
+          <span class="td-cand-body"><b>${escapeHtml(c.subject||'')}</b> ${escapeHtml(c.text)}</span>
+          <span class="td-cand-plus">+</span>
+        </button>`).join('');
+
+    return `<div class="fade-in">
+      <div class="page-head"><h1>타워 디펜스</h1></div>
+      <div class="td-status">
+        <b>오늘의 방어선</b> — 사수 ${secured} · 교전 중 ${engaging}
+        ${picks.length>0 && engaging===0 ? ' · <span style="color:var(--green);">오늘 방어선 클리어</span>' : ''}
+        ${yLeft>0 ? `<button class="section-link" data-action="carryTdPicks" style="margin-left:8px;">어제 못 지킨 ${yLeft}개 이어받기</button>` : ''}
+      </div>
+      <div class="section">
+        <div class="section-head"><div class="section-title">오늘 사수할 것 (${picks.length})</div></div>
+        ${pickRows}
+      </div>
+      <div id="td3dSlot" class="city-slot-full"></div>
+      <div class="section" style="margin-top:22px;">
+        <div class="section-head"><div class="section-title">방어선에 추가</div></div>
+        <div class="conn-note">여기서 고른 것만 3D 방어선에 UFO로 밀려와. 완료하면 격퇴하고 본진 크리스탈이 켜져.</div>
+        ${candRows}
+      </div>
+    </div>`;
+  }
+
   function findCityItem(target){
     if(!target) return null;
     if(target.kind==='teacher'){
@@ -4770,6 +5257,9 @@ ${text}`}]
       case 'cityCompleteFromInspect': cityCompleteFromInspect(); break;
       case 'goCityArchive': state.cityView='archive'; render(); break;
       case 'goCityMain': state.cityView='main'; render(); break;
+      case 'addTdPick': addTdPick({kind:el.dataset.kind, key:el.dataset.key||null, corner:el.dataset.corner||null, itemId:el.dataset.item}); break;
+      case 'removeTdPick': removeTdPick(el.dataset.id); break;
+      case 'carryTdPicks': carryTdPicks(); break;
       case 'restorePersonal': restorePersonalTask(el.dataset.id); break;
       case 'deletePersonalPermanent': deletePersonalPermanent(el.dataset.id); break;
       case 'deleteArchiveEntry': deleteArchiveEntry(el.dataset.id); break;
@@ -4911,7 +5401,8 @@ ${text}`}]
           archiveLog: saved.archiveLog || [],
           reports: saved.reports || [],
           recallRequests: saved.recallRequests || [],
-          recallReserve: saved.recallReserve || []
+          recallReserve: saved.recallReserve || [],
+          tdPicks: saved.tdPicks || []
         };
       } else {
         state.data = { teachers: Object.assign(skeleton.teachers, saved), assignments:[], notices:[], dailyCapacity:5, importedClassroomIds:[], importedNoticeIds:[], personal:{tasks:[],completed:[]}, ddays:[], recall:{tasks:[],lastGeneratedAt:null}, archiveLog:[] };
