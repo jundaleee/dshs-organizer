@@ -2262,12 +2262,19 @@ ${prevSummary}`}]
     }
   }
 
-  /* ---- 오늘의 학습기록 (매일 저녁 자동 생성) ---- */
-  async function generateDailyLog(auto){
+  // 지난 공부날 (어제 못 만든 것 자동 채우기용) — startMs~endMs 창을 명시적으로 넘긴다
+  function prevStudyDayInfo(){
+    const cur = studyDayInfo();
+    const s = new Date(cur.startMs - 86400000);
+    return { startMs: s.getTime(), endMs: cur.startMs, date: s, key: toISODate(s), m: s.getMonth()+1, dd: s.getDate() };
+  }
+  /* ---- 오늘의 학습기록 ---- */
+  async function generateDailyLog(auto, sdOverride){
     const apiKey = getApiKey();
     if(!apiKey){ if(!auto){ reportStatus = 'API 키가 필요해 — 설정에서 먼저 등록해줘.'; render(); } return; }
-    const sd = studyDayInfo();
-    const todays = (state.data.archiveLog||[]).filter(e=>e.ts >= sd.startMs).sort((a,b)=>a.ts-b.ts);
+    const sd = sdOverride || studyDayInfo();
+    const endMs = sd.endMs || Date.now();
+    const todays = (state.data.archiveLog||[]).filter(e=>e.ts >= sd.startMs && e.ts < endMs).sort((a,b)=>a.ts-b.ts);
     if(todays.length===0){
       if(!auto){ reportStatus = '이 공부날에 아직 완료한 게 없어 — 학습기록으로 남길 내용이 없어.'; render(); }
       return;
@@ -2357,6 +2364,15 @@ ${logText}`}]
   // 보고서는 시각 스케줄이 아니라 사용자가 직접 버튼으로 만든다 (새벽까지 공부하는 날도
   // 있어서 22:50 같은 고정 컷오프가 안 맞음). "오늘 학습기록 만들기" / "이번 주 아카이브
   // 지금 만들기" 둘 다 알림 팝오버에 있다.
+  // 단, 지난 공부날 학습기록을 실수로 못 만들었으면 앱 열 때 한 번 자동으로 채워준다.
+  function maybeCatchUpYesterdayReport(){
+    if(!getApiKey()) return;
+    const prev = prevStudyDayInfo();
+    if((state.data.reports||[]).some(r=>r.type==='daily' && r.dateKey===prev.key)) return;
+    const had = (state.data.archiveLog||[]).some(e=>e.ts >= prev.startMs && e.ts < prev.endMs);
+    if(!had) return;
+    generateDailyLog(true, prev);
+  }
 
   /* ---- 도시 (City, beta) ----
      새 데이터를 저장하지 않음 — 수업 과제(teachers[key].review)와 자율학습(teachers[key].self + personal.tasks)을
@@ -3334,14 +3350,21 @@ ${logText}`}]
     if(state.cityView==='archive') return renderGraduationArchive();
     const citizens = collectCityCitizens();
     const graduating = collectGraduatingThisWeek();
-    // 복습 생성은 백그라운드에서 알아서 돈다 — 도시엔 표시하지 않는다.
-    // 단 사용자가 고칠 수 있는 문제(키 없음 / 요청 차단)일 때만 조용히 한 줄.
+    const recalls = pendingRecall();
+    // 복습 생성은 백그라운드에서 알아서 돈다. 문제(키 없음 / 요청 실패)일 때만 조용히 한 줄.
     const gateNote = (recallStatus && recallStatus.startsWith('실패')) ? recallStatus
-      : (!getApiKey() ? recallGateReason() : '');
+      : (!getApiKey() ? recallGateReason() : (recentlyActive(21) ? '' : recallGateReason()));
+    const recallHtml = recalls.length===0
+      ? `<div class="empty" style="padding:4px 0;">지금 걸어다니는 망각의 시민이 없어. 뭔가 완료하면 곧 새로 만들어져.</div>`
+      : recalls.map(recallRowHtml).join('');
     return `<div class="fade-in">
       <div class="page-head"><h1>도시</h1><button class="iconbtn" data-action="goCityArchive">${icon('external')} 졸업 앨범</button></div>
       ${renderCityGrowthBar()}
-      ${gateNote ? `<div class="empty" style="padding:0 0 12px;">복습 생성: ${escapeHtml(gateNote)}</div>` : ''}
+      <div class="section">
+        <div class="section-head"><div class="section-title">망각의 시민 ${recalls.length}명</div></div>
+        ${gateNote ? `<div class="empty" style="padding:0 0 8px;">복습 생성: ${escapeHtml(gateNote)}</div>` : ''}
+        ${recallHtml}
+      </div>
       <div class="city-legend">
         <span><i class="cl-dot cl-car"></i>자동차 = 수업 과제</span>
         <span><i class="cl-dot cl-house"></i>집 = 자율학습</span>
@@ -3349,7 +3372,7 @@ ${logText}`}]
       </div>
       ${graduating.length>0?`<div class="city-graduating">🎓 이번 주 졸업 예정 ${graduating.length}명 — 다음 주 월요일에 졸업 앨범으로 넘어가</div>`:''}
       <div id="city3dSlot" class="city-slot-full"></div>
-      ${citizens.length===0?`<div class="empty">아직 시민이 없어 — 할 일 탭에서 수업 과제나 자율학습을 추가하면 도시에 나타나.</div>`:''}
+      ${(citizens.length===0 && recalls.length===0)?`<div class="empty">아직 아무도 없어 — 할 일 탭에서 수업 과제나 자율학습을 추가하면 도시에 나타나.</div>`:''}
     </div>`;
   }
   /* ============ 타워 디펜스 (그날그날 사수할 것을 고르면 그것만 방어선에 나타남) ============
@@ -4713,7 +4736,7 @@ ${logText}`}]
   // 사용자가 모르는 사이 계속 부풀어야 한다 — 앱을 쓰는 동안 40분마다 한 번씩,
   // 완료 직후에도, 도시/타워디펜스로 스크롤할 때도 조용히 시도한다. (모델이 최대 5개 +
   // 중복 금지로 절제하므로 호출이 잦아도 시민이 폭증하진 않는다.)
-  const RECALL_AUTO_INTERVAL_MS = 40*60000;
+  const RECALL_AUTO_INTERVAL_MS = 15*60000;
   let recallGenInFlight = false;
   function maybeAutoGenerateRecall(){
     if(recallGenInFlight) return;
@@ -5445,6 +5468,7 @@ ${text}`}]
     render();
     syncClassroom(false);
     maybeAutoGenerateRecall();
+    maybeCatchUpYesterdayReport();
   })();
 
 })();
