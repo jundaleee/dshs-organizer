@@ -4556,7 +4556,7 @@ ${logText}`}]
       state.feedbackTargetId = null;
       state.feedbackSelectedRating = null;
       render();
-      maybeAutoGenerateRecall();   // 완료 직후에도 큐가 비었으면 새로 채운다 (6h 게이트가 과호출은 막음)
+      maybeAutoGenerateRecall();   // 완료 직후에도 시도 (45분 간격·30명 상한이 과호출은 막음)
     });
   }
   function skipCompletionFeedback(){
@@ -4587,7 +4587,7 @@ ${logText}`}]
       state.feedbackTargetId = null;
       state.feedbackSelectedRating = null;
       render();
-      maybeAutoGenerateRecall();   // 완료 직후에도 큐가 비었으면 새로 채운다 (6h 게이트가 과호출은 막음)
+      maybeAutoGenerateRecall();   // 완료 직후에도 시도 (45분 간격·30명 상한이 과호출은 막음)
     });
   }
   // 완료 자체를 잘못 눌렀거나(엉뚱한 항목, 등급 실수 등) 다시 처음부터 하고 싶을 때 되돌린다.
@@ -4738,19 +4738,23 @@ ${logText}`}]
     if(!recentlyActive(21)) return '최근 완료한 게 없어 — 뭐라도 하나 끝내면 복습을 만들어줄게.';
     return '';
   }
-  // 사용자가 모르는 사이 계속 부풀어야 한다 — 앱을 쓰는 동안 40분마다 한 번씩,
-  // 완료 직후에도, 도시/타워디펜스로 스크롤할 때도 조용히 시도한다. (모델이 최대 5개 +
-  // 중복 금지로 절제하므로 호출이 잦아도 시민이 폭증하진 않는다.)
-  const RECALL_AUTO_INTERVAL_MS = 15*60000;
+  // 사용자가 모르는 사이 조금씩 부푼다 — 사용 중 45분마다 + 완료 직후 + 도시/타워디펜스
+  // 스크롤 시 시도. 단 30명 넘게 밀려 있으면 폭증 방지로 멈춘다(몇 개 끝내면 다시 돈다).
+  const RECALL_AUTO_INTERVAL_MS = 45*60000;
+  const RECALL_PENDING_CEILING = 30;
   let recallGenInFlight = false;
   // 마지막 자동 생성 시도의 결과를 도시 목록 위에 한 줄로 보여준다 (죽었는지 도는지 확인용)
   let recallGen = { at:0, outcome:'' };
-  function maybeAutoGenerateRecall(ignoreInterval){
+  function maybeAutoGenerateRecall(){
     if(recallGenInFlight) return;
     const gate = recallGateReason();
     if(gate){ recallGen = { at: Date.now(), outcome: '대기: ' + gate }; return; }
+    if(pendingRecall().length >= RECALL_PENDING_CEILING){
+      recallGen = { at: Date.now(), outcome: `대기: ${pendingRecall().length}명 밀림 (${RECALL_PENDING_CEILING} 넘으면 멈춤 — 몇 개 끝내면 재개)` };
+      return;
+    }
     const last = state.data.recall && state.data.recall.lastGeneratedAt;
-    if(!ignoreInterval && last && (Date.now() - last) < RECALL_AUTO_INTERVAL_MS) return;
+    if(last && (Date.now() - last) < RECALL_AUTO_INTERVAL_MS) return;
     generateRecall();
   }
 
@@ -4833,12 +4837,11 @@ text 안에는 큰따옴표(") 금지. boxKey는 다음 중 하나만: ${boxList
 - 메모에 학생이 스스로 미래 복습을 제안한 표현("~다시 봐야겠다", "다음엔 ~로 보고싶다" 등)이
   있으면 그걸 최우선으로 만들고 fulfillsRequest에 그 표현을 옮긴다.
 - 아래 "예비군"이 있으면 우선 재료로 삼아 다듬고(그대로 베끼지 말고) fromReserve에 원문을 옮긴다.
-- 학생은 복습 항목이 밀물처럼 많이 쌓이길 원한다. 열려 있는 복습이 몇 개든(20개든) 신경 쓰지 말고
-  이번에 최대한 많이 뽑아라. 이력에 나온 개념 하나당 회상·적용·전이·오답교정을 서로 다른 항목으로
-  여러 개 만들어도 좋다 (예: "설명하기" → "새 상황에 적용하기" → "왜 그런지 다른 개념과 잇기").
-- 금지는 단 하나: 이미 열려 있는 복습과 **문장이 사실상 똑같은** 것만 만들지 마라. 각도가 다르면 OK.
-  없는 개념을 지어내지도 마라. 이력의 개념 하나도 안 남았을 때만 빈 배열 [].
-- 이번 응답에 5~10개, 각 3~10분. (이력이 아주 적으면 그만큼만)
+- 복습은 조금씩 꾸준히 쌓인다. 이번엔 3~6개만, 가장 값진 것부터. 억지로 채우지 마라.
+- 이미 열려 있는 복습(아래 목록)과 주제가 겹치면, 각도가 확실히 다를 때만 만든다
+  (같은 개념 "설명하기"가 이미 있으면 "새 상황에 적용하기"는 OK, 표현만 바꾼 재탕은 금지).
+  없는 개념을 지어내지 마라. 이력의 개념이 하나도 안 남았으면 빈 배열 [].
+- 이번 응답에 3~6개, 각 3~10분. (이력이 적거나 겹칠 게 많으면 그보다 적게, 없으면 [])
 - 수학(subject 또는 boxKey가 math/수학)은 절대 만들지 마라. 수학은 CONNECTION의 상대(subjectB)로만 가능.
 - CONNECTION은 잇는 두 개념이 둘 다 아래 이력에 이미 등장했고 지금 수준에서 써먹을 수 있을 때만, 한 번에 최대 2개.
 - 과신율 높은 과목(아래 캘리브레이션)은 "완벽했음"으로 끝냈어도 설명형을 한 번 더 넣는다. 이 수치는 학생 비공개.
@@ -4884,12 +4887,23 @@ ${reserveText}
       const now = Date.now();
       let added = 0;
       state.data.recall = state.data.recall || {tasks:[], lastGeneratedAt:null};
+      // 이미 열려 있는 복습과 사실상 같은 문장은 버린다 (모델이 재탕해도 여기서 막음)
+      const normText = s => String(s||'').replace(/\s+/g,'').replace(/["'’.,·!?]/g,'').toLowerCase();
+      const openNorms = pendingRecall().map(t=>normText(t.text)).filter(Boolean);
+      const seenThisBatch = [];
       items.forEach(it=>{
         if(!it || !it.text) return;
         const tag = RECALL_TAGS[it.tag] ? it.tag : 'RECALL';
         // 수학은 망각의 시민을 만들지 않는다 (모델이 규칙을 어겨도 여기서 한 번 더 막는다)
         const bk = BOX_KEYS.has(it.boxKey) ? it.boxKey : null;
         if(bk === 'math' || canonSubject((it.subject||'').trim()) === '수학') return;
+        const n = normText(it.text);
+        if(n.length >= 6){
+          const dup = openNorms.concat(seenThisBatch).some(o =>
+            o === n || (o.length>=12 && n.length>=12 && (o.includes(n.slice(0,14)) || n.includes(o.slice(0,14)))));
+          if(dup) return;
+          seenThisBatch.push(n);
+        }
         // 학생이 메모로 직접 요청한 걸 반영한 항목이면 그 표현을 함께 들고 다닌다 (append-only recallRequests에도 기록)
         const fromReq = (typeof it.fulfillsRequest === 'string') ? it.fulfillsRequest.trim().slice(0,160) : '';
         const rid = genId();
@@ -5463,7 +5477,7 @@ ${text}`}]
     reviveDueRecall();   // 예정일이 된 복습을 도시로 되돌린 뒤에 그려야 함
     render();
     syncClassroom(false);
-    maybeAutoGenerateRecall(true);   // 앱 열 때는 15분 간격 무시하고 무조건 한 번 시도
+    maybeAutoGenerateRecall();   // 앱 열 때 한 번 — 45분 간격/30명 상한은 지킨다 (새로고침마다 폭증 방지)
     maybeCatchUpYesterdayReport();
   })();
 
