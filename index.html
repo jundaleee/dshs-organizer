@@ -4813,9 +4813,10 @@ ${logText}`}]
         },
         body: JSON.stringify({
           model:'claude-sonnet-5',
-          max_tokens:4000,
+          max_tokens:8000,
           messages:[{role:'user', content:
 `영재학교 학생의 완료 이력을 보고, 가장 적은 시간으로 장기기억을 유지할 다음 복습 행동을 골라낸다.
+바로 JSON 배열부터 출력하기 시작한다. 어떤 사고 과정·서두도 쓰지 않는다.
 
 출력은 JSON 배열 하나뿐이다. 그 앞뒤로 어떤 텍스트도(인사·설명·코드펜스) 쓰지 마라.
 각 원소는 이 스키마다:
@@ -4866,7 +4867,13 @@ ${reserveText}
       const raw = modelText(data);
       const items = parseModelJsonArray(raw);
       if(items === null){
-        const peek = raw ? raw.replace(/\s+/g,' ').trim().slice(0,180) : (data && data.error ? JSON.stringify(data.error).slice(0,180) : '(빈 응답)');
+        let peek;
+        if(raw) peek = raw.replace(/\s+/g,' ').trim().slice(0,180);
+        else {
+          // 텍스트가 비었을 때: 응답 구조를 최대한 그대로 보여줘서 원인 파악
+          const types = Array.isArray(data && data.content) ? data.content.map(b=>b&&b.type).join(',') : 'content없음';
+          peek = `stop=${data&&data.stop_reason||'?'} content=[${types}] ` + JSON.stringify(data).replace(/\s+/g,' ').slice(0,220);
+        }
         recallStatus = `실패 — 모델 응답을 파싱 못함: ${peek}`;
         recallGen = { at: Date.now(), outcome: '파싱 실패: ' + peek };
         recallGenInFlight = false;
