@@ -3351,8 +3351,11 @@ ${logText}`}]
     const citizens = collectCityCitizens();
     const graduating = collectGraduatingThisWeek();
     const recalls = pendingRecall();
-    // 복습 생성은 백그라운드에서 알아서 돈다. 상태(실패·"새로 만들 게 없었음"·키 없음)만 한 줄.
-    const gateNote = recallStatus || (recallGateReason());
+    // 복습 자동생성이 도는지/왜 안 도는지 항상 한 줄로 보여준다 (버튼 대신 상태 readout)
+    const ago = recallGen.at ? Math.max(0, Math.round((Date.now()-recallGen.at)/60000)) : null;
+    const genLine = recallGen.at
+      ? `자동생성 · ${ago===0?'방금':ago+'분 전'} · ${recallGen.outcome}`
+      : (getApiKey() ? '자동생성 · 아직 안 돌았어 (뭐 하나 완료하거나 잠시 뒤)' : '자동생성 · API 키 없음');
     const recallHtml = recalls.length===0
       ? `<div class="empty" style="padding:4px 0;">지금 걸어다니는 망각의 시민이 없어. 뭔가 완료하면 곧 새로 만들어져.</div>`
       : recalls.map(recallRowHtml).join('');
@@ -3361,7 +3364,7 @@ ${logText}`}]
       ${renderCityGrowthBar()}
       <div class="section">
         <div class="section-head"><div class="section-title">망각의 시민 ${recalls.length}명</div></div>
-        ${gateNote ? `<div class="empty" style="padding:0 0 8px;">복습 생성: ${escapeHtml(gateNote)}</div>` : ''}
+        <div class="empty" style="padding:0 0 8px;font-size:11px;">${escapeHtml(genLine)}</div>
         ${recallHtml}
       </div>
       <div class="city-legend">
@@ -4740,11 +4743,14 @@ ${logText}`}]
   // 중복 금지로 절제하므로 호출이 잦아도 시민이 폭증하진 않는다.)
   const RECALL_AUTO_INTERVAL_MS = 15*60000;
   let recallGenInFlight = false;
-  function maybeAutoGenerateRecall(){
+  // 마지막 자동 생성 시도의 결과를 도시 목록 위에 한 줄로 보여준다 (죽었는지 도는지 확인용)
+  let recallGen = { at:0, outcome:'' };
+  function maybeAutoGenerateRecall(ignoreInterval){
     if(recallGenInFlight) return;
-    if(recallGateReason()) return;
+    const gate = recallGateReason();
+    if(gate){ recallGen = { at: Date.now(), outcome: '대기: ' + gate }; return; }
     const last = state.data.recall && state.data.recall.lastGeneratedAt;
-    if(last && (Date.now() - last) < RECALL_AUTO_INTERVAL_MS) return;
+    if(!ignoreInterval && last && (Date.now() - last) < RECALL_AUTO_INTERVAL_MS) return;
     generateRecall();
   }
 
@@ -4763,6 +4769,7 @@ ${logText}`}]
                    text: e.text, at: e.ts, rating: e.rating, note: e.note, attempts: e.attempts }));
     if(history.length===0){
       recallStatus = '아직 완료한 게 없어 — 뭐라도 하나 끝내면 복습을 만들어줄게.';
+      recallGen = { at: Date.now(), outcome: '이력 없음' };
       render(); return;
     }
     if(recallGenInFlight) return;
@@ -4861,6 +4868,8 @@ ${reserveText}
       if(items === null){
         const peek = raw ? raw.replace(/\s+/g,' ').trim().slice(0,180) : (data && data.error ? JSON.stringify(data.error).slice(0,180) : '(빈 응답)');
         recallStatus = `실패 — 모델 응답을 파싱 못함: ${peek}`;
+        recallGen = { at: Date.now(), outcome: '파싱 실패: ' + peek };
+        recallGenInFlight = false;
         render(); return;
       }
       const now = Date.now();
@@ -4907,12 +4916,12 @@ ${reserveText}
         added++;
       });
       state.data.recall.lastGeneratedAt = now;
-      // 새로 만든 게 있으면 조용히. 0개면 "돌긴 했는데 새로 뽑을 게 없었다"를 남겨서
-      // 죽은 건지 정상인지 구분되게 한다 (도시 목록 위에만 한 줄).
       recallStatus = added > 0 ? '' : '방금 확인했는데 새로 만들 복습이 없었어 (이력 개념을 이미 다 뽑음).';
+      recallGen = { at: now, outcome: added > 0 ? `${added}명 추가` : '새로 만들 게 없었음' };
       persist(); render();
     }catch(err){
       recallStatus = '실패 — ' + describeApiError(err);
+      recallGen = { at: Date.now(), outcome: '실패: ' + describeApiError(err) };
       render();
     }finally{
       recallGenInFlight = false;
@@ -5445,7 +5454,7 @@ ${text}`}]
     reviveDueRecall();   // 예정일이 된 복습을 도시로 되돌린 뒤에 그려야 함
     render();
     syncClassroom(false);
-    maybeAutoGenerateRecall();
+    maybeAutoGenerateRecall(true);   // 앱 열 때는 15분 간격 무시하고 무조건 한 번 시도
     maybeCatchUpYesterdayReport();
   })();
 
