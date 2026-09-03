@@ -3351,9 +3351,8 @@ ${logText}`}]
     const citizens = collectCityCitizens();
     const graduating = collectGraduatingThisWeek();
     const recalls = pendingRecall();
-    // 복습 생성은 백그라운드에서 알아서 돈다. 문제(키 없음 / 요청 실패)일 때만 조용히 한 줄.
-    const gateNote = (recallStatus && recallStatus.startsWith('실패')) ? recallStatus
-      : (!getApiKey() ? recallGateReason() : (recentlyActive(21) ? '' : recallGateReason()));
+    // 복습 생성은 백그라운드에서 알아서 돈다. 상태(실패·"새로 만들 게 없었음"·키 없음)만 한 줄.
+    const gateNote = recallStatus || (recallGateReason());
     const recallHtml = recalls.length===0
       ? `<div class="empty" style="padding:4px 0;">지금 걸어다니는 망각의 시민이 없어. 뭔가 완료하면 곧 새로 만들어져.</div>`
       : recalls.map(recallRowHtml).join('');
@@ -4749,12 +4748,21 @@ ${logText}`}]
     generateRecall();
   }
 
+  const ARCHIVE_KIND_LABEL = {review:'수업 과제', self:'자율학습', personal:'자율학습', recall:'복습(망각의 시민)'};
   async function generateRecall(){
     const apiKey = getApiKey();
     if(!apiKey){ recallStatus = 'API 키가 필요해 — 설정에서 먼저 등록해줘.'; render(); return; }
-    const history = completedHistory(40);
+    // 완료 이력은 archiveLog(모든 완료가 append-only로 남음)에서 뽑는다 — 예전엔
+    // completedHistory(수업 과제·자율학습만)를 써서, 복습·Classroom 위주로 쓰는 날엔
+    // "이력 없음"으로 조용히 생성이 멈췄었다.
+    const cut = Date.now() - 30*86400000;
+    const history = (state.data.archiveLog||[])
+      .filter(e => e.ts >= cut && e.text)
+      .sort((a,b)=>b.ts-a.ts).slice(0,40)
+      .map(e => ({ subject: canonSubject(e.subject), kind: ARCHIVE_KIND_LABEL[e.kind] || e.kind,
+                   text: e.text, at: e.ts, rating: e.rating, note: e.note, attempts: e.attempts }));
     if(history.length===0){
-      recallStatus = '아직 완료한 과제가 없어 — 할 일을 몇 개 끝내면 복습 과제를 만들어줄게.';
+      recallStatus = '아직 완료한 게 없어 — 뭐라도 하나 끝내면 복습을 만들어줄게.';
       render(); return;
     }
     if(recallGenInFlight) return;
@@ -4899,7 +4907,9 @@ ${reserveText}
         added++;
       });
       state.data.recall.lastGeneratedAt = now;
-      recallStatus = '';   // 조용히 — 도시에 시민이 늘어난 것만으로 충분
+      // 새로 만든 게 있으면 조용히. 0개면 "돌긴 했는데 새로 뽑을 게 없었다"를 남겨서
+      // 죽은 건지 정상인지 구분되게 한다 (도시 목록 위에만 한 줄).
+      recallStatus = added > 0 ? '' : '방금 확인했는데 새로 만들 복습이 없었어 (이력 개념을 이미 다 뽑음).';
       persist(); render();
     }catch(err){
       recallStatus = '실패 — ' + describeApiError(err);
