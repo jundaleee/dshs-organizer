@@ -2263,10 +2263,13 @@ ${prevSummary}`}]
   }
 
   // 지난 공부날 (어제 못 만든 것 자동 채우기용) — startMs~endMs 창을 명시적으로 넘긴다
-  function prevStudyDayInfo(){
+  function prevStudyDayInfo(){ return studyDayInfoNDaysAgo(1); }
+  // n일 전 공부날 창 (n=1이면 어제). 자동 백필에서 며칠치 놓친 학습기록을 채울 때 씀.
+  function studyDayInfoNDaysAgo(n){
     const cur = studyDayInfo();
-    const s = new Date(cur.startMs - 86400000);
-    return { startMs: s.getTime(), endMs: cur.startMs, date: s, key: toISODate(s), m: s.getMonth()+1, dd: s.getDate() };
+    const s = new Date(cur.startMs - n*86400000);
+    const e = new Date(cur.startMs - (n-1)*86400000);
+    return { startMs: s.getTime(), endMs: e.getTime(), date: s, key: toISODate(s), m: s.getMonth()+1, dd: s.getDate() };
   }
   /* ---- 오늘의 학습기록 ---- */
   async function generateDailyLog(auto, sdOverride){
@@ -2364,14 +2367,23 @@ ${logText}`}]
   // 보고서는 시각 스케줄이 아니라 사용자가 직접 버튼으로 만든다 (새벽까지 공부하는 날도
   // 있어서 22:50 같은 고정 컷오프가 안 맞음). "오늘 학습기록 만들기" / "이번 주 아카이브
   // 지금 만들기" 둘 다 알림 팝오버에 있다.
-  // 단, 지난 공부날 학습기록을 실수로 못 만들었으면 앱 열 때 한 번 자동으로 채워준다.
-  function maybeCatchUpYesterdayReport(){
+  // 단, 지난 며칠 학습기록을 실수로 못 만들었으면 앱 열 때 자동으로 채워준다.
+  // 최근 7 공부날(오늘 제외) 중 완료 활동은 있는데 daily 보고서가 없는 날을
+  // 오래된 것부터 하나씩 (순차적으로) 만든다. 이미 있는 날은 건드리지 않는다.
+  async function maybeCatchUpMissedReports(){
     if(!getApiKey()) return;
-    const prev = prevStudyDayInfo();
-    if((state.data.reports||[]).some(r=>r.type==='daily' && r.dateKey===prev.key)) return;
-    const had = (state.data.archiveLog||[]).some(e=>e.ts >= prev.startMs && e.ts < prev.endMs);
-    if(!had) return;
-    generateDailyLog(true, prev);
+    const reports = state.data.reports || [];
+    const log = state.data.archiveLog || [];
+    const missing = [];
+    for(let n = 7; n >= 1; n--){
+      const info = studyDayInfoNDaysAgo(n);
+      if(reports.some(r=>r.type==='daily' && r.dateKey===info.key)) continue;
+      if(!log.some(e=>e.ts >= info.startMs && e.ts < info.endMs)) continue;
+      missing.push(info);
+    }
+    for(const info of missing){
+      try{ await generateDailyLog(true, info); }catch(e){}
+    }
   }
 
   /* ---- 도시 (City, beta) ----
@@ -5478,7 +5490,7 @@ ${text}`}]
     render();
     syncClassroom(false);
     maybeAutoGenerateRecall();   // 앱 열 때 한 번 — 45분 간격/30명 상한은 지킨다 (새로고침마다 폭증 방지)
-    maybeCatchUpYesterdayReport();
+    maybeCatchUpMissedReports();
   })();
 
 })();
