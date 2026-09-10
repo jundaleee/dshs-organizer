@@ -25,12 +25,7 @@
     --glass:rgba(255,255,255,.08); --glass-strong:rgba(255,255,255,.15); --glass-press:rgba(255,255,255,.2);
     --border:rgba(255,255,255,.13); --border-strong:rgba(255,255,255,.22); --border-hi:rgba(255,255,255,.36);
     --text:#FFFFFF; --text-2:rgba(255,255,255,.76); --text-3:rgba(255,255,255,.52);
-    /* 무채색 전환: 색상(hue)을 전부 빼고 흰색~회색 스펙트럼의 밝기(lightness) 단차로만
-       구분한다. --blue/--red는 필터 버튼(.btn/.btn-danger 등)의 배경이라 가장 밝은
-       흰색 쪽에 두고, 그 두 변수를 배경으로 쓰는 자리는 글자색을 --bg(어두운색)로
-       뒤집어야 흰 배경 위에서 글자가 보인다(아래 각 규칙에 반영됨). 나머지는 과목 박스
-       색상 구분용이라 서로 다른 밝기만 유지하면 되고 어디에 쓰이든 대비 문제가 없다. */
-    --blue:#FFFFFF; --red:#EAEAEA; --green:#AEAEAE; --orange:#D6D6D6; --purple:#9A9A9A; --pink:#868686; --indigo:#727272; --teal:#C2C2C2;
+    --blue:#0A84FF; --red:#FF453A; --green:#30D158; --orange:#FF9F0A; --purple:#BF5AF2; --pink:#FF375F; --indigo:#5E5CE6; --teal:#64D2FF;
     --accent:var(--blue);
     --danger:var(--red); --good:var(--green);
     --sans:-apple-system,BlinkMacSystemFont,'SF Pro Text','Pretendard Variable','Pretendard','Malgun Gothic',sans-serif;
@@ -42,14 +37,14 @@
   html,body{margin:0;padding:0;}
   body{
     background:
-      radial-gradient(ellipse 900px 620px at 12% -8%, rgba(255,255,255,.10), transparent 60%),
-      radial-gradient(ellipse 780px 680px at 105% 8%, rgba(255,255,255,.07), transparent 55%),
-      radial-gradient(ellipse 700px 640px at 25% 108%, rgba(255,255,255,.04), transparent 58%),
+      radial-gradient(ellipse 900px 620px at 12% -8%, rgba(10,132,255,.20), transparent 60%),
+      radial-gradient(ellipse 780px 680px at 105% 8%, rgba(191,90,242,.14), transparent 55%),
+      radial-gradient(ellipse 700px 640px at 25% 108%, rgba(255,69,58,.08), transparent 58%),
       var(--bg);
     background-attachment:fixed;
     color:var(--text);font-family:var(--sans);min-height:100vh;-webkit-font-smoothing:antialiased;font-feature-settings:'tnum' 1;
   }
-  ::selection{background:rgba(255,255,255,.35);}
+  ::selection{background:rgba(10,132,255,.35);}
   button,input,textarea{font-family:inherit;}
   a{color:inherit;}
   :focus-visible{outline:2px solid var(--blue);outline-offset:2px;border-radius:6px;}
@@ -86,7 +81,7 @@
   .sidebar-brand b{font-size:14.5px;font-weight:600;letter-spacing:-.01em;}
   .nav-list{display:flex;flex-direction:column;gap:2px;}
   .nav-item{display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:11px;font-size:14px;color:var(--text-2);background:none;border:none;text-align:left;width:100%;transition:background var(--dur) var(--ease),color var(--dur) var(--ease);position:relative;}
-  .nav-icon{width:27px;height:27px;border-radius:8px;background:var(--nc,var(--blue));display:flex;align-items:center;justify-content:center;flex-shrink:0;color:var(--bg);box-shadow:0 1px 2px rgba(0,0,0,.35);}
+  .nav-icon{width:27px;height:27px;border-radius:8px;background:var(--nc,var(--blue));display:flex;align-items:center;justify-content:center;flex-shrink:0;color:#fff;box-shadow:0 1px 2px rgba(0,0,0,.35);}
   .nav-icon svg{opacity:1;}
   .nav-item:hover{background:var(--glass);color:var(--text);}
   .nav-item.active{background:var(--glass-strong);color:var(--text);font-weight:600;}
@@ -105,7 +100,7 @@
   .scroll-sec.sec-city{max-width:1560px;}
 
   .topbar-mini{display:flex;justify-content:flex-end;margin-bottom:10px;}
-  .notif-badge{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--red);color:var(--bg);font-size:9.5px;font-weight:700;}
+  .notif-badge{display:inline-flex;align-items:center;justify-content:center;min-width:15px;height:15px;padding:0 3px;border-radius:8px;background:var(--red);color:#fff;font-size:9.5px;font-weight:700;}
   /* 완료 후기 — 화면을 덮지 않고 구석에 뜨는 대화창(오버레이 없음, 뒤쪽 조작 그대로 가능) */
   .feedback-dock{position:fixed;right:18px;bottom:18px;width:340px;max-width:calc(100vw - 36px);z-index:70;
     background:rgba(20,22,28,.92);-webkit-backdrop-filter:blur(var(--blur)) saturate(1.7);backdrop-filter:blur(var(--blur)) saturate(1.7);
@@ -125,18 +120,18 @@
     padding:12px 14px 8px;font-size:13.5px;}
   .feedback-dock-body{padding:0 14px 14px;max-height:min(70vh,520px);overflow-y:auto;}
   .feedback-ratings{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;}
-  .feedback-ratings .btn-outline.is-selected{background:var(--blue);border-color:var(--blue);color:var(--bg);}
+  .feedback-ratings .btn-outline.is-selected{background:var(--blue);border-color:var(--blue);color:#fff;}
   .feedback-dock-actions{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;}
   @media(max-width:639px){
     .feedback-dock{right:12px;left:12px;bottom:calc(76px + env(safe-area-inset-bottom));width:auto;}
   }
   .feedback-hint{font-size:11.5px;color:var(--text-3);line-height:1.55;margin-bottom:10px;}
   .feedback-explain-label{font-size:13px;font-weight:600;color:var(--text-2);margin-bottom:4px;}
-  .feedback-nudge{font-size:11.5px;line-height:1.5;color:var(--orange);background:rgba(255,255,255,.1);
-    border:1px solid rgba(255,255,255,.28);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:10px;}
+  .feedback-nudge{font-size:11.5px;line-height:1.5;color:var(--orange);background:rgba(255,159,10,.1);
+    border:1px solid rgba(255,159,10,.28);border-radius:var(--r-sm);padding:8px 10px;margin-bottom:10px;}
   /* 내가 후기에 요청한 게 실제로 반영된 복습 */
-  .from-req{font-size:11.5px;line-height:1.5;color:var(--teal);background:rgba(255,255,255,.1);
-    border:1px solid rgba(255,255,255,.28);border-radius:var(--r-sm);padding:8px 10px;margin:8px 0 0;
+  .from-req{font-size:11.5px;line-height:1.5;color:var(--teal);background:rgba(100,210,255,.1);
+    border:1px solid rgba(100,210,255,.28);border-radius:var(--r-sm);padding:8px 10px;margin:8px 0 0;
     display:flex;gap:6px;align-items:flex-start;}
   .from-req svg{flex-shrink:0;margin-top:1px;}
   .notif-row{font-size:13px;line-height:1.6;padding:9px 0;border-bottom:1px solid var(--border);}
@@ -326,16 +321,16 @@
     padding:16px 20px;margin-bottom:28px;flex-wrap:wrap;
     transition:border-color var(--dur) var(--ease),box-shadow var(--dur) var(--ease);
   }
-  .pomo-card.drag-over{border-color:var(--blue);box-shadow:0 0 0 3px rgba(255,255,255,.35) inset;}
+  .pomo-card.drag-over{border-color:var(--blue);box-shadow:0 0 0 3px rgba(10,132,255,.35) inset;}
   .pomo-drop-hint{
     position:absolute;inset:0;border-radius:inherit;z-index:5;
     display:flex;align-items:center;justify-content:center;
-    background:rgba(255,255,255,.22);border:2px dashed var(--blue);
+    background:rgba(10,132,255,.22);border:2px dashed var(--blue);
     color:#fff;font-weight:700;font-size:14px;
     opacity:0;pointer-events:none;transition:opacity .12s ease;
   }
   .pomo-card.drag-over .pomo-drop-hint{opacity:1;}
-  @keyframes pomoLinked{0%{box-shadow:0 0 0 0 rgba(255,255,255,.55);}100%{box-shadow:0 0 0 16px rgba(255,255,255,0);}}
+  @keyframes pomoLinked{0%{box-shadow:0 0 0 0 rgba(48,209,88,.55);}100%{box-shadow:0 0 0 16px rgba(48,209,88,0);}}
   .pomo-card.linked-flash{animation:pomoLinked .55s ease;}
 
   /* ---- 홈 할 일 카드를 길게 눌렀다 끌어서 지우기 ---- */
@@ -399,7 +394,7 @@
   .task-check{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border-strong);flex-shrink:0;margin-top:1px;background:var(--glass);display:flex;align-items:center;justify-content:center;transition:background var(--dur) var(--ease),border-color var(--dur) var(--ease);padding:0;}
   .task-check:hover{border-color:var(--blue);}
   .task-check svg{opacity:0;transform:scale(.4);transition:all var(--dur) var(--ease);}
-  .task-row.done .task-check{background:var(--blue);border-color:var(--blue);color:var(--bg);}
+  .task-row.done .task-check{background:var(--blue);border-color:var(--blue);}
   .task-row.done .task-check svg{opacity:1;transform:scale(1);}
   .task-body{flex:1;min-width:0;}
   .task-tag{font-size:12px;color:var(--text-3);margin-bottom:2px;}
@@ -420,7 +415,7 @@
   .asg-row:last-child{border-bottom:none;}
   .asg-row.done{opacity:.4;}
   .asg-check{width:22px;height:22px;border-radius:7px;border:1.5px solid var(--border-strong);flex-shrink:0;background:var(--glass);display:flex;align-items:center;justify-content:center;padding:0;transition:all var(--dur) var(--ease);}
-  .asg-row.done .asg-check{background:var(--green);border-color:var(--green);color:var(--bg);}
+  .asg-row.done .asg-check{background:var(--green);border-color:var(--green);}
   .asg-check svg{opacity:0;transform:scale(.4);transition:all var(--dur) var(--ease);}
   .asg-row.done .asg-check svg{opacity:1;transform:scale(1);}
   .asg-main{flex:1;min-width:0;}
@@ -434,7 +429,7 @@
   .asg-row:hover .asg-del{opacity:1;}
   .asg-del:hover{color:var(--red);}
   .asg-row.asg-complete-anim{pointer-events:none;overflow:hidden;animation:asgCollapse 260ms cubic-bezier(.4,0,.2,1) 260ms forwards;}
-  .asg-row.asg-complete-anim .asg-check{background:var(--green);border-color:var(--green);color:var(--bg);transform:scale(1.08);transition:all 240ms cubic-bezier(.34,1.56,.64,1);}
+  .asg-row.asg-complete-anim .asg-check{background:var(--green);border-color:var(--green);transform:scale(1.08);transition:all 240ms cubic-bezier(.34,1.56,.64,1);}
   .asg-row.asg-complete-anim .asg-check svg{opacity:1;transform:scale(1);transition:all 240ms cubic-bezier(.34,1.56,.64,1) 30ms;}
   .asg-row.asg-complete-anim .asg-title{text-decoration:line-through;text-decoration-color:var(--border-strong);transition:text-decoration-color 200ms var(--ease);}
   @keyframes asgCollapse{
@@ -445,8 +440,8 @@
   .asg-priority{display:flex;align-items:center;gap:6px;margin-top:7px;}
   .asg-priority-label{font-size:11px;color:var(--text-3);}
   .pri-btn{background:var(--glass);border:1px solid var(--border);color:var(--text-3);border-radius:var(--r-pill);padding:3px 11px;font-size:11px;font-weight:600;}
-  .pri-btn.active[data-val="high"]{background:var(--red);border-color:var(--red);color:var(--bg);}
-  .pri-btn.active[data-val="mid"]{background:var(--blue);border-color:var(--blue);color:var(--bg);}
+  .pri-btn.active[data-val="high"]{background:var(--red);border-color:var(--red);color:#fff;}
+  .pri-btn.active[data-val="mid"]{background:var(--blue);border-color:var(--blue);color:#fff;}
   .pri-btn.active[data-val="low"]{background:rgba(255,255,255,.22);border-color:var(--border-strong);color:var(--text);}
 
   .sync-health{font-size:12px;color:var(--text-3);padding:0 0 14px;}
@@ -459,7 +454,7 @@
   .dday-legend-dot.overdue{background:var(--red);}
   .dday-timeline{position:relative;height:92px;margin:4px 14px 28px;}
   .dday-track{position:absolute;left:0;right:0;bottom:26px;height:2px;background:var(--border);}
-  .dday-today{position:absolute;bottom:20px;width:2px;height:14px;background:var(--blue);box-shadow:0 0 8px rgba(255,255,255,.7);}
+  .dday-today{position:absolute;bottom:20px;width:2px;height:14px;background:var(--blue);box-shadow:0 0 8px rgba(10,132,255,.7);}
   .dday-cluster{position:absolute;bottom:26px;display:flex;flex-direction:column-reverse;align-items:center;gap:3px;transform:translateX(-50%);cursor:default;}
   .dday-dot{width:9px;height:9px;border-radius:50%;background:var(--orange);flex-shrink:0;border:1.5px solid var(--bg);box-shadow:0 0 0 1px var(--border);}
   .dday-dot.overdue{background:var(--red);}
@@ -473,14 +468,14 @@
   .asg-form input.title{flex:2;min-width:180px;}
   .asg-form input.date{flex:1;min-width:130px;}
   .asg-form input.tag{flex:1;min-width:110px;}
-  .btn{background:var(--blue);color:var(--bg);border:none;border-radius:var(--r-pill);padding:9px 20px;font-size:13.5px;font-weight:600;transition:filter var(--dur) var(--ease),transform var(--dur) var(--ease);}
+  .btn{background:var(--blue);color:#fff;border:none;border-radius:var(--r-pill);padding:9px 20px;font-size:13.5px;font-weight:600;transition:filter var(--dur) var(--ease),transform var(--dur) var(--ease);}
   .btn[disabled]{opacity:.4;cursor:not-allowed;}
   .btn:hover{filter:brightness(1.12);}
   .btn:active{transform:scale(.97);}
   .btn-outline{background:var(--glass);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));border:1px solid var(--border-strong);color:var(--text);border-radius:var(--r-pill);padding:9px 20px;font-size:13.5px;font-weight:600;transition:all var(--dur) var(--ease);}
   .btn-outline:hover{background:var(--glass-strong);}
   .btn-outline:active{transform:scale(.97);}
-  .btn-danger{background:var(--red);color:var(--bg);border:none;border-radius:var(--r-pill);padding:9px 20px;font-size:13.5px;font-weight:600;transition:filter var(--dur) var(--ease);}
+  .btn-danger{background:var(--red);color:#fff;border:none;border-radius:var(--r-pill);padding:9px 20px;font-size:13.5px;font-weight:600;transition:filter var(--dur) var(--ease);}
   .btn-danger:hover{filter:brightness(1.12);}
 
   /* ---- schedule ---- */
@@ -489,7 +484,7 @@
   .sched-row .p{width:46px;color:var(--text-3);font-size:12.5px;flex-shrink:0;}
   .sched-row .s-main{flex:1;min-width:0;}
   .sched-row .s-teacher{font-size:12.5px;color:var(--text-3);margin-top:1px;}
-  .sched-row.today{background:rgba(255,255,255,.14);padding-left:10px;padding-right:10px;margin:0 -10px;border-bottom:none;}
+  .sched-row.today{background:rgba(10,132,255,.14);padding-left:10px;padding-right:10px;margin:0 -10px;border-bottom:none;}
   .sched-row.today .s-main{font-weight:600;}
   .sched-row.clickable{cursor:pointer;transition:background var(--dur) var(--ease);}
   .sched-row.clickable:hover{background:var(--glass);padding-left:10px;padding-right:10px;margin:0 -10px;border-bottom-color:transparent;}
@@ -502,7 +497,7 @@
   .week-grid .wcell{background:rgba(255,255,255,.03);padding:9px 8px;font-size:12px;min-height:52px;}
   .week-grid .whead{background:rgba(255,255,255,.07);font-size:12px;color:var(--text-3);font-weight:600;text-align:center;padding:9px 4px;}
   .week-grid .whead.today{color:var(--blue);}
-  .week-grid .wcell.today{background:rgba(255,255,255,.14);}
+  .week-grid .wcell.today{background:rgba(10,132,255,.14);}
   .week-grid .wcell .subj{font-weight:600;font-size:12.5px;}
   .week-grid .wcell .who{color:var(--text-3);font-size:11px;margin-top:2px;}
   .week-grid .wcell.empty{color:var(--text-3);}
@@ -549,7 +544,7 @@
   .ai-textarea{width:100%;min-height:64px;background:var(--glass);border:1px solid var(--border);border-radius:var(--r-md);color:var(--text);padding:11px 13px;font-size:13px;margin-bottom:10px;}
   .ai-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
   .ai-status{font-size:11.5px;color:var(--text-3);}
-  .btn-ai{background:linear-gradient(135deg,var(--purple),var(--blue));color:var(--bg);border:none;border-radius:var(--r-pill);padding:9px 18px;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:filter var(--dur) var(--ease);}
+  .btn-ai{background:linear-gradient(135deg,var(--purple),var(--blue));color:#fff;border:none;border-radius:var(--r-pill);padding:9px 18px;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:filter var(--dur) var(--ease);}
   .btn-ai:hover{filter:brightness(1.12);}
 
   /* ---- settings modal ---- */
@@ -575,7 +570,7 @@
   .rotation-status{font-size:12px;color:var(--text-3);margin-bottom:8px;}
   .rotation-actions{display:inline-flex;gap:2px;padding:3px;border-radius:var(--r-pill);background:var(--glass);-webkit-backdrop-filter:blur(var(--blur));backdrop-filter:blur(var(--blur));border:1px solid var(--border);flex-wrap:wrap;}
   .rot-btn{background:none;border:none;color:var(--text-2);border-radius:var(--r-pill);padding:6px 13px;font-size:11.5px;transition:all var(--dur) var(--ease);}
-  .rot-btn.active{background:var(--blue);color:var(--bg);font-weight:600;}
+  .rot-btn.active{background:var(--blue);color:#fff;font-weight:600;}
 
 
   .completed-modal .item{padding:11px 4px;border-bottom:1px solid var(--border);}
@@ -888,7 +883,6 @@
       reports:[],
       recallRequests:[],
       recallReserve:[],
-      recallRejected:[],
       tdPicks:[]
     };
   }
@@ -2578,10 +2572,7 @@ ${logText}`}]
       const THREE = await import(cityAssetUrl('assets/vendor/three-city.min.js'));
       CITY3D.THREE = THREE;
       const gltf = await new THREE.GLTFLoader().loadAsync(cityAssetUrl('assets/city/city-kit.glb'));
-      // 차·사람 파츠 중 일부는 과목색 recolor()가 옅게(0.4~0.62) 섞이는 정도라, 밑바탕
-      // 버텍스 컬러 자체가 채도 높으면 완전히 안 빠질 수 있다 — 로드 시점에 한 번
-      // 무채색으로 밀어둔다(TD3D 쪽과 같은 이유, 같은 함수 재사용).
-      gltf.scene.children.slice().forEach(n=>{ desaturateModelColors(n); CITY3D.proto[n.name] = n; });
+      gltf.scene.children.slice().forEach(n=>{ CITY3D.proto[n.name] = n; });
       applyWarmTownSkin(THREE);
       initCityRenderer();
       CITY3D.phase = 'ready';
@@ -2595,30 +2586,11 @@ ${logText}`}]
     }
   }
 
-  /* Kenney 시티킷은 같은 UV에 색만 다른 팔레트를 여러 장 준다 — 건물/나무 쪽
-     머티리얼만 건드리면 차·캐릭터는 원래 색을 그대로 유지한다. 팔레트 텍스처 자체가
-     따뜻한 톤(town-warm.png)이라, 새 무채색 텍스처 에셋을 따로 만드는 대신 로드된
-     이미지를 캔버스에 그려서 픽셀별 휘도(luminance) 기준으로 그 자리에서 흑백
-     변환한다 — 원본 파일은 그대로 둔 채 런타임에만 탈색. */
-  function desaturateTextureOnLoad(tex){
-    const img = tex.image;
-    if(!img || !img.width) return;
-    const c = document.createElement('canvas');
-    c.width = img.width; c.height = img.height;
-    const ctx = c.getContext('2d');
-    ctx.drawImage(img, 0, 0);
-    const data = ctx.getImageData(0, 0, c.width, c.height);
-    const px = data.data;
-    for(let i=0; i<px.length; i+=4){
-      const g = px[i]*0.299 + px[i+1]*0.587 + px[i+2]*0.114;
-      px[i] = px[i+1] = px[i+2] = g;
-    }
-    ctx.putImageData(data, 0, 0);
-    tex.image = c;
-    tex.needsUpdate = true;
-  }
+  /* Kenney 시티킷은 같은 UV에 색만 다른 팔레트를 여러 장 준다 —
+     기본(초록 마을) 대신 따뜻한 톤(variation-b)으로 갈아끼운다. 건물/나무 쪽 머티리얼만
+     건드리면 차·캐릭터는 원래 색을 그대로 유지한다. */
   function applyWarmTownSkin(THREE){
-    const tex = new THREE.TextureLoader().load(cityAssetUrl('assets/city/town-warm.png'), loaded=>desaturateTextureOnLoad(loaded));
+    const tex = new THREE.TextureLoader().load(cityAssetUrl('assets/city/town-warm.png'));
     tex.flipY = false;                 // glTF 텍스처 규약
     tex.colorSpace = THREE.SRGBColorSpace;
     const done = new Set();
@@ -2652,12 +2624,12 @@ ${logText}`}]
     const camera = new T.PerspectiveCamera(42, 1, 0.5, 400);
     camera.position.set(26, 24, 26);
 
-    // 무채색 조명 — 색온도(따뜻함/차가움) 없이 밝기만 다른 흰색~회색 광원으로
-    scene.add(new T.HemisphereLight(0xe8e8e8, 0x2e2e2e, 2.1));
-    const sun = new T.DirectionalLight(0xf0f0f0, 2.3);
+    // 따뜻한 노을빛 조명 — 초록 마을이 아니라 해질녘 타운 느낌으로
+    scene.add(new T.HemisphereLight(0xffd9b3, 0x3a2c24, 2.1));
+    const sun = new T.DirectionalLight(0xffe3bb, 2.3);
     sun.position.set(20, 30, 14);
     scene.add(sun);
-    const rim = new T.DirectionalLight(0xaaaaaa, 0.7);
+    const rim = new T.DirectionalLight(0xff9f6a, 0.7);
     rim.position.set(-22, 12, -18);
     scene.add(rim);
 
@@ -2716,8 +2688,8 @@ ${logText}`}]
   function makeRoadTexture(alongX){
     const c = document.createElement('canvas'); c.width = 64; c.height = 64;
     const g = c.getContext('2d');
-    g.fillStyle = '#585858'; g.fillRect(0,0,64,64);
-    g.fillStyle = 'rgba(255,255,255,.34)';
+    g.fillStyle = '#59504b'; g.fillRect(0,0,64,64);
+    g.fillStyle = 'rgba(255,240,215,.34)';
     if(alongX) g.fillRect(8, 30, 26, 4); else g.fillRect(30, 8, 4, 26);
     const tex = new CITY3D.THREE.CanvasTexture(c);
     tex.wrapS = tex.wrapT = CITY3D.THREE.RepeatWrapping;
@@ -2839,9 +2811,9 @@ ${logText}`}]
 
     /* 땅덩어리 — 종이 한 장이 아니라 두께 있는 지반으로 (윗면 잔디, 옆면 흙) */
     const SLAB = CITY_TILE*0.9;
-    const grassMat = new T.MeshStandardMaterial({color:0x6e6e6e, roughness:1, metalness:0});
-    const soilMat  = new T.MeshStandardMaterial({color:0x4a4a4a, roughness:1, metalness:0});
-    const rockMat  = new T.MeshStandardMaterial({color:0x2f2f2f, roughness:1, metalness:0});
+    const grassMat = new T.MeshStandardMaterial({color:0x6d7a45, roughness:1, metalness:0});
+    const soilMat  = new T.MeshStandardMaterial({color:0x6b5340, roughness:1, metalness:0});
+    const rockMat  = new T.MeshStandardMaterial({color:0x4a382c, roughness:1, metalness:0});
     CITY3D.owned.push(grassMat, soilMat, rockMat);
     const slabGeo = new T.BoxGeometry(span, SLAB, span);
     slabGeo.userData.own = true;
@@ -2852,7 +2824,7 @@ ${logText}`}]
     // 흙과 잔디 사이 얇은 띠 — 단면이 잘린 느낌을 줄여줌
     const rimGeo = new T.BoxGeometry(span*1.004, 0.28, span*1.004);
     rimGeo.userData.own = true;
-    const rimMat = new T.MeshStandardMaterial({color:0x5a5a5a, roughness:1});
+    const rimMat = new T.MeshStandardMaterial({color:0x7d6248, roughness:1});
     CITY3D.owned.push(rimMat);
     const rimMesh = new T.Mesh(rimGeo, rimMat);
     rimMesh.position.y = -0.16;
@@ -3516,41 +3488,6 @@ ${logText}`}]
   }
 
   /* ---- 3D ---- */
-  // Kenney 타워 디펜스 키트는 CITY3D의 city-kit.glb와 달리 팔레트 텍스처가 아니라
-  // 메시마다 버텍스 컬러(초록 스폰 타일, 주황 본진 등)를 구워서 갖고 있다 — recolor()가
-  // material.color를 곱하는 방식이라 버텍스 컬러 자체의 색상(hue)은 못 지운다(밝기만 죽임).
-  // 그래서 로드 직후 각 프로토타입의 버텍스 컬러/맵 텍스처를 휘도 기준으로 직접 회색조
-  // 변환한다 — 이후 모든 clone()이 이 프로토타입 지오메트리를 공유하므로 한 번이면 충분.
-  const desaturatedTextures = new WeakSet();
-  function desaturateModelColors(root){
-    root.traverse(n=>{
-      if(!n.isMesh) return;
-      const attr = n.geometry && n.geometry.attributes && n.geometry.attributes.color;
-      if(attr){
-        for(let i=0;i<attr.count;i++){
-          const l = attr.getX(i)*0.299 + attr.getY(i)*0.587 + attr.getZ(i)*0.114;
-          attr.setXYZ(i, l, l, l);
-        }
-        attr.needsUpdate = true;
-      }
-      const mats = Array.isArray(n.material) ? n.material : (n.material ? [n.material] : []);
-      mats.forEach(m=>{
-        const tex = m.map;
-        const src = tex && tex.image;
-        if(!src || !src.width || desaturatedTextures.has(tex)) return;
-        desaturatedTextures.add(tex);
-        const c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
-        const ctx = c.getContext('2d'); ctx.drawImage(src, 0, 0);
-        const d = ctx.getImageData(0, 0, c.width, c.height); const px = d.data;
-        for(let i=0;i<px.length;i+=4){
-          const l = px[i]*0.299 + px[i+1]*0.587 + px[i+2]*0.114;
-          px[i]=px[i+1]=px[i+2]=l;
-        }
-        ctx.putImageData(d, 0, 0);
-        tex.image = c; tex.needsUpdate = true;
-      });
-    });
-  }
   async function ensureTD3D(){
     if(TD3D.phase==='loading' || TD3D.phase==='ready') return;
     TD3D.phase = 'loading';
@@ -3561,9 +3498,7 @@ ${logText}`}]
       await Promise.all(TD_MODELS.map(async name=>{
         try{
           const g = await loader.loadAsync(tdAssetUrl('assets/td/'+name+'.glb'));
-          const proto = g.scene.children[0] || g.scene;
-          desaturateModelColors(proto);
-          TD3D.proto[name] = proto;
+          TD3D.proto[name] = g.scene.children[0] || g.scene;
         }catch(e){ /* 하나 빠져도 나머지로 진행 */ }
       }));
       initTDRenderer();
@@ -3585,11 +3520,11 @@ ${logText}`}]
     renderer.setClearColor(0x000000, 0);
     wrap.appendChild(renderer.domElement);
     const scene = new T.Scene();
-    scene.fog = new T.Fog(0x0e0e0e, 60, 190);
+    scene.fog = new T.Fog(0x0b1220, 60, 190);
     const camera = new T.PerspectiveCamera(44, 1, 0.5, 500);
-    scene.add(new T.HemisphereLight(0xe0e0e0, 0x2e2e2e, 2.0));
-    const sun = new T.DirectionalLight(0xf0f0f0, 2.2); sun.position.set(18, 34, 20); scene.add(sun);
-    const rim = new T.DirectionalLight(0xaaaaaa, 0.5); rim.position.set(-20, 14, -22); scene.add(rim);
+    scene.add(new T.HemisphereLight(0xcfe3ff, 0x2a2f26, 2.0));
+    const sun = new T.DirectionalLight(0xfff2df, 2.2); sun.position.set(18, 34, 20); scene.add(sun);
+    const rim = new T.DirectionalLight(0x88aaff, 0.5); rim.position.set(-20, 14, -22); scene.add(rim);
     const controls = new T.OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = false;
     controls.minDistance = 14; controls.maxDistance = 140;
@@ -3661,8 +3596,8 @@ ${logText}`}]
     const groundW = 30, groundL = laneHalf*2 + 10;
 
     // 지면 + 레인
-    const groundMat = new T.MeshStandardMaterial({color:0x6e6e6e, roughness:1});
-    const laneMat = new T.MeshStandardMaterial({color:0x3a3a3a, roughness:1});
+    const groundMat = new T.MeshStandardMaterial({color:0x5f6f3e, roughness:1});
+    const laneMat = new T.MeshStandardMaterial({color:0x3a4152, roughness:1});
     TD3D.owned.push(groundMat, laneMat);
     const slabGeo = new T.BoxGeometry(groundW, 1, groundL); slabGeo.userData.own = true;
     const slab = new T.Mesh(slabGeo, groundMat); slab.position.y = -0.5; g.add(slab);
@@ -3733,7 +3668,7 @@ ${logText}`}]
           uh.position.copy(a).lerp(b, t0);
           if(r.fromRequest){
             const ring = tdSpawn('detail-crystal');   // 요청 반영 표식 대용
-            if(ring){ fitH(ring, 1.1); ring.position.y = 2.2; recolor(ring, '#c2c2c2', 0.8); uh.add(ring); }
+            if(ring){ fitH(ring, 1.1); ring.position.y = 2.2; recolor(ring, '#64d2ff', 0.8); uh.add(ring); }
           }
           markPick(uh, entry);
           TD3D.ufos.push({obj:uh, a, b, t:t0, bob:Math.random()*6.28, speed:0.006 + (i%3)/900});
@@ -4509,24 +4444,6 @@ ${logText}`}]
                        ERROR_CORRECTION:'오답 교정', CONNECTION:'개념 연결'};
   function recallList(){ return (state.data.recall && state.data.recall.tasks) || []; }
   function pendingRecall(){ return recallList().filter(t=>!t.done); }
-  // 같은 문장인지 비교할 때 쓰는 정규화 — deleteRecall(거절 기록)과 generateRecall(중복 방지) 둘 다 씀
-  const normText = s => String(s||'').replace(/\s+/g,'').replace(/["'’.,·!?]/g,'').toLowerCase();
-  // "필요 없음"으로 지운 망각의 시민은 그냥 배열에서 빠질 뿐이라, 다음 생성 때 모델이
-  // 같은 주제를 또 만들어도 막을 방법이 없었다(열려있는 항목하고만 중복 검사를 했음) —
-  // 그래서 "삭제 = 다시 만들지 마라"는 별도 영구 목록에 지문만 append-only로 남긴다.
-  const RECALL_REJECTED_CAP = 300; // 무한정 쌓이지 않게 최근 것만 유지(오래된 거절은 유효기간 지났다고 봄)
-  function recallRejectedNorms(){ return (state.data.recallRejected||[]).map(r=>normText(r.text)).filter(Boolean); }
-  function recordRecallRejection(text){
-    const clean = String(text||'').trim();
-    if(normText(clean).length < 6) return;
-    state.data.recallRejected = state.data.recallRejected || [];
-    if(!recallRejectedNorms().includes(normText(clean))){
-      state.data.recallRejected.push({text: clean, at: Date.now()});
-    }
-    if(state.data.recallRejected.length > RECALL_REJECTED_CAP){
-      state.data.recallRejected = state.data.recallRejected.slice(-RECALL_REJECTED_CAP);
-    }
-  }
 
   /* ============ 간격 반복 스케줄러 (SM-2 계열) ============
      "언제 다시 볼지"는 여기서 수식으로 정하고, "무엇을 물어볼지"만 Claude가 만든다.
@@ -4900,12 +4817,6 @@ ${logText}`}]
     const reserveText = reserve.length
       ? reserve.slice(0, 15).map(r=>`- ${r.text}`).join('\n')
       : '(없음)';
-    // 학생이 "필요 없음"으로 지운 것 — 배열에서만 빠지는 게 아니라 여기 영구 기록으로 남아서
-    // 다음 생성 때도 계속 피해간다(안 그러면 지워도 비슷한 문장이 계속 다시 나타남)
-    const rejected = (state.data.recallRejected||[]).slice(-30);
-    const rejectedText = rejected.length
-      ? rejected.map(r=>`- ${r.text}`).join('\n')
-      : '(없음)';
 
     try{
       const res = await fetch('https://api.anthropic.com/v1/messages', {
@@ -4942,8 +4853,6 @@ text 안에는 큰따옴표(") 금지. boxKey는 다음 중 하나만: ${boxList
 - 이미 열려 있는 복습(아래 목록)과 주제가 겹치면, 각도가 확실히 다를 때만 만든다
   (같은 개념 "설명하기"가 이미 있으면 "새 상황에 적용하기"는 OK, 표현만 바꾼 재탕은 금지).
   없는 개념을 지어내지 마라. 이력의 개념이 하나도 안 남았으면 빈 배열 [].
-- 아래 "학생이 거절한 복습" 목록에 있는 건 학생이 직접 "필요 없음"으로 지운 것들이다.
-  같은 문장은 물론, 표현만 바꾼 재탕도 만들지 마라 — 그 개념 자체를 다시 꺼내지 말 것.
 - 이번 응답에 3~6개, 각 3~10분. (이력이 적거나 겹칠 게 많으면 그보다 적게, 없으면 [])
 - 수학(subject 또는 boxKey가 math/수학)은 절대 만들지 마라. 수학은 CONNECTION의 상대(subjectB)로만 가능.
 - CONNECTION은 잇는 두 개념이 둘 다 아래 이력에 이미 등장했고 지금 수준에서 써먹을 수 있을 때만, 한 번에 최대 2개.
@@ -4963,9 +4872,6 @@ ${doneRecallText}
 
 망각의 시민 예비군 (오늘의 학습기록에서 넘어온 후보 — 큐 채울 때 우선):
 ${reserveText}
-
-학생이 거절한 복습 (다시 만들지 마라, 비슷한 각도도 피하라):
-${rejectedText}
 
 다시 강조: 응답은 JSON 배열 그 자체로 시작하고 끝난다. 만들 게 없으면 [] 만 출력.`}]
         })
@@ -4993,9 +4899,9 @@ ${rejectedText}
       const now = Date.now();
       let added = 0;
       state.data.recall = state.data.recall || {tasks:[], lastGeneratedAt:null};
-      // 이미 열려 있는 복습이나 학생이 예전에 거절한 것과 사실상 같은 문장은 버린다
-      // (모델이 프롬프트 지시를 어기고 재탕해도 여기서 한 번 더 막음)
-      const openNorms = pendingRecall().map(t=>normText(t.text)).filter(Boolean).concat(recallRejectedNorms());
+      // 이미 열려 있는 복습과 사실상 같은 문장은 버린다 (모델이 재탕해도 여기서 막음)
+      const normText = s => String(s||'').replace(/\s+/g,'').replace(/["'’.,·!?]/g,'').toLowerCase();
+      const openNorms = pendingRecall().map(t=>normText(t.text)).filter(Boolean);
       const seenThisBatch = [];
       items.forEach(it=>{
         if(!it || !it.text) return;
@@ -5067,10 +4973,6 @@ ${rejectedText}
   }
   function deleteRecall(id){
     if(!state.data.recall) return;
-    const t = state.data.recall.tasks.find(x=>x.id===id);
-    // "필요 없음"으로 지운 건 배열에서만 빠지는 게 아니라 영구 거절 목록에도 남겨서,
-    // 다음 생성 때 모델이 같은 문장을 또 만들어 돌려주지 않게 한다.
-    if(t) recordRecallRejection(t.text);
     state.data.recall.tasks = state.data.recall.tasks.filter(x=>x.id!==id);
     persist(); render();
   }
@@ -5577,7 +5479,6 @@ ${text}`}]
           reports: saved.reports || [],
           recallRequests: saved.recallRequests || [],
           recallReserve: saved.recallReserve || [],
-          recallRejected: saved.recallRejected || [],
           tdPicks: saved.tdPicks || []
         };
       } else {
